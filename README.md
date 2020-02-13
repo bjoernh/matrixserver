@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bjoernh/matrixserver.svg?branch=master)](https://travis-ci.org/bjoernh/matrixserver)
+
 # LEDCube matrixserver
 
 This is a screenserver for the purpose of being used with differently orientated LED Matrix panels. 
