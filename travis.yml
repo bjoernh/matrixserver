@@ -1,0 +1,13 @@
+language: cpp
+os: linux
+dist: bionic
+compiler: gcc
+addons:
+  apt:
+    packages: git libeigen3-dev cmake libboost-log-dev libboost-thread-dev libboost-system-dev libboost-program-options-dev libasound2-dev libprotobuf-dev protobuf-compiler libimlib2-dev
+
+script:
+  - mkdir -p build
+  - cd build
+  - cmake ..
+  - make
