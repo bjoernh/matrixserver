@@ -40,7 +40,7 @@ endif ()
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}> $<INSTALL_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
 
-target_compile_definitions(matrixapplication PUBLIC BOOST_ALL_DYN_LINK)
+target_compile_definitions(matrixapplication PUBLIC BOOST_LOG_DYN_LINK)
 set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;Image.h;MatrixApplication.h")
 
 install(TARGETS matrixapplication
