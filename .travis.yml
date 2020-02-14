@@ -1,6 +1,6 @@
 language: cpp
 os: 
-  - linux
+#  - linux
   - osx
 
 dist: 
@@ -8,10 +8,10 @@ dist:
 
 osx_image: 
   - xcode11.3
-  - xcode10.2
+#  - xcode10.2
 
 compiler: 
-  - gcc
+#  - gcc
   - clang
 
 addons:

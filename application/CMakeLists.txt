@@ -10,9 +10,8 @@ IF(APPLE)
 	# Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
 	# for sucessfull linking against lmlib2
 	LINK_DIRECTORIES(/usr/local/lib)
+	set(CMAKE_CXX_FLAGS "-I/opt/X11/include")
 ENDIF()
-
-#set(CMAKE_CXX_FLAGS "-fPIC -I/opt/X11/include")
 
 
 set(SOURCE_FILES
