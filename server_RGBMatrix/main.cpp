@@ -5,15 +5,16 @@
 
 #include <Server.h>
 #include <RGBMatrixRenderer.h>
-#include <SimulatorRenderer.h>
+//#include <SimulatorRenderer.h> TODO: remove it for builds without SimulatorRenderer
 #include <TcpServer.h>
 
 #include <matrixserver.pb.h>
 #include <google/protobuf/util/json_util.h>
 
 void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
+    BOOST_LOG_TRIVIAL(debug) << "[Server] create default config ";
     serverConfig.Clear();
-    serverConfig.set_globalscreenbrightness(100);
+    serverConfig.set_globalscreenbrightness(75);
     serverConfig.set_servername("matrixserver");
     matrixserver::Connection *serverConnection = new matrixserver::Connection();
     serverConnection->set_serveraddress("127.0.0.1");
@@ -21,7 +22,7 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
     serverConnection->set_connectiontype(matrixserver::Connection_ConnectionType_tcp);
     serverConfig.set_allocated_serverconnection(serverConnection);
     serverConfig.set_assemblytype(matrixserver::ServerConfig_AssemblyType_cube);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 6; i++) {  // TODO: change to cmdline arg
         auto screenInfo = serverConfig.add_screeninfo();
         screenInfo->set_screenid(i);
         screenInfo->set_available(true);

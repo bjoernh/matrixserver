@@ -24,18 +24,19 @@ void RGBMatrixRenderer::init(std::vector<std::shared_ptr<Screen>> initScreens) {
 
     rgb_matrix::RGBMatrix::Options RGBmatrixOptions;
     rgb_matrix::RuntimeOptions RGBruntimeOptions;
-    RGBmatrixOptions.hardware_mapping = "regular";
+    RGBmatrixOptions.hardware_mapping = "adafruit-hat-pwm";
     RGBmatrixOptions.rows = 64;
     RGBmatrixOptions.cols = 64; //todo: should be tested -> tested now, no difference
-    RGBmatrixOptions.chain_length = 3;
+    RGBmatrixOptions.chain_length = 4;
 //    RGBmatrixOptions.chain_length = 6;
-    RGBmatrixOptions.parallel = 2;
+    RGBmatrixOptions.parallel = 1;  // TODO: add to global config
     RGBmatrixOptions.show_refresh_rate = false;
-    RGBmatrixOptions.pwm_lsb_nanoseconds = 150;
+    RGBmatrixOptions.pwm_lsb_nanoseconds = 130;
     RGBmatrixOptions.brightness = globalBrightness;
     RGBmatrixOptions.led_rgb_sequence = "rgb";
-    RGBruntimeOptions.gpio_slowdown = 2;
+    RGBruntimeOptions.gpio_slowdown = 4;
     RGBruntimeOptions.drop_privileges = -1;
+    RGBruntimeOptions.do_gpio_init = true;
 
     rgbMatrix = CreateMatrixFromOptions(RGBmatrixOptions, RGBruntimeOptions);
 
@@ -93,6 +94,7 @@ void RGBMatrixRenderer::render() {
                 }
                 break;
             default:
+                std::cout << "No orientation found" << std::endl;
                 break;
         }
     }

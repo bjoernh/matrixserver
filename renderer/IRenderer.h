@@ -18,7 +18,7 @@ public:
 
 protected:
     std::vector<std::shared_ptr<Screen>> screens;
-    int globalBrightness = 100;
+    int globalBrightness = 75;
 };
 
 

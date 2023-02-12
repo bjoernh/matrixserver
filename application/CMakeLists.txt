@@ -14,7 +14,7 @@ IF(APPLE)
 ENDIF()
 
 
-set(SOURCE_FILES
+set(SOURCE_FILES 
         CubeApplication.cpp
         Image.cpp)
 
@@ -25,10 +25,10 @@ if (BUILD_RASPBERRYPI)
 endif ()
 
 
-add_library(matrixapplication SHARED ${SOURCE_FILES} MatrixApplication.cpp)
+add_library(matrixapplication SHARED ${SOURCE_FILES} MatrixApplication.cpp CubeApplication.cpp Image.cpp)
 
 target_link_libraries(matrixapplication common renderer 
-	$<$<PLATFORM_ID:Linux>:FPGARenderer>)
+	)  # TODO: removed for compilimng without FPGARendererer 
 target_link_libraries(matrixapplication
         ${Boost_LIBRARIES} Imlib2
         $<$<PLATFORM_ID:Linux>:rt>
