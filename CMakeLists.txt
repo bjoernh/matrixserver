@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.07)
-project(matrixserver)
+project(matrixserver VERSION 0.3.0)
 
 
 set(CMAKE_CXX_STANDARD 14)
@@ -44,6 +44,17 @@ install(EXPORT matrixapplication-targets
         FILE matrixapplication-config.cmake
         DESTINATION lib/cmake/matrixapplication)
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/matrixapplication-config-version.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/matrixapplication-config-version.cmake"
+        DESTINATION lib/cmake/matrixapplication
+)
+
 install(PROGRAMS Update.sh DESTINATION sbin)
 
 set(CPACK_GENERATOR "DEB")
@@ -57,8 +68,8 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "libeigen3-dev,wiringpi,libboost-thread-dev,lib
 set(CPACK_PACKAGE_CONTACT "Adrian maintainer@squarewave.io")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local/")
 #set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/Debian/postinst")
-set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "2")
-set(CPACK_PACKAGE_VERSION_PATCH "2")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 include(CPack)
