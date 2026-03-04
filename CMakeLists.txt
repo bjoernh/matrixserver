@@ -30,17 +30,15 @@ add_subdirectory(common)
 add_subdirectory(renderer)
 add_subdirectory(server)
 add_subdirectory(application)
-if (BUILD_RASPBERRYPI)
-add_subdirectory(MainMenu)
-add_subdirectory(server_FPGA_RPISPI)
-endif()
-#add_subdirectory(server_testapp)
-#add_subdirectory(server_RGBMatrix)
-#add_subdirectory(server_FPGA)
+
 add_subdirectory(server_simulator)
-#add_subdirectory(tests)
 
-
+if (BUILD_RASPBERRYPI)
+    add_subdirectory(MainMenu)
+    add_subdirectory(server_FPGA_RPISPI)
+    add_subdirectory(server_FPGA)
+    add_subdirectory(server_RGBMatrix)
+endif()
 install(EXPORT matrixapplication-targets
         NAMESPACE matrixapplication::
         FILE matrixapplication-config.cmake

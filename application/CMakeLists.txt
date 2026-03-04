@@ -20,21 +20,22 @@ set(SOURCE_FILES
 
 if (BUILD_RASPBERRYPI)
 	set(SOURCE_FILES
+			${SOURCE_FILES}
         	Mpu6050.cpp
         	Mpu6050.h ADS1000.cpp ADS1000.h)
 endif ()
 
 
-add_library(matrixapplication SHARED ${SOURCE_FILES} MatrixApplication.cpp)
+add_library(matrixapplication STATIC ${SOURCE_FILES} MatrixApplication.cpp)
 
-target_link_libraries(matrixapplication common renderer 
-	$<$<PLATFORM_ID:Linux>:FPGARenderer>)
+target_link_libraries(matrixapplication common renderer)
+
 target_link_libraries(matrixapplication
         ${Boost_LIBRARIES} Imlib2
         $<$<PLATFORM_ID:Linux>:rt>
          )
 if (BUILD_RASPBERRYPI)
-	target_link_libraries(matrixapplication wiringPi)
+	target_link_libraries(matrixapplication wiringPi FPGARenderer)
 endif ()
 
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)

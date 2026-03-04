@@ -1,10 +1,8 @@
 project(server_FPGA_RPISPI)
 
-find_package(matrixapplication REQUIRED)
+add_executable(server_FPGA_RPISPI main.cpp)
+target_link_libraries(server_FPGA_RPISPI server FPGARenderer)
 
-add_executable(matrixserver main.cpp)
-target_link_libraries(matrixserver server matrixapplication::FPGARenderer)
+target_compile_definitions(server_FPGA_RPISPI PUBLIC BOOST_LOG_DYN_LINK)
 
-target_compile_definitions(matrixserver PUBLIC BOOST_LOG_DYN_LINK)
-
-install(TARGETS matrixserver DESTINATION bin)
+install(TARGETS server_FPGA_RPISPI DESTINATION bin)

@@ -5,8 +5,8 @@ cmake-build-release/*
 !cmake-build-release/.keep
 build/*
 
-#CMake
 
+#CMake
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
@@ -21,6 +21,7 @@ CTestTestfile.cmake
 .DS_Store
 
 # Building
+install/*
 reports/*
 output/*
 .idea/*
