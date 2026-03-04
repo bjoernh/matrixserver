@@ -24,6 +24,7 @@ App *Server::getAppByID(int searchID) {
 
 Server::Server(std::shared_ptr<IRenderer> setRenderer, matrixserver::ServerConfig &setServerConfig) :
         ioContext(),
+        ioWork(new boost::asio::io_service::work(ioContext)),
         serverConfig(setServerConfig),
         tcpServer(ioContext, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), std::stoi(setServerConfig.serverconnection().serverport()))),
 //        unixServer(ioContext, boost::asio::local::stream_protocol::endpoint("/tmp/matrixserver.sock")),
@@ -34,7 +35,13 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer, matrixserver::ServerConfi
     tcpServer.setAcceptCallback(std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
 //    unixServer.setAcceptCallback(std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
     ipcServer.setAcceptCallback(std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
-    ioThread = new boost::thread([this]() { this->ioContext.run(); });
+    ioThread = new boost::thread([this]() {
+        try {
+            this->ioContext.run();
+        } catch (const std::exception &e) {
+            BOOST_LOG_TRIVIAL(fatal) << "[Server] io_service exception: " << e.what();
+        }
+    });
     std::random_device rd;
     srand(rd());
 }

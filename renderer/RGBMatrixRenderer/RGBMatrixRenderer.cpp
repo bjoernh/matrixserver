@@ -42,7 +42,6 @@ void RGBMatrixRenderer::init(std::vector<std::shared_ptr<Screen>> initScreens) {
 
   rgbMatrix->set_luminance_correct(true);
   rgbFrameCanvas = rgbMatrix->CreateFrameCanvas();
-  rgbFrameCanvas = rgbMatrix->SwapOnVSync(rgbFrameCanvas);
 }
 
 void RGBMatrixRenderer::setScreenData(int screenId, Color *screenData) {

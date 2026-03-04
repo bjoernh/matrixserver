@@ -36,11 +36,12 @@ private:
     std::vector<App> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;
     boost::asio::io_service ioContext;
-    boost::thread *ioThread;
+    std::unique_ptr<boost::asio::io_service::work> ioWork;
+    matrixserver::ServerConfig & serverConfig;
     TcpServer tcpServer;
 //    UnixSocketServer unixServer;
     IpcServer ipcServer;
-    matrixserver::ServerConfig & serverConfig;
+    boost::thread *ioThread;
     std::vector<std::shared_ptr<UniversalConnection>> connections;
     JoystickManager joystickmngr;
 };
