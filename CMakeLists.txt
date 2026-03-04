@@ -36,7 +36,7 @@ add_subdirectory(server_simulator)
 if (BUILD_RASPBERRYPI)
     add_subdirectory(MainMenu)
     add_subdirectory(server_FPGA_RPISPI)
-    add_subdirectory(server_FPGA)
+    add_subdirectory(server_FPGA_FTDI)
     add_subdirectory(server_RGBMatrix)
 endif()
 install(EXPORT matrixapplication-targets

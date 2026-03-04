@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include <FPGARendererRPISPI.h>
+#include <FPGARendererFTDI.h>
 #include <Server.h>
 #include <TcpServer.h>
 
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     screens.push_back(screen);
   }
 
-  auto rendererFPGA = std::make_shared<FPGARendererRPISPI>(screens);
+  auto rendererFPGA = std::make_shared<FPGARendererFTDI>(screens);
   //    auto rendererSimulator = std::make_shared<SimulatorRenderer>(screens,
   //    "10.42.42.69");
 

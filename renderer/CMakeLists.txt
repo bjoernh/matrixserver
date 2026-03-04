@@ -10,9 +10,10 @@ target_link_libraries(renderer common)
 target_include_directories(renderer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 
 add_subdirectory(SimulatorRenderer)
-if(BUILD_RASPBERRYPI)
-	add_subdirectory(RGBMatrixRenderer)
-	add_subdirectory(FPGARenderer)
+if (BUILD_RASPBERRYPI)
+    add_subdirectory(FPGAFTDIRenderer)
+    add_subdirectory(FPGASPIRenderer)
+    add_subdirectory(RGBMatrixRenderer)
 endif()
 
 set_target_properties(common PROPERTIES PUBLIC_HEADER "IRenderer.h")

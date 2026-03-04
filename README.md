@@ -16,18 +16,24 @@ on raspbian and ubuntu:
 
 # Building
 
-make sure you have cloned with submodules `git clone --recursive`  
-tested on ubuntu, raspbian & macOS
+**make sure you have cloned with submodules** `git clone --recursive`  
+tested on Ubuntu, Raspbian & macOS.
 
-`cd build && cmake .. && make`
+By default, on macOS and standard Ubuntu setups, only the development targets (like `server_simulator`) are built to avoid missing hardware dependencies.
+
+To build the project for a standard development environment:
+`mkdir build && cd build && cmake .. && make`
+
+To build the project for Raspberry Pi (including hardware-specific variants like `server_FPGA_FTDI`, `server_RGBMatrix`, etc.):
+`mkdir build && cd build && cmake -DBUILD_RASPBERRYPI=ON .. && make`
 
 # Quickstart
 
 If you have an IceBreaker board with HUB75 PMOD:  
 * at first load the FPGA with the `rgb_panel` project example (https://github.com/squarewavedot/ice40-playground/tree/master/projects/rgb_panel)   
 * hook up the icebreaker to the Raspberry Pi via USB
-* compile and start the `Server_FPGA` target (in the `build` folder `make Server_FPGA`)
-* In another Terminal compile and start the `cubetestapp` or `PixelFlow` or any other target from the exampleApplications folder.
+* compile and start the `server_FPGA_FTDI` target (in the `build` folder `make server_FPGA_FTDI`)
+* In another Terminal compile and start the `cubetestapp` or `PixelFlow` or any other target from the exampleApplications repository.
 
 
 ## The Project is divided into multiple modules:
@@ -58,10 +64,10 @@ If you have an IceBreaker board with HUB75 PMOD:
 
 * server_* folders:
 	* these are main.cpp with setups for servers with the different renderers
-	    * server_FPGA
+	    * server_FPGA_FTDI
 	        * the Icebreaker USB FTDI Renderer
 	    * server_FPGA_RPISPI
-	        * the Icebreaker native Raspberry Pi SPI renderer (more infos soon)
+	        * the Icebreaker Raspberry Pi SPI Renderer
 		* server_testapp
 			* if you have installed OpenCV this target will be available. It shows the Screens as simple OpenCV windows (useful for debugging)
 		* server_simulator

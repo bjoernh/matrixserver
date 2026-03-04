@@ -35,7 +35,7 @@ target_link_libraries(matrixapplication
         $<$<PLATFORM_ID:Linux>:rt>
          )
 if (BUILD_RASPBERRYPI)
-	target_link_libraries(matrixapplication wiringPi FPGARenderer)
+	target_link_libraries(matrixapplication wiringPi FPGASPIRenderer)
 endif ()
 
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
