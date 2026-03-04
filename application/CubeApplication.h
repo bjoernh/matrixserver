@@ -65,8 +65,7 @@ class CubeApplication : public MatrixApplication{
 public:
     CubeApplication(
             int fps = DEFAULTFPS,
-            std::string setServerAddress = DEFAULTSERVERADRESS,
-            std::string setServerPort = DEFAULTSERVERPORT);
+            std::string serverUri = DEFAULTSERVERURI);
     void setPixel3D(Vector3i pos, Color col, float intensity = 1.0f, bool add = false);
     void setPixel3D(int x, int y, int z, Color col, float intensity = 1.0f, bool add = false);
     void setPixelSmooth3D(Vector3f pos, Color color);

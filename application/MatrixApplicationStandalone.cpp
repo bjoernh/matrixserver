@@ -28,7 +28,7 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
 }
 
 
-MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string setServerAddress, std::string setServerPort) :
+MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string serverUri) :
         mainThread(), renderThread() {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     newFrame = false;

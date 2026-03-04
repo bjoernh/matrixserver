@@ -13,6 +13,9 @@
 #define MAXFPS 200
 #define MINFPS 1
 
+#define DEFAULTSERVERURI "tcp://127.0.0.1:2017"
+
+// Legacy defines kept for backward compatibility
 #define DEFAULTSERVERADRESS "127.0.0.1"
 #define DEFAULTSERVERPORT "2017"
 
@@ -24,8 +27,7 @@ class MatrixApplication {
 public:
     MatrixApplication(
             int fps = DEFAULTFPS,
-            std::string setServerAddress = DEFAULTSERVERADRESS,
-            std::string setServerPort = DEFAULTSERVERPORT);
+            std::string serverUri = DEFAULTSERVERURI);
 
     ~MatrixApplication() = default;
 
@@ -61,7 +63,7 @@ protected:
 private:
     void internalLoop();
 
-    bool connect(const std::string &serverAddress, const std::string &serverPort);
+    bool connect(const std::string &server_uri);
 
     void checkConnection();
 
@@ -74,8 +76,7 @@ private:
     float load;
 
     int brightness;
-    std::string serverAddress;
-    std::string serverPort;
+    std::string serverUri;
     std::shared_ptr<UniversalConnection> connection;
     boost::thread *mainThread;
     boost::thread *ioThread;

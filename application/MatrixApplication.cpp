@@ -7,11 +7,10 @@
 
 bool updateBrightness = false;
 
-MatrixApplication::MatrixApplication(int fps, std::string setServerAddress, std::string setServerPort) :
+MatrixApplication::MatrixApplication(int fps, std::string serverUri) :
         mainThread(),
         io_context(),
-        serverAddress(setServerAddress),
-        serverPort(setServerPort) {
+        serverUri(serverUri) {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     std::random_device rd;
     srand(rd());
@@ -19,20 +18,48 @@ MatrixApplication::MatrixApplication(int fps, std::string setServerAddress, std:
     appId = 0;
     appState = AppState::starting;
 //    ioThread = new boost::thread([this]() { io_context.run(); });
-    while (!connect(serverAddress, serverPort)) {
+    while (!connect(serverUri)) {
         sleep(1);
     }
     registerAtServer();
 }
 
-bool MatrixApplication::connect(const std::string &serverAddress, const std::string &serverPort) {
-    BOOST_LOG_TRIVIAL(debug) << "[Application] Trying to connect to Server";
+bool MatrixApplication::connect(const std::string &server_uri) {
+    BOOST_LOG_TRIVIAL(debug) << "[Application] Trying to connect to Server: " << server_uri;
 
-    auto ipcCon = std::make_shared<IpcConnection>();
-    ipcCon->connectToServer("matrixserver");
-    connection = ipcCon;
-    connection = TcpClient::connect(io_context, serverAddress, serverPort);
-//    connection = UnixSocketClient::connect(io_context, "/tmp/matrixserver.sock");
+    // Parse URI scheme
+    auto schemeEnd = server_uri.find("://");
+    if (schemeEnd == std::string::npos) {
+        BOOST_LOG_TRIVIAL(error) << "[Application] Invalid URI format: " << server_uri;
+        return false;
+    }
+
+    std::string scheme = server_uri.substr(0, schemeEnd);
+    std::string rest = server_uri.substr(schemeEnd + 3);
+
+    if (scheme == "ipc") {
+        // ipc://<path>
+        auto ipcCon = std::make_shared<IpcConnection>();
+        ipcCon->connectToServer(rest);
+        connection = ipcCon;
+    } else if (scheme == "tcp") {
+        // tcp://<host>:<port>
+        auto colonPos = rest.rfind(':');
+        if (colonPos == std::string::npos) {
+            BOOST_LOG_TRIVIAL(error) << "[Application] Invalid TCP URI, expected tcp://<host>:<port>: " << server_uri;
+            return false;
+        }
+        std::string host = rest.substr(0, colonPos);
+        std::string port = rest.substr(colonPos + 1);
+        connection = TcpClient::connect(io_context, host, port);
+    } else if (scheme == "unix") {
+        // unix:///tmp/<path>.socket
+        // After "unix://", rest includes the full path (e.g. "/tmp/matrixserver.sock")
+        connection = UnixSocketClient::connect(io_context, rest);
+    } else {
+        BOOST_LOG_TRIVIAL(error) << "[Application] Unknown URI scheme: " << scheme;
+        return false;
+    }
 
     if (!connection->isDead()) {
         BOOST_LOG_TRIVIAL(debug) << "[Application] Connection successfull";
@@ -104,7 +131,7 @@ void MatrixApplication::internalLoop() {
 void MatrixApplication::checkConnection() {
     if (connection->isDead()) {
         appState = AppState::failure;
-        if (connect(serverAddress, serverPort))
+        if (connect(serverUri))
             registerAtServer();
     }
 }
