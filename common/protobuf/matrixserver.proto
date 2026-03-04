@@ -89,6 +89,8 @@ message ServerConfig {
     int32 globalScreenBrightness = 3;
     Connection serverConnection = 4;
     string serverName = 5;
+    string simulatorAddress = 6;
+    string simulatorPort = 7;
 }
 
 message Connection {
