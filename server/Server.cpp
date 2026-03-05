@@ -1,6 +1,7 @@
 #include <vector>
 #include <iostream>
 #include <future>
+#include <cstdlib>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
@@ -10,7 +11,10 @@
 
 #include "Server.h"
 
-std::string defaultApp("/usr/local/bin/MainMenu 1>/dev/null 2>/dev/null &");
+std::string defaultApp([]() -> std::string {
+    const char *envVal = std::getenv("MATRIXSERVER_DEFAULT_APP");
+    return envVal ? std::string(envVal) : std::string("/usr/local/bin/MainMenu 1>/dev/null 2>/dev/null &");
+}());
 bool defaultAppStarted = false;
 
 App *Server::getAppByID(int searchID) {

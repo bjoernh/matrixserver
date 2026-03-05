@@ -7,6 +7,8 @@
 #include <iostream>
 #include <unistd.h>
 #include <byteswap.h>
+#include <sys/stat.h>
+#include <boost/log/trivial.hpp>
 
 // values
 // 944 = 10.05V
@@ -33,6 +35,13 @@ ADS1000::ADS1000(){
 
 void ADS1000::init()
 {
+    struct stat buffer;
+    if (stat("/dev/i2c-1", &buffer) != 0) {
+        BOOST_LOG_TRIVIAL(warning) << "[ADS1000] I2C device /dev/i2c-1 not found, battery monitoring disabled";
+        fd = -1;
+        return;
+    }
+
     fd = wiringPiI2CSetup(ADS1000_I2C_ADDRESS);
     if (fd == -1)
         return;

@@ -5,12 +5,14 @@
 #include <iterator>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <array>
 #include <unistd.h>
+#include <boost/log/trivial.hpp>
 
 size_t hostnameLen = 20;
 char hostname[20];
@@ -22,11 +24,16 @@ enum MenuState {
 MenuState menuState = applist;
 
 MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
-    searchDirectory = "/home/pi/APPS";
-    for (const auto &p : std::experimental::filesystem::directory_iterator(searchDirectory)) {
-        //if(p.path().extension() == "cube"){
-        appList.push_back(AppListItem(std::string(p.path().filename()), std::string(p.path())));
-        //}
+    const char *homeDir = std::getenv("HOME");
+    searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
+    if (std::experimental::filesystem::is_directory(searchDirectory)) {
+        for (const auto &p : std::experimental::filesystem::directory_iterator(searchDirectory)) {
+            //if(p.path().extension() == "cube"){
+            appList.push_back(AppListItem(std::string(p.path().filename()), std::string(p.path())));
+            //}
+        }
+    } else {
+        BOOST_LOG_TRIVIAL(warning) << "[MainMenu] Apps directory not found: " << searchDirectory;
     }
 
     appList.push_back(AppListItem("settings", "settings", true, Color::blue()));
