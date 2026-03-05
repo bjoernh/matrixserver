@@ -1,0 +1,29 @@
+# Runtime Stage for Pre-compiled artifacts
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libboost-thread1.83.0 \
+    libboost-log1.83.0 \
+    libboost-system1.83.0 \
+    libboost-regex1.83.0 \
+    libboost-chrono1.83.0 \
+    libboost-date-time1.83.0 \
+    libboost-filesystem1.83.0 \
+    libboost-atomic1.83.0 \
+    libboost-program-options1.83.0 \
+    libasound2t64 \
+    libprotobuf32t64 \
+    libimlib2t64 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the pre-built server executable from the deb-workspace created by GitHub Actions
+COPY deb-workspace/usr/local/bin/server_simulator /usr/local/bin/server_simulator
+
+# Default entrypoint (can be overridden when running the container)
+CMD ["server_simulator"]

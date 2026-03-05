@@ -1,0 +1,45 @@
+# Runtime Stage for Pre-compiled artifacts
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libboost-thread1.83.0 \
+    libboost-log1.83.0 \
+    libboost-system1.83.0 \
+    libboost-regex1.83.0 \
+    libboost-chrono1.83.0 \
+    libboost-date-time1.83.0 \
+    libboost-filesystem1.83.0 \
+    libboost-atomic1.83.0 \
+    libboost-program-options1.83.0 \
+    libasound2t64 \
+    libprotobuf32t64 \
+    libimlib2t64 \
+    libftdi1-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the pre-built server executables from the deb-workspace created by GitHub Actions
+COPY deb-workspace/usr/local/bin/MainMenu /usr/local/bin/MainMenu
+COPY deb-workspace/usr/local/bin/server_FPGA_RPISPI /usr/local/bin/server_FPGA_RPISPI
+COPY deb-workspace/usr/local/bin/server_FPGA_FTDI /usr/local/bin/server_FPGA_FTDI
+COPY deb-workspace/usr/local/bin/server_RGBMatrix /usr/local/bin/server_RGBMatrix
+
+# Copy project shared libraries
+COPY deb-workspace/usr/local/lib/libFPGASPIRenderer.so /usr/local/lib/
+COPY deb-workspace/usr/local/lib/libFPGAFTDIRenderer.so /usr/local/lib/
+COPY deb-workspace/usr/local/lib/libRGBMatrixRenderer.so /usr/local/lib/
+COPY deb-workspace/usr/local/lib/libImu.so /usr/local/lib/
+
+# Copy wiringPi dynamic libraries
+COPY deb-workspace/usr/local/lib/libwiringPi.so* /usr/local/lib/
+COPY deb-workspace/usr/local/lib/libwiringPiDev.so* /usr/local/lib/
+
+RUN ldconfig
+
+# Default entrypoint
+CMD ["server_FPGA_RPISPI"]

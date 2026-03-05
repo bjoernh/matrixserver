@@ -1,0 +1,97 @@
+# Build Stage (Native ARM64 builder)
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    sudo \
+    pkg-config \
+    libeigen3-dev \
+    libboost-thread-dev \
+    libboost-log-dev \
+    libboost-system-dev \
+    libboost-regex-dev \
+    libboost-chrono-dev \
+    libboost-date-time-dev \
+    libboost-filesystem-dev \
+    libboost-atomic-dev \
+    libboost-program-options-dev \
+    libasound2-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libimlib2-dev \
+    libftdi1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build and install wiringPi natively
+RUN git clone https://github.com/WiringPi/WiringPi.git \
+    && cd WiringPi \
+    && ./build \
+    && cd .. && rm -rf WiringPi
+
+# A small hack to trick CMake into believing we are on a Raspberry Pi
+RUN mkdir -p /boot && touch /boot/LICENCE.broadcom
+
+# Copy source code
+WORKDIR /app
+COPY . .
+
+# Clean pre-compiled submodules that might have been copied from x86_64 host
+RUN make -C renderer/RGBMatrixRenderer/rpi-rgb-led-matrix/lib clean || true
+
+# Build the project
+RUN mkdir -p build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_RASPBERRYPI=ON \
+    .. && \
+    make -j$(nproc)
+
+# Runtime Stage
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libboost-thread1.83.0 \
+    libboost-log1.83.0 \
+    libboost-system1.83.0 \
+    libboost-regex1.83.0 \
+    libboost-chrono1.83.0 \
+    libboost-date-time1.83.0 \
+    libboost-filesystem1.83.0 \
+    libboost-atomic1.83.0 \
+    libboost-program-options1.83.0 \
+    libasound2t64 \
+    libprotobuf32t64 \
+    libimlib2t64 \
+    libftdi1-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the built server executables from the builder stage
+COPY --from=builder /app/build/MainMenu/MainMenu /usr/local/bin/MainMenu
+COPY --from=builder /app/build/server_FPGA_RPISPI/server_FPGA_RPISPI /usr/local/bin/server_FPGA_RPISPI
+COPY --from=builder /app/build/server_FPGA_FTDI/server_FPGA_FTDI /usr/local/bin/server_FPGA_FTDI
+COPY --from=builder /app/build/server_RGBMatrix/server_RGBMatrix /usr/local/bin/server_RGBMatrix
+
+# Copy project shared libraries
+COPY --from=builder /app/build/renderer/FPGASPIRenderer/libFPGASPIRenderer.so /usr/local/lib/
+COPY --from=builder /app/build/renderer/FPGAFTDIRenderer/libFPGAFTDIRenderer.so /usr/local/lib/
+COPY --from=builder /app/build/renderer/RGBMatrixRenderer/libRGBMatrixRenderer.so /usr/local/lib/
+COPY --from=builder /app/build/renderer/RGBMatrixRenderer/imu/libImu.so /usr/local/lib/
+
+# Copy wiringPi dynamic libraries (usually installed to /usr/local/lib)
+COPY --from=builder /usr/local/lib/libwiringPi.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libwiringPiDev.so* /usr/local/lib/
+RUN ldconfig
+
+# Default entrypoint
+CMD ["server_FPGA_RPISPI"]
