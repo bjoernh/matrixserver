@@ -13,7 +13,7 @@ env:
 jobs:
   build-and-push-rpi:
     name: Build DEB and Push to GHCR (ARM64)
-    runs-on: ubuntu-24.04-arm64
+    runs-on: [self-hosted, linux, ARM64]
     permissions:
       contents: read
       packages: write
