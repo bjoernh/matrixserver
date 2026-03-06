@@ -7,6 +7,7 @@
 #include <Server.h>
 #include <SimulatorRenderer.h>
 #include <TcpServer.h>
+#include <WebSocketSimulatorRenderer.h>
 
 #include <google/protobuf/util/json_util.h>
 #include <matrixserver.pb.h>
@@ -105,8 +106,26 @@ int main(int argc, char **argv) {
     screens.push_back(std::make_shared<Screen>(
         screenInfo.width(), screenInfo.height(), screenInfo.screenid()));
 
-  auto renderer = std::make_shared<SimulatorRenderer>(
-      screens, serverConfig.simulatoraddress(), serverConfig.simulatorport());
+  bool useDeprecatedTcp = false;
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--use-deprecated-tcp-connection") {
+      useDeprecatedTcp = true;
+      break;
+    }
+  }
+
+  std::shared_ptr<IRenderer> renderer;
+  if (useDeprecatedTcp) {
+    BOOST_LOG_TRIVIAL(info)
+        << "[Server] Initialising legacy TCP SimulatorRenderer";
+    renderer = std::make_shared<SimulatorRenderer>(
+        screens, serverConfig.simulatoraddress(), serverConfig.simulatorport());
+  } else {
+    BOOST_LOG_TRIVIAL(info)
+        << "[Server] Initialising WebSocketSimulatorRenderer";
+    renderer = std::make_shared<WebSocketSimulatorRenderer>(
+        screens, serverConfig.simulatorport());
+  }
 
   Server server(renderer, serverConfig);
 

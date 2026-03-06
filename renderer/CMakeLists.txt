@@ -10,6 +10,7 @@ target_link_libraries(renderer common)
 target_include_directories(renderer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 
 add_subdirectory(SimulatorRenderer)
+add_subdirectory(WebSocketSimulatorRenderer)
 if (BUILD_RASPBERRYPI)
     add_subdirectory(FPGAFTDIRenderer)
     add_subdirectory(FPGASPIRenderer)

@@ -1,0 +1,56 @@
+{
+  "screenInfo": [
+    {
+      "screenID": 0,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "front"
+    },
+    {
+      "screenID": 1,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "right"
+    },
+    {
+      "screenID": 2,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "back"
+    },
+    {
+      "screenID": 3,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "left"
+    },
+    {
+      "screenID": 4,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "top"
+    },
+    {
+      "screenID": 5,
+      "width": 64,
+      "height": 64,
+      "available": true,
+      "screenOrientation": "bottom"
+    }
+  ],
+  "assemblyType": "cube",
+  "globalScreenBrightness": 100,
+  "serverConnection": {
+    "serverAddress": "127.0.0.1",
+    "serverPort": "2017",
+    "connectionType": "tcp"
+  },
+  "serverName": "matrixserver",
+  "simulatorAddress": "172.17.0.1",
+  "simulatorPort": "1337"
+}

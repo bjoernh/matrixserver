@@ -1,0 +1,66 @@
+#ifndef MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
+#define MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
+
+#include <IRenderer.h>
+#include <Screen.h>
+#include <boost/asio.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/thread/thread.hpp>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace beast     = boost::beast;
+namespace websocket = beast::websocket;
+namespace net       = boost::asio;
+using tcp           = net::ip::tcp;
+
+#define WS_SIMULATOR_DEFAULT_PORT "1337"
+
+/**
+ * WebSocketSimulatorRenderer
+ *
+ * Implements IRenderer by opening a Boost.Beast WebSocket server on the
+ * configured port. The browser-based CubeSimulator connects to this server.
+ *
+ * Protocol:
+ *   - Accepts one connection at a time.
+ *   - On render(), serialises the MatrixServerMessage to raw protobuf binary
+ *     and sends it as a WebSocket binary message (no COBS framing needed).
+ *   - Reconnects automatically if the browser disconnects.
+ */
+class WebSocketSimulatorRenderer : public IRenderer {
+public:
+    explicit WebSocketSimulatorRenderer(
+        std::vector<std::shared_ptr<Screen>> screens,
+        std::string port = WS_SIMULATOR_DEFAULT_PORT);
+
+    ~WebSocketSimulatorRenderer();
+
+    void setScreenData(int screenId, Color* data) override;
+
+    void render() override;
+
+    void setGlobalBrightness(int brightness) override;
+
+    int getGlobalBrightness() override;
+
+private:
+    void acceptLoop();
+    void runSession(tcp::socket socket);
+
+    std::string port;
+    net::io_context ioContext;
+    std::unique_ptr<tcp::acceptor> acceptor;
+
+    // Active WebSocket session (nullable — no client connected yet)
+    using WsStream = websocket::stream<beast::tcp_stream>;
+    std::shared_ptr<WsStream> activeSession;
+    std::mutex sessionMutex;
+
+    boost::thread ioThread;
+    bool running = true;
+};
+
+#endif // MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
