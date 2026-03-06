@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/bjoernh/matrixserver.svg?branch=master)](https://travis-ci.org/bjoernh/matrixserver)
+[![Build Matrixserver Simulator (AMD64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml)
+[![Build Matrixserver RPi (ARM64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml)
 
 # LEDCube matrixserver
 
@@ -26,6 +27,17 @@ To build the project for a standard development environment:
 
 To build the project for Raspberry Pi (including hardware-specific variants like `server_FPGA_FTDI`, `server_RGBMatrix`, etc.):
 `mkdir build && cd build && cmake -DBUILD_RASPBERRYPI=ON .. && make`
+
+# Server Configuration
+
+All `server_*` targets share a unified command-line interface for configuration and startup:
+
+*   **`-h, --help`**: Display available command-line options.
+*   **`--config <path>`**: Path to the `matrixServerConfig.json` configuration file. If not provided, the server checks the current directory or prompts you to generate a default one.
+*   **`--address <ip>`**: Override the server address specified in the configuration file.
+*   **`--use-deprecated-tcp-connection`**: (Simulator only) Use the legacy TCP connection for the simulator renderer.
+
+When starting a server without an existing configuration file, it will explicitly prompt you `[y/N]` before creating a default `matrixServerConfig.json` in the current directory. If you decline, it runs with a default in-memory configuration.
 
 # Quickstart
 

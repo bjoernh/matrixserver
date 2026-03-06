@@ -108,37 +108,70 @@ void handleServerConfig(int argc, char **argv,
         << "[ServerSetup] Error parsing command line arguments: " << e.what();
   }
 
+  if (configPath.empty()) {
+    std::ifstream defaultFile("matrixServerConfig.json");
+    if (defaultFile.good()) {
+      configPath = "matrixServerConfig.json";
+    }
+  }
+
   if (!configPath.empty()) {
-    BOOST_LOG_TRIVIAL(debug)
-        << "[ServerSetup] Trying to read config from: " << configPath;
+    std::string fullPath = configPath;
+    char resolved_path[PATH_MAX];
+    if (realpath(configPath.c_str(), resolved_path) != NULL) {
+      fullPath = std::string(resolved_path);
+    }
+
+    BOOST_LOG_TRIVIAL(info)
+        << "[ServerSetup] Trying to read config from: " << fullPath;
     std::ifstream configFileReadStream(configPath);
     std::stringstream buffer;
     buffer << configFileReadStream.rdbuf();
     if (google::protobuf::util::JsonStringToMessage(buffer.str(), &serverConfig)
             .ok()) {
-      BOOST_LOG_TRIVIAL(debug)
-          << "[ServerSetup] ServerConfig successfully read from: "
-          << configPath;
+      BOOST_LOG_TRIVIAL(info)
+          << "[ServerSetup] ServerConfig successfully loaded from: "
+          << fullPath;
     } else {
       BOOST_LOG_TRIVIAL(warning)
-          << "[ServerSetup] ServerConfig read failed from: " << configPath;
+          << "[ServerSetup] ServerConfig read failed from: " << fullPath;
     }
   } else {
-    BOOST_LOG_TRIVIAL(debug) << "[ServerSetup] creating default config";
-    createDefaultCubeConfig(serverConfig);
-    std::string configString;
-    google::protobuf::util::JsonOptions jsonOptions;
-    jsonOptions.add_whitespace = true;
-    jsonOptions.always_print_primitive_fields = true;
-    if (google::protobuf::util::MessageToJsonString(serverConfig, &configString,
-                                                    jsonOptions)
-            .ok()) {
-      std::string configFileName = "matrixServerConfig.json";
-      std::ofstream configFileWriteStream(configFileName, std::ios_base::trunc);
-      configFileWriteStream << configString;
-      configFileWriteStream.close();
-      BOOST_LOG_TRIVIAL(debug)
-          << "[ServerSetup] written default config to " << configFileName;
+    std::string configFileName = "matrixServerConfig.json";
+    std::string fullPath = configFileName;
+    char resolved_path[PATH_MAX];
+    if (realpath(".", resolved_path) != NULL) {
+      fullPath = std::string(resolved_path) + "/" + configFileName;
+    }
+
+    std::cout << "\nNo configuration file specified or found.\n"
+              << "Would you like to create a default configuration file at "
+              << fullPath << "? [y/N]: ";
+    std::string response;
+    std::getline(std::cin, response);
+
+    if (response == "y" || response == "Y") {
+      BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Creating default config...";
+      createDefaultCubeConfig(serverConfig);
+      std::string configString;
+      google::protobuf::util::JsonOptions jsonOptions;
+      jsonOptions.add_whitespace = true;
+      jsonOptions.always_print_primitive_fields = true;
+      if (google::protobuf::util::MessageToJsonString(
+              serverConfig, &configString, jsonOptions)
+              .ok()) {
+        std::ofstream configFileWriteStream(configFileName,
+                                            std::ios_base::trunc);
+        configFileWriteStream << configString;
+        configFileWriteStream.close();
+        BOOST_LOG_TRIVIAL(info)
+            << "[ServerSetup] Successfully wrote default config to "
+            << fullPath;
+      }
+    } else {
+      BOOST_LOG_TRIVIAL(info)
+          << "[ServerSetup] Starting with default in-memory config.";
+      createDefaultCubeConfig(serverConfig);
     }
   }
 
