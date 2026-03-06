@@ -42,6 +42,11 @@ docker pull ghcr.io/bjoernh/matrixserver-simulator:latest
 # Expose the Matrix Server port (2017) and Simulator WebSocket port (1337)
 docker run -it --rm -p 2017:2017 -p 1337:1337 ghcr.io/bjoernh/matrixserver-simulator:latest server_simulator
 ```
+To test the matrix server without a physical cube, you can use the CUBE Simulator:
+Open the CUBE Simulator in your browser:
+**https://bjoernh.github.io/CubeSimulator/**
+
+Use the default address `ws://localhost:1337` to connect the CUBE Simulator to the matrix server.
 
 **Raspberry Pi (ARM64)**
 ```bash
@@ -62,7 +67,15 @@ All `server_*` targets share a unified command-line interface for configuration 
 
 When starting a server without an existing configuration file, it will explicitly prompt you `[y/N]` before creating a default `matrixServerConfig.json` in the current directory. If you decline, it runs with a default in-memory configuration.
 
-# Quickstart
+# Important: Running an Application
+
+The matrix server only acts as a display driver. By itself, it will only maintain the connection and show a blank screen or default background. 
+
+To actually see something rendered on your led matrix or the simulator, **you must start a client application** after the server is running. The client application connects to the matrix server and sends the actual pixel data to be displayed. 
+
+You can find example applications to run in the `exampleApplications` repository (e.g., `cubetestapp` or `PixelFlow3`).
+
+# Example: Running the server on a Raspberry Pi with an IceBreaker board
 
 If you have an IceBreaker board with HUB75 PMOD:  
 * at first load the FPGA with the `rgb_panel` project example (https://github.com/squarewavedot/ice40-playground/tree/master/projects/rgb_panel)   
@@ -71,40 +84,37 @@ If you have an IceBreaker board with HUB75 PMOD:
 * In another Terminal compile and start the `cubetestapp` or `PixelFlow` or any other target from the exampleApplications repository.
 
 
-## The Project is divided into multiple modules:
+## Repository Structure & Modules
 
-* common
+The project is thoughtfully divided into logical directories that separate the server daemon, the display rendering technologies, the shared communication protocols, and client application libraries:
 
-	* protobuf message definition for communication
-        * multiple communication classes
-	
-                * IPC (boost message queue, currently the most efficient local communication)
-                * UnixSocket
-                * TCPSocket (remote communication possible)
-        * Screen & Color classes
+*   **`common`**
+    *   Defines the core `matrixserver` Protobuf messages used for exchanging pixel data and configurations between clients and the server.
+    *   Contains the underlying connection implementations (IPC using Boost Message Queues for local performance, Unix Sockets, TCP Sockets for network streams).
+    *   Provides foundational classes like `Screen`, `Color`, and `Cobs` encoding.
 
-* renderer
-	* different renderers for interface with physical or virtual displays
-	* multiple renderers can be used at the same time. i.e. SimulatorRenderer(remote over network) && HardwareRenderer
-	* currently implemented:
-		* RGBMatrixRenderer: hardwareinterface via hzeller rpi-rgb-matrix library
-		* SimulatorRenderer: softwareinterface for the CubeSimulator project (see [https://github.com/squarewavedot/CubeSimulator])
-		* FPGARendererFTDI: FTDI protocol implementation of FPGA rendering. Meant to be used together with [https://github.com/squarewavedot/ice40-playground.git]
-* server & application
-	* server logic
-	* application interface library (applications link against this)
-	* cubeapplication interface with convenient setPixel3D etc. methods
+*   **`renderer`**
+    *   Contains interchangeable rendering backends that the server uses to output the final pixel buffers to physical or virtual displays.
+    *   *Supported Renderers include:*
+        *   **`RGBMatrixRenderer`**: Hardware interface driving HUB75 panels directly from Raspberry Pi GPIOs (via `rpi-rgb-led-matrix`).
+        *   **`WebSocketSimulatorRenderer`**: Network interface streaming pixels to the web-based `CubeSimulator` project.
+        *   **`FPGAFTDIRenderer` & `FPGASPIRenderer`**: Protocol implementations for sending pixel data to an IceBreaker FPGA board acting as the HUB75 driver, via USB FTDI or RPi SPI.
+        *   **`TestRenderer`**: A simple 2D previewer that uses OpenCV windows, entirely software-based.
 
-* exampleApplications
+*   **`server`**
+    *   The core daemon logic containing the `Server` class that accepts connections, validates configuration parameters, and routes incoming application frames to the active renderers.
+    *   Includes a unified `ServerSetup` utility to handle configuration parsing consistently.
 
-* server_* folders:
-	* these are main.cpp with setups for servers with the different renderers
-	    * server_FPGA_FTDI
-	        * the Icebreaker USB FTDI Renderer
-	    * server_FPGA_RPISPI
-	        * the Icebreaker Raspberry Pi SPI Renderer
-		* server_testapp
-			* if you have installed OpenCV this target will be available. It shows the Screens as simple OpenCV windows (useful for debugging)
-		* server_simulator
-			* meant to be used with locally installed simulator (start simulator first)  [https://github.com/squarewavedot/CubeSimulator]
+*   **`application`**
+    *   A client-side C++ library containing base classes like `MatrixApplication` and `CubeApplication`. 
+    *   These provide a high-level API with convenient drawing methods (e.g., `setPixel3D`, coordinate mapping) for writing custom programs that connect to the screen server.
 
+*   **`server_*` directories (The Executables)**
+    *   These directories contain the `main.cpp` programs that instantiate the server with a specific set of active renderers targeted for a given platform:
+        *   **`server_simulator`**: The default build target. Combines the server with the `WebSocketSimulatorRenderer` to interact with the web simulator.
+        *   **`server_RGBMatrix`**: The production target for Raspberry Pi direct GPIO matrix driving.
+        *   **`server_FPGA_FTDI` / `server_FPGA_RPISPI`**: Targets for offloading the Hub75 driving to an external IceBreaker FPGA.
+        *   **`server_testapp`**: Builds if OpenCV is installed. Opens simple 2D windows on the host machine representing each matrix plane, useful for debugging visual logic without the 3D emulator overhead.
+
+*   **`MainMenu`**
+    *   A built-in example client application that provides a launch interface for the cube.
