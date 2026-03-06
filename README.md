@@ -5,10 +5,7 @@
 
 This is a screenserver for the purpose of being used with differently orientated LED Matrix panels. 
 It currently has been implemented for the LEDCube project, but it can also be used in simple, 
-planar screen orientations, as well as other complex screen orientations.  
-
-# Install and Update quickfix
-should work: `wget -O - https://raw.githubusercontent.com/squarewavedot/matrixserver/master/Update.sh | bash`
+planar screen orientations, as well as other complex screen orientations.
 
 # Dependencies
 
@@ -27,6 +24,32 @@ To build the project for a standard development environment:
 
 To build the project for Raspberry Pi (including hardware-specific variants like `server_FPGA_FTDI`, `server_RGBMatrix`, etc.):
 `mkdir build && cd build && cmake -DBUILD_RASPBERRYPI=ON .. && make`
+
+# Releases and Docker
+
+Pre-built binaries and Docker images are automatically generated for every repository tag.
+
+## Debian Packages
+Pre-compiled `.deb` packages for both `amd64` (Simulator targets) and `arm64` (Raspberry Pi hardware targets) are available on the [GitHub Releases](https://github.com/bjoernh/matrixserver/releases) page. You can easily install them on compatible systems using:
+`sudo dpkg -i matrixserver-*.deb`
+
+## Docker Images
+To run the server without compiling or installing dependencies, you can use the pre-built Docker images hosted on the GitHub Container Registry (GHCR). 
+
+**Simulator (AMD64)**
+```bash
+docker pull ghcr.io/bjoernh/matrixserver-simulator:latest
+# Expose the Matrix Server port (2017) and Simulator WebSocket port (1337)
+docker run -it --rm -p 2017:2017 -p 1337:1337 ghcr.io/bjoernh/matrixserver-simulator:latest server_simulator
+```
+
+**Raspberry Pi (ARM64)**
+```bash
+docker pull ghcr.io/bjoernh/matrixserver-rpi:latest
+# Hardware access usually requires privileges or mapping specific /dev devices
+docker run -it --rm --privileged -v /dev:/dev ghcr.io/bjoernh/matrixserver-rpi:latest server_RGBMatrix
+```
+*(Note: You can pass any of the standard server parameters, such as `--config`, at the end of the `docker run` command).*
 
 # Server Configuration
 
