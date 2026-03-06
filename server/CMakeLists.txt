@@ -1,10 +1,11 @@
 project(server)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log system)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log system program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(SOURCE_FILES
         Server.cpp
+        ServerSetup.cpp
         App.cpp)
 
 add_library(server STATIC ${SOURCE_FILES})
