@@ -1,0 +1,72 @@
+{
+ "screenInfo": [
+  {
+   "screenID": 0,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "front",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  },
+  {
+   "screenID": 1,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "right",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  },
+  {
+   "screenID": 2,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "back",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  },
+  {
+   "screenID": 3,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "left",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  },
+  {
+   "screenID": 4,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "top",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  },
+  {
+   "screenID": 5,
+   "width": 64,
+   "height": 64,
+   "available": true,
+   "screenOrientation": "bottom",
+   "screenRotation": "rot0",
+   "offsetX": 0,
+   "offsetY": 0
+  }
+ ],
+ "assemblyType": "cube",
+ "globalScreenBrightness": 100,
+ "serverConnection": {
+  "serverAddress": "127.0.0.1",
+  "serverPort": "2017",
+  "connectionType": "tcp"
+ },
+ "serverName": "matrixserver"
+}
