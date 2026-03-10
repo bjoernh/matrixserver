@@ -55,6 +55,6 @@ install(FILES
         DESTINATION lib/cmake/matrixapplication
 )
 
-install(PROGRAMS Update.sh DESTINATION sbin)
+
 
 

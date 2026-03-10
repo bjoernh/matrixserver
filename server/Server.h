@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <boost/thread/thread.hpp>
 
 #include <Screen.h>
@@ -33,6 +34,7 @@ public:
     App * getAppByID(int searchID);
 
 private:
+    std::mutex appsMutex;
     std::vector<App> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;
     boost::asio::io_service ioContext;

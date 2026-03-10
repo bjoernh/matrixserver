@@ -16,13 +16,13 @@ ENDIF()
 
 set(SOURCE_FILES
         CubeApplication.cpp
+        Mpu6050.cpp
         Image.cpp)
 
 if (BUILD_RASPBERRYPI)
 	set(SOURCE_FILES
 			${SOURCE_FILES}
-        	Mpu6050.cpp
-        	Mpu6050.h ADS1000.cpp ADS1000.h)
+        	ADS1000.cpp ADS1000.h)
 endif ()
 
 

@@ -11,10 +11,10 @@
 #include <string>
 #include <vector>
 
-namespace beast     = boost::beast;
+namespace beast = boost::beast;
 namespace websocket = beast::websocket;
-namespace net       = boost::asio;
-using tcp           = net::ip::tcp;
+namespace net = boost::asio;
+using tcp = net::ip::tcp;
 
 #define WS_SIMULATOR_DEFAULT_PORT "1337"
 
@@ -32,35 +32,40 @@ using tcp           = net::ip::tcp;
  */
 class WebSocketSimulatorRenderer : public IRenderer {
 public:
-    explicit WebSocketSimulatorRenderer(
-        std::vector<std::shared_ptr<Screen>> screens,
-        std::string port = WS_SIMULATOR_DEFAULT_PORT);
+  explicit WebSocketSimulatorRenderer(
+      std::vector<std::shared_ptr<Screen>> screens,
+      std::string port = WS_SIMULATOR_DEFAULT_PORT);
 
-    ~WebSocketSimulatorRenderer();
+  ~WebSocketSimulatorRenderer();
 
-    void setScreenData(int screenId, Color* data) override;
+  void setScreenData(int screenId, Color *data) override;
 
-    void render() override;
+  void render() override;
 
-    void setGlobalBrightness(int brightness) override;
+  void setGlobalBrightness(int brightness) override;
 
-    int getGlobalBrightness() override;
+  int getGlobalBrightness() override;
+
+  void setClientMessageCallback(
+      std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
+          cb) override;
 
 private:
-    void acceptLoop();
-    void runSession(tcp::socket socket);
+  void do_accept();
 
-    std::string port;
-    net::io_context ioContext;
-    std::unique_ptr<tcp::acceptor> acceptor;
+  std::string port;
+  net::io_context ioContext;
+  std::unique_ptr<tcp::acceptor> acceptor;
 
-    // Active WebSocket session (nullable — no client connected yet)
-    using WsStream = websocket::stream<beast::tcp_stream>;
-    std::shared_ptr<WsStream> activeSession;
-    std::mutex sessionMutex;
+  // Active WebSocket session (nullable — no client connected yet)
+  std::shared_ptr<class WsSession> activeSession;
+  std::mutex sessionMutex;
 
-    boost::thread ioThread;
-    bool running = true;
+  boost::thread ioThread;
+  bool running = true;
+
+  std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
+      clientMessageCb;
 };
 
 #endif // MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H

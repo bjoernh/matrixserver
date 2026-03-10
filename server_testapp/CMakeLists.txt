@@ -10,5 +10,7 @@ IF (OpenCV_FOUND)
     target_link_libraries(server_testapp server testRenderer)
 
     target_compile_definitions(server_testapp PUBLIC BOOST_LOG_DYN_LINK)
+    
+    install(TARGETS server_testapp DESTINATION bin)
 
 ENDIF ()
