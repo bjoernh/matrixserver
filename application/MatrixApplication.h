@@ -3,10 +3,11 @@
 
 #include <boost/thread/thread.hpp>
 
+#include <IpcConnection.h>
 #include <Screen.h>
 #include <TcpClient.h>
 #include <UnixSocketClient.h>
-#include <IpcConnection.h>
+#include <matrixserver.pb.h>
 #include <mutex>
 
 #define DEFAULTFPS 40
@@ -19,73 +20,76 @@
 #define DEFAULTSERVERADRESS "127.0.0.1"
 #define DEFAULTSERVERPORT "2017"
 
-enum class AppState {
-    starting, running, paused, ended, killed, failure
-};
+enum class AppState { starting, running, paused, ended, killed, failure };
 
 class MatrixApplication {
 public:
-    MatrixApplication(
-            int fps = DEFAULTFPS,
-            std::string serverUri = DEFAULTSERVERURI);
+  MatrixApplication(int fps = DEFAULTFPS,
+                    std::string serverUri = DEFAULTSERVERURI);
 
-    ~MatrixApplication() = default;
+  ~MatrixApplication() = default;
 
-    void renderToScreens();
+  void renderToScreens();
 
-    int getFps();
+  int getFps();
 
-    void setFps(int fps);
+  void setFps(int fps);
 
-    AppState getAppState();
+  AppState getAppState();
 
-    float getLoad();
+  float getLoad();
 
-    void start();
+  void start();
 
-    bool pause();
+  bool pause();
 
-    bool resume();
+  bool resume();
 
-    void stop();
+  void stop();
 
-    int getBrightness();
+  int getBrightness();
 
-    void setBrightness(int setBrightness);
+  void setBrightness(int setBrightness);
 
-    virtual bool loop() = 0;
+  virtual bool loop() = 0;
 
 protected:
-    std::vector<std::shared_ptr<Screen>> screens;
+  std::vector<std::shared_ptr<Screen>> screens;
 
-    long micros();
+  long micros();
 
 private:
-    void internalLoop();
+  void internalLoop();
 
-    bool connect(const std::string &server_uri);
+  bool connect(const std::string &server_uri);
 
-    void checkConnection();
+  void checkConnection();
 
-    void registerAtServer();
+  void registerAtServer();
 
-    void handleRequest(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>);
+  void handleRequest(std::shared_ptr<UniversalConnection>,
+                     std::shared_ptr<matrixserver::MatrixServerMessage>);
 
-    int appId;
-    int fps;
-    float load;
+  int appId;
+  int fps;
+  float load;
 
-    int brightness;
-    std::string serverUri;
-    std::shared_ptr<UniversalConnection> connection;
-    boost::thread *mainThread;
-    boost::thread *ioThread;
-    AppState appState;
-    boost::asio::io_service io_context;
-    matrixserver::ServerConfig serverConfig;
+  int brightness;
+  std::string serverUri;
+  std::shared_ptr<UniversalConnection> connection;
+  boost::thread *mainThread;
+  boost::thread *ioThread;
+  AppState appState;
+  boost::asio::io_service io_context;
+  matrixserver::ServerConfig serverConfig;
 
-    std::mutex renderSyncMutex;
+  std::mutex renderSyncMutex;
+
+public:
+  static float latestSimulatorImuX;
+  static float latestSimulatorImuY;
+  static float latestSimulatorImuZ;
+  static std::mutex simulatorImuMutex;
 };
 
-
-#endif //MATRIXSERVER_MATRIXAPPLICATION_H
+#endif // MATRIXSERVER_MATRIXAPPLICATION_H

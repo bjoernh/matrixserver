@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <mutex>
+#include <queue>
 #include "Cobs.h"
 #include <matrixserver.pb.h>
 #include "UniversalConnection.h"
@@ -34,16 +35,18 @@ public:
 private:
     void doRead();
 
-    void handleWrite(const boost::system::error_code &error, size_t bytes_transferred,
-                     const std::string & message_encoded);
+    void doWrite();
+
+    void handleWrite(const boost::system::error_code &error, size_t bytes_transferred);
 
     void handleRead(const boost::system::error_code &error, size_t bytes_transferred);
 
     boost::asio::io_service &io;
     boost::asio::generic::stream_protocol::socket socket;
-    std::mutex sendMutex;
     char recv_buffer[RECEIVE_BUFFER_SIZE];
     std::string message_buffer;
+    std::queue<std::string> write_queue;
+    bool is_writing = false;
     Cobs cobsDecoder;
     std::function<void(std::shared_ptr<UniversalConnection>,
                        std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;

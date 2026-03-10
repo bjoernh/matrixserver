@@ -59,47 +59,42 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
 
 void SocketConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) {
     auto sendBuffer = Cobs::encode(message->SerializeAsString());
-    BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Starting Write of " << sendBuffer.size() << " bytes - last byte: " << std::hex << (int)sendBuffer.back();
 
-    sendMutex.lock();
+    boost::asio::post(io, [this, self=shared_from_this(), sendBuffer=std::move(sendBuffer)]() mutable {
+        if (write_queue.size() > 5) {
+            return;
+        }
+        bool empty = write_queue.empty();
+        write_queue.push(std::move(sendBuffer));
+        if (empty && !is_writing) {
+            doWrite();
+        }
+    });
+}
+
+void SocketConnection::doWrite() {
+    is_writing = true;
     boost::asio::async_write(socket,
-                             boost::asio::buffer(sendBuffer.data(), sendBuffer.size()),
-                             [this, sendBuffer](boost::system::error_code error, size_t bytes_transferred) {
-                                 sendMutex.unlock();
-                                 this->handleWrite(error, bytes_transferred, sendBuffer);
+                             boost::asio::buffer(write_queue.front().data(), write_queue.front().size()),
+                             [this, self=shared_from_this()](boost::system::error_code error, size_t bytes_transferred) {
+                                 this->handleWrite(error, bytes_transferred);
                              });
 }
 
-
-std::string getHexArrayString(const uint8_t *data, size_t length) {
-    std::stringstream result;
-    for (int i = 0; i < length; i++) {
-        result << "0x" << std::hex << (int) data[i] << " ";
-    }
-    return result.str();
-}
-
-std::string getHexArrayString(std::string input) {
-    return getHexArrayString((const uint8_t *) input.data(), input.size());
-}
-
-
-void SocketConnection::handleWrite(const boost::system::error_code &error, size_t bytes_transferred,
-                                const std::string &message_encoded) {
+void SocketConnection::handleWrite(const boost::system::error_code &error, size_t bytes_transferred) {
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Handling Write";
     if (!error) {
-        BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Written: " << bytes_transferred << " bytes from "
-                                 << message_encoded.size();
+        BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Written: " << bytes_transferred << " bytes";
     } else {
         BOOST_LOG_TRIVIAL(debug) << "[SOCK CON] Write Error: " << error.message();
         dead = true;
     }
-    BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] written packet end "
-                             << getHexArrayString((const uint8_t *) (message_encoded.data()+message_encoded.size()-10), 10);
-    for (int i = 0; i < message_encoded.size(); i++) {
-        if (message_encoded.at(i) == 0x00) {
-            BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Found 0 in packet at " << i;
-        }
+    
+    write_queue.pop();
+    if (!write_queue.empty()) {
+        doWrite();
+    } else {
+        is_writing = false;
     }
 }
 

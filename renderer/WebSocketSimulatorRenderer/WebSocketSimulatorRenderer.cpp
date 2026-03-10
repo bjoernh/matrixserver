@@ -1,5 +1,5 @@
 #include "WebSocketSimulatorRenderer.h"
-
+#include "WsSession.h"
 #include <boost/log/trivial.hpp>
 #include <matrixserver.pb.h>
 
@@ -20,8 +20,10 @@ WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
   BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] Listening on WebSocket port "
                           << port;
 
+  // Start async accept
+  do_accept();
   // Accept loop runs in a dedicated thread
-  ioThread = boost::thread([this] { this->acceptLoop(); });
+  ioThread = boost::thread([this] { this->ioContext.run(); });
 }
 
 WebSocketSimulatorRenderer::~WebSocketSimulatorRenderer() {
@@ -32,77 +34,35 @@ WebSocketSimulatorRenderer::~WebSocketSimulatorRenderer() {
   }
 }
 
-// ── Accept Loop ─────────────────────────────────────────────────────────────
-void WebSocketSimulatorRenderer::acceptLoop() {
-  BOOST_LOG_TRIVIAL(debug) << "[WebSocketRenderer] Accept loop started";
-
-  while (running) {
-    beast::error_code ec;
-    tcp::socket socket(ioContext);
-    acceptor->accept(socket, ec);
-
-    if (ec) {
-      if (running) {
-        BOOST_LOG_TRIVIAL(debug)
-            << "[WebSocketRenderer] Accept error: " << ec.message();
-      }
-      break;
-    }
-
-    BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] Browser connected from "
-                            << socket.remote_endpoint(ec).address().to_string();
-
-    runSession(std::move(socket));
-  }
-
-  BOOST_LOG_TRIVIAL(debug) << "[WebSocketRenderer] Accept loop ended";
+void WebSocketSimulatorRenderer::setClientMessageCallback(
+    std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
+        cb) {
+  clientMessageCb = cb;
 }
 
-// ── WebSocket Session ────────────────────────────────────────────────────────
-void WebSocketSimulatorRenderer::runSession(tcp::socket socket) {
-  auto ws = std::make_shared<WsStream>(std::move(socket));
-
-  beast::error_code ec;
-
-  // Perform WebSocket handshake
-  ws->accept(ec);
-  if (ec) {
-    BOOST_LOG_TRIVIAL(debug)
-        << "[WebSocketRenderer] Handshake error: " << ec.message();
+void WebSocketSimulatorRenderer::do_accept() {
+  if (!running)
     return;
-  }
-
-  // Disable fragmentation and use binary mode
-  ws->binary(true);
-  ws->auto_fragment(false);
-
-  {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    activeSession = ws;
-  }
-
-  BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] WebSocket session active";
-
-  // Drain incoming messages (ignore them in view-only Phase 1)
-  beast::flat_buffer buf;
-  while (running) {
-    ws->read(buf, ec);
-    if (ec) {
-      if (ec != websocket::error::closed) {
-        BOOST_LOG_TRIVIAL(debug)
-            << "[WebSocketRenderer] Read error: " << ec.message();
+  acceptor->async_accept([this](beast::error_code ec, tcp::socket socket) {
+    if (!ec) {
+      BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] Browser connected";
+      auto session = std::make_shared<WsSession>(
+          std::move(socket), clientMessageCb, [this]() {
+            std::lock_guard<std::mutex> lock(sessionMutex);
+            activeSession.reset();
+          });
+      {
+        std::lock_guard<std::mutex> lock(sessionMutex);
+        activeSession = session;
       }
-      break;
+      session->run();
+    } else {
+      BOOST_LOG_TRIVIAL(debug)
+          << "[WebSocketRenderer] Accept error: " << ec.message();
     }
-    buf.consume(buf.size());
-  }
-
-  {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    activeSession.reset();
-  }
-
-  BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] Browser disconnected";
+    if (running)
+      do_accept();
+  });
 }
 
 // ── IRenderer interface ──────────────────────────────────────────────────────
@@ -113,7 +73,7 @@ void WebSocketSimulatorRenderer::setScreenData(int screenId, Color *data) {
 }
 
 void WebSocketSimulatorRenderer::render() {
-  std::shared_ptr<WsStream> session;
+  std::shared_ptr<WsSession> session;
   {
     std::lock_guard<std::mutex> lock(sessionMutex);
     session = activeSession;
@@ -144,15 +104,8 @@ void WebSocketSimulatorRenderer::render() {
     return;
   }
 
-  // Send as WebSocket binary message (no COBS — WebSocket handles framing)
-  beast::error_code ec;
-  session->write(net::buffer(serialised), ec);
-  if (ec) {
-    BOOST_LOG_TRIVIAL(debug)
-        << "[WebSocketRenderer] Write error: " << ec.message();
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    activeSession.reset();
-  }
+  // Send as WebSocket binary message via queue
+  session->send_msg(serialised);
 }
 
 void WebSocketSimulatorRenderer::setGlobalBrightness(int brightness) {

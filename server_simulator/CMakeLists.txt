@@ -9,3 +9,5 @@ add_executable(server_simulator main.cpp)
 target_link_libraries(server_simulator server simulatorRenderer wsSimulatorRenderer $<$<PLATFORM_ID:Linux>:rt>)
 
 target_compile_definitions(server_simulator PUBLIC BOOST_LOG_DYN_LINK)
+
+install(TARGETS server_simulator DESTINATION bin)

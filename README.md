@@ -25,6 +25,14 @@ To build the project for a standard development environment:
 To build the project for Raspberry Pi (including hardware-specific variants like `server_FPGA_FTDI`, `server_RGBMatrix`, etc.):
 `mkdir build && cd build && cmake -DBUILD_RASPBERRYPI=ON .. && make`
 
+To build and install the project to a local directory (e.g., `./install`):
+```bash
+mkdir -p build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
+make -j$(nproc)
+make install
+```
+
 # Releases and Docker
 
 Pre-built binaries and Docker images are automatically generated for every repository tag.
@@ -47,6 +55,8 @@ Open the CUBE Simulator in your browser:
 **https://bjoernh.github.io/CubeSimulator/**
 
 Use the default address `ws://localhost:1337` to connect the CUBE Simulator to the matrix server.
+
+![Picture of Cube Simulator](LEDCubeSim.jpg)
 
 **Raspberry Pi (ARM64)**
 ```bash

@@ -4,3 +4,5 @@ add_executable(server_FPGA_FTDI main.cpp)
 target_link_libraries(server_FPGA_FTDI server FPGAFTDIRenderer)
 
 target_compile_definitions(server_FPGA_FTDI PUBLIC BOOST_LOG_DYN_LINK)
+
+install(TARGETS server_FPGA_FTDI DESTINATION bin)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.07)
-project(matrixserver VERSION 0.3.0)
+project(matrixserver VERSION 0.3.2)
 
 
 set(CMAKE_CXX_STANDARD 14)
@@ -55,6 +55,6 @@ install(FILES
         DESTINATION lib/cmake/matrixapplication
 )
 
-install(PROGRAMS Update.sh DESTINATION sbin)
+
 
 
