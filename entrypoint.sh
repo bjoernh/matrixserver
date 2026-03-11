@@ -5,6 +5,10 @@ set -e
 echo "Starting Nginx (HTTPS) on port 5173..."
 nginx -g "daemon on;"
 
-# Start the C++ WebSocket server simulator in the foreground
-echo "Starting MatrixServer Simulator..."
-exec server_simulator "$@"
+if [ $# -eq 0 ]; then
+  echo "Starting MatrixServer Simulator (fallback)..."
+  exec server_simulator
+else
+  echo "Starting command: $@"
+  exec "$@"
+fi
