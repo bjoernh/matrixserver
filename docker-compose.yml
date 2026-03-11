@@ -1,0 +1,12 @@
+services:
+  matrixserver:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: matrixserver-simulator:latest
+    container_name: matrixserver
+    ports:
+      - "1337:1337"
+      - "2017:2017"
+      - "5173:5173"
+    restart: unless-stopped

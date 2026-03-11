@@ -1,4 +1,10 @@
-# Build Stage
+# Web Build Stage
+FROM node:24 AS web-builder
+WORKDIR /app
+COPY CubeSimulator/web ./
+RUN npm install && npm run build
+
+# C++ Build Stage
 FROM ubuntu:24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -47,13 +53,24 @@ RUN apt-get update && apt-get install -y \
     libasound2t64 \
     libprotobuf32t64 \
     libimlib2t64 \
+    nginx \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copy the built server executable and required resources from the builder stage
-# Adjust the executable name and paths based on what you actually want to run by default.
 COPY --from=builder /app/build/server_simulator/server_simulator /usr/local/bin/server_simulator
+COPY --from=web-builder /app/dist /app/dist/CubeSimulator
+COPY entrypoint.sh /app/entrypoint.sh
+COPY nginx.conf /etc/nginx/sites-available/default
+RUN chmod +x /app/entrypoint.sh
 
-# Default entrypoint (can be overridden when running the container)
-CMD ["server_simulator"]
+# Generate self-signed certificate
+RUN mkdir -p /etc/nginx/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt \
+    -subj "/C=DE/ST=Augsburg/L=Augsburg/O=CubeSimulator/OU=Dev/CN=localhost"
+
+# Default entrypoint (starts both Nginx and WebSocket servers)
+CMD ["/app/entrypoint.sh"]
