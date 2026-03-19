@@ -13,7 +13,7 @@
 
 class SocketConnection :  public std::enable_shared_from_this<SocketConnection>, public UniversalConnection {
 public:
-    SocketConnection(boost::asio::io_service &io_context);
+    SocketConnection(boost::asio::io_context &io_context);
 
     ~SocketConnection();
 
@@ -39,7 +39,7 @@ private:
 
     void handleRead(const boost::system::error_code &error, size_t bytes_transferred);
 
-    boost::asio::io_service &io;
+    boost::asio::io_context &io;
     boost::asio::generic::stream_protocol::socket socket;
     std::mutex sendMutex;
     char recv_buffer[RECEIVE_BUFFER_SIZE];

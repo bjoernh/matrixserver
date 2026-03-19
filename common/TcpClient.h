@@ -8,7 +8,7 @@
 
 class TcpClient {
 public:
-//    TcpClient(boost::asio::io_service &setIo, std::string, std::string);
+//    TcpClient(boost::asio::io_context &setIo, std::string, std::string);
 //
 //    void handleConnect(const boost::system::error_code &error);
 //
@@ -16,9 +16,9 @@ public:
 //
 //    void setConnectCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback);
 
-    static std::shared_ptr<SocketConnection> connect(boost::asio::io_service &io, std::string serverAddress, std::string serverPort);
+    static std::shared_ptr<SocketConnection> connect(boost::asio::io_context &io, std::string serverAddress, std::string serverPort);
 private:
-//    boost::asio::io_service &io;
+//    boost::asio::io_context &io;
 //    boost::asio::ip::tcp::endpoint endpoint;
 //    boost::asio::ip::tcp::resolver::iterator endpoint_iterator;
 //    std::function<void(std::shared_ptr<SocketConnection>)> connectCallback;

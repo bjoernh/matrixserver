@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.07)
 project(matrixserver VERSION 0.3.0)
 
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(Boost_FIND_QUIETLY ON) #FINALLY!!!
 

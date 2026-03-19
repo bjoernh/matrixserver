@@ -28,7 +28,7 @@ App *Server::getAppByID(int searchID) {
 
 Server::Server(std::shared_ptr<IRenderer> setRenderer, matrixserver::ServerConfig &setServerConfig) :
         ioContext(),
-        ioWork(new boost::asio::io_service::work(ioContext)),
+        ioWork(new boost::asio::executor_work_guard<boost::asio::io_context::executor_type>(boost::asio::make_work_guard(ioContext))),
         serverConfig(setServerConfig),
         tcpServer(ioContext, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), std::stoi(setServerConfig.serverconnection().serverport()))),
 //        unixServer(ioContext, boost::asio::local::stream_protocol::endpoint("/tmp/matrixserver.sock")),

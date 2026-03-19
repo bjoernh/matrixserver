@@ -1,7 +1,7 @@
 #include "UnixSocketServer.h"
 #include <boost/log/trivial.hpp>
 
-UnixSocketServer::UnixSocketServer(boost::asio::io_service &setIo, boost::asio::local::stream_protocol::endpoint setEndpoint) :
+UnixSocketServer::UnixSocketServer(boost::asio::io_context &setIo, boost::asio::local::stream_protocol::endpoint setEndpoint) :
         io(setIo),
         endpoint(setEndpoint),
         acceptor(setIo){

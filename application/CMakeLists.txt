@@ -1,6 +1,6 @@
 project(application)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log system)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
 find_package(Eigen3 REQUIRED)
@@ -9,8 +9,8 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 IF(APPLE)
 	# Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
 	# for sucessfull linking against lmlib2
-	LINK_DIRECTORIES(/usr/local/lib)
-	set(CMAKE_CXX_FLAGS "-I/opt/X11/include")
+	LINK_DIRECTORIES(/usr/local/lib /opt/homebrew/lib)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/X11/include -I/opt/homebrew/include -I/opt/homebrew/include/eigen3")
 ENDIF()
 
 

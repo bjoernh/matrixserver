@@ -81,7 +81,7 @@ private:
     boost::thread *mainThread;
     boost::thread *ioThread;
     AppState appState;
-    boost::asio::io_service io_context;
+    boost::asio::io_context io_context;
     matrixserver::ServerConfig serverConfig;
 
     std::mutex renderSyncMutex;

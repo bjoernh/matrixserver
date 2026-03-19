@@ -46,9 +46,9 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
         BOOST_LOG_TRIVIAL(debug) << "[Server] creating default config";
         createDefaultCubeConfig(serverConfig);
         std::string configString;
-        google::protobuf::util::JsonOptions jsonOptions;
+        google::protobuf::util::JsonPrintOptions jsonOptions;
         jsonOptions.add_whitespace = true;
-        jsonOptions.always_print_primitive_fields = true;
+        // jsonOptions.always_print_primitive_fields = true;
         if (google::protobuf::util::MessageToJsonString(serverConfig, &configString, jsonOptions).ok()) {
             std::string configFileName = "matrixServerConfig.json";
             std::ofstream configFileWriteStream(configFileName, std::ios_base::trunc);

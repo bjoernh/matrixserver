@@ -5,7 +5,7 @@
 
 class UnixSocketClient {
 public:
-    static std::shared_ptr<SocketConnection> connect(boost::asio::io_service &io, std::string socketFile);
+    static std::shared_ptr<SocketConnection> connect(boost::asio::io_context &io, std::string socketFile);
 };
 
 
