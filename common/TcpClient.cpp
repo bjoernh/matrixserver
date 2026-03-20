@@ -1,7 +1,7 @@
 #include "TcpClient.h"
 #include <boost/log/trivial.hpp>
 //
-//TcpClient::TcpClient(boost::asio::io_service &setIo, std::string serverAddress, std::string serverPort) :
+//TcpClient::TcpClient(boost::asio::io_context &setIo, std::string serverAddress, std::string serverPort) :
 //        io(setIo),
 //        endpoint_iterator(boost::asio::ip::tcp::resolver(io).resolve(boost::asio::ip::tcp::resolver::query(serverAddress, serverPort))) {
 //    this->endpoint = *endpoint_iterator;
@@ -50,11 +50,11 @@
 //}
 
 std::shared_ptr<SocketConnection>
-TcpClient::connect(boost::asio::io_service &io, std::string serverAddress, std::string serverPort) {
+TcpClient::connect(boost::asio::io_context &io, std::string serverAddress, std::string serverPort) {
     auto sockConnection = std::make_shared<SocketConnection>(io);
     try {
-        boost::asio::ip::tcp::resolver::iterator endpoints = boost::asio::ip::tcp::resolver(io).resolve(boost::asio::ip::tcp::resolver::query(serverAddress, serverPort));
-        boost::asio::ip::tcp::endpoint endpoint = *endpoints;
+        auto endpoints = boost::asio::ip::tcp::resolver(io).resolve(serverAddress, serverPort);
+        boost::asio::ip::tcp::endpoint endpoint = endpoints.begin()->endpoint();
         sockConnection->getSocket().connect(endpoint);
         if (sockConnection->getSocket().is_open()) {
             BOOST_LOG_TRIVIAL(debug) << "[TcpClient] Connect Successful to address: "

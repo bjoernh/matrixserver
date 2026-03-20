@@ -1,7 +1,7 @@
 #include "TcpServer.h"
 #include <boost/log/trivial.hpp>
 
-TcpServer::TcpServer(boost::asio::io_service &setIo, boost::asio::ip::tcp::endpoint setEndpoint) :
+TcpServer::TcpServer(boost::asio::io_context &setIo, boost::asio::ip::tcp::endpoint setEndpoint) :
         io(setIo),
         endpoint(setEndpoint),
         acceptor(setIo) {

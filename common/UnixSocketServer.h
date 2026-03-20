@@ -7,7 +7,7 @@
 
 class UnixSocketServer {
 public:
-    UnixSocketServer(boost::asio::io_service &setIo, boost::asio::local::stream_protocol::endpoint setEndpoint);
+    UnixSocketServer(boost::asio::io_context &setIo, boost::asio::local::stream_protocol::endpoint setEndpoint);
 
     void handleAccept(const boost::system::error_code &error, std::shared_ptr<SocketConnection> connection);
 
@@ -16,7 +16,7 @@ public:
     void setAcceptCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback);
 
 private:
-    boost::asio::io_service &io;
+    boost::asio::io_context &io;
     std::shared_ptr<SocketConnection> remote_con;
     boost::asio::local::stream_protocol::endpoint endpoint;
     boost::asio::local::stream_protocol::acceptor acceptor;

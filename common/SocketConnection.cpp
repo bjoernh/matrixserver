@@ -2,7 +2,7 @@
 
 #include <boost/log/trivial.hpp>
 
-SocketConnection::SocketConnection(boost::asio::io_service &io_context) :
+SocketConnection::SocketConnection(boost::asio::io_context &io_context) :
         io(io_context), socket(io), cobsDecoder(RECEIVE_BUFFER_SIZE) {
     receiveCallback = NULL;
 }

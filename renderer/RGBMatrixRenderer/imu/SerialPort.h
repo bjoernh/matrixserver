@@ -12,7 +12,7 @@ public:
   std::string readLine();
 private:
   void internalLoop();
-  boost::asio::io_service io;
+  boost::asio::io_context io;
   boost::asio::serial_port serial;
 };
 

@@ -1,6 +1,6 @@
 project(server_RGBMatrix)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log system)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(server_RGBMatrix main.cpp)
