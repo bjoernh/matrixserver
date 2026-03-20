@@ -3,7 +3,7 @@ project(server_testapp)
 find_package(OpenCV QUIET)
 IF (OpenCV_FOUND)
 
-    find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log system)
+    find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
     include_directories(${Boost_INCLUDE_DIRS})
 
     add_executable(server_testapp main.cpp)

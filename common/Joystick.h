@@ -26,7 +26,6 @@ public:
 
     Joystick(Joystick const &) = delete;
 
-    Joystick(Joystick &&) = default;
 
     Joystick(std::string devicePath, bool blocking);
 

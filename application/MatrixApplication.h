@@ -5,6 +5,7 @@
 
 #include <IpcConnection.h>
 #include <Screen.h>
+#include <AnimationParams.h>
 #include <TcpClient.h>
 #include <UnixSocketClient.h>
 #include <matrixserver.pb.h>
@@ -25,7 +26,8 @@ enum class AppState { starting, running, paused, ended, killed, failure };
 class MatrixApplication {
 public:
   MatrixApplication(int fps = DEFAULTFPS,
-                    std::string serverUri = DEFAULTSERVERURI);
+                    std::string serverUri = DEFAULTSERVERURI,
+                    std::string appName = "MatrixApp");
 
   ~MatrixApplication() = default;
 
@@ -58,6 +60,9 @@ protected:
 
   long micros();
 
+  matrixserver::AnimationParams params;
+  std::string appName;
+
 private:
   void internalLoop();
 
@@ -80,7 +85,7 @@ private:
   boost::thread *mainThread;
   boost::thread *ioThread;
   AppState appState;
-  boost::asio::io_service io_context;
+  boost::asio::io_context io_context;
   matrixserver::ServerConfig serverConfig;
 
   std::mutex renderSyncMutex;

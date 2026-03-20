@@ -11,6 +11,10 @@ message MatrixServerMessage {
     repeated JoystickData joystickData = 5;
     ImuData imuData = 6;
     ServerConfig serverConfig = 10;
+
+    AppParamSchema appParamSchema = 15;
+    AppParamUpdate appParamUpdate = 16;
+    AppParamValues appParamValues = 17;
 }
 
 enum MessageType {
@@ -25,6 +29,10 @@ enum MessageType {
     appKill = 8;
     imuData = 9;
     joystickData = 10;
+    appParamSchema = 11;
+    setAppParam = 12;
+    getAppParams = 13;
+    appParamValues = 14;
 }
 
 enum Status{
@@ -129,4 +137,34 @@ message ScreenInfo {
     ScreenRotation screenRotation = 6;
     int32 offsetX = 7;
     int32 offsetY = 8;
+}
+
+message AppParamDef {
+    string key = 1;
+    string label = 2;
+    string type = 3;    // "float", "int", "bool", "enum"
+    float minVal = 4;
+    float maxVal = 5;
+    float step = 6;
+    float defaultVal = 7;
+    repeated string enumOptions = 8;
+    string group = 9;
+}
+
+message AppParamSchema {
+    string appName = 1;
+    repeated AppParamDef params = 2;
+}
+
+message AppParamUpdate {
+    string key = 1;
+    float floatVal = 2;
+    int32 intVal = 3;
+    bool boolVal = 4;
+    string stringVal = 5;
+}
+
+message AppParamValues {
+    string appName = 1;
+    repeated AppParamUpdate values = 2;
 }

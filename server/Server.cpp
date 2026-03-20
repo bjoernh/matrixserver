@@ -31,7 +31,10 @@ App *Server::getAppByID(int searchID) {
 
 Server::Server(std::shared_ptr<IRenderer> setRenderer,
                matrixserver::ServerConfig &setServerConfig)
-    : ioContext(), ioWork(new boost::asio::io_service::work(ioContext)),
+    : ioContext(),
+      ioWork(new boost::asio::executor_work_guard<
+             boost::asio::io_context::executor_type>(
+          boost::asio::make_work_guard(ioContext))),
       serverConfig(setServerConfig),
       tcpServer(
           ioContext,
@@ -45,12 +48,46 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
                                       boost::log::trivial::debug);
 
   setRenderer->setClientMessageCallback(
-      [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-        if (msg->messagetype() == matrixserver::imuData ||
-            msg->messagetype() == matrixserver::joystickData) {
+      [this, setRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        if (msg->messagetype() == matrixserver::getServerInfo) {
+          auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+          response->set_messagetype(matrixserver::getServerInfo);
+          auto *tempConfig = new matrixserver::ServerConfig();
+          tempConfig->CopyFrom(serverConfig);
+          response->set_allocated_serverconfig(tempConfig);
+          setRenderer->sendMessage(response);
+
           std::lock_guard<std::mutex> lock(appsMutex);
-          for (auto &app : apps) {
-            app.getConnection()->sendMessage(msg);
+          if (!apps.empty()) {
+            auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+            schemaMsg->set_appid(apps.back().getAppId());
+            schemaMsg->set_messagetype(matrixserver::appParamSchema);
+            auto schema = apps.back().getParamSchema();
+            schemaMsg->mutable_appparamschema()->CopyFrom(schema);
+            setRenderer->sendMessage(schemaMsg);
+          }
+        } else if (msg->messagetype() == matrixserver::imuData ||
+            msg->messagetype() == matrixserver::joystickData ||
+            msg->messagetype() == matrixserver::setAppParam ||
+            msg->messagetype() == matrixserver::getAppParams) {
+          std::lock_guard<std::mutex> lock(appsMutex);
+          if (msg->messagetype() == matrixserver::setAppParam ||
+              msg->messagetype() == matrixserver::getAppParams) {
+            // If appID is specified, target that app, else target current top app
+            if (msg->appid() != 0) {
+              for (auto &app : apps) {
+                if (app.getAppId() == msg->appid()) {
+                  app.getConnection()->sendMessage(msg);
+                  break;
+                }
+              }
+            } else if (!apps.empty()) {
+              apps.back().getConnection()->sendMessage(msg);
+            }
+          } else {
+            for (auto &app : apps) {
+              app.getConnection()->sendMessage(msg);
+            }
           }
         }
       });
@@ -182,6 +219,30 @@ void Server::handleRequest(
                apps.end());
     break;
   }
+  case matrixserver::appParamSchema: {
+    BOOST_LOG_TRIVIAL(debug) << "[Server] App parameter schema received";
+    {
+      std::lock_guard<std::mutex> lock(appsMutex);
+      for (auto &app : apps) {
+        if (app.getAppId() == message->appid()) {
+          app.setParamSchema(message->appparamschema());
+          break;
+        }
+      }
+    }
+    // Forward to all renderers
+    for (auto renderer : renderers) {
+      renderer->sendMessage(message);
+    }
+    break;
+  }
+  case matrixserver::appParamValues: {
+    // Forward current values to all renderers
+    for (auto renderer : renderers) {
+      renderer->sendMessage(message);
+    }
+    break;
+  }
   default:
     break;
   }
@@ -240,10 +301,26 @@ void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
   newRenderer->setClientMessageCallback(
       [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
         if (msg->messagetype() == matrixserver::imuData ||
-            msg->messagetype() == matrixserver::joystickData) {
+            msg->messagetype() == matrixserver::joystickData ||
+            msg->messagetype() == matrixserver::setAppParam ||
+            msg->messagetype() == matrixserver::getAppParams) {
           std::lock_guard<std::mutex> lock(appsMutex);
-          for (auto &app : apps) {
-            app.getConnection()->sendMessage(msg);
+          if (msg->messagetype() == matrixserver::setAppParam ||
+              msg->messagetype() == matrixserver::getAppParams) {
+            if (msg->appid() != 0) {
+              for (auto &app : apps) {
+                if (app.getAppId() == msg->appid()) {
+                  app.getConnection()->sendMessage(msg);
+                  break;
+                }
+              }
+            } else if (!apps.empty()) {
+              apps.back().getConnection()->sendMessage(msg);
+            }
+          } else {
+            for (auto &app : apps) {
+              app.getConnection()->sendMessage(msg);
+            }
           }
         }
       });

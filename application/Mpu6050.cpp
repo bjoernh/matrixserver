@@ -1,11 +1,17 @@
 #include "Mpu6050.h"
 
 #include "MatrixApplication.h"
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define __bswap_16 OSSwapInt16
+#else
 #include <byteswap.h>
+#endif
 #include <iostream>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+
 #ifdef BUILD_RASPBERRYPI
 #include <wiringPi.h>
 #include <wiringPiI2C.h>

@@ -17,7 +17,6 @@
 
 class Server {
 public:
-    Server() = default;
 
     ~Server() = default;
 
@@ -37,8 +36,8 @@ private:
     std::mutex appsMutex;
     std::vector<App> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;
-    boost::asio::io_service ioContext;
-    std::unique_ptr<boost::asio::io_service::work> ioWork;
+    boost::asio::io_context ioContext;
+    std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioWork;
     matrixserver::ServerConfig & serverConfig;
     TcpServer tcpServer;
 //    UnixSocketServer unixServer;

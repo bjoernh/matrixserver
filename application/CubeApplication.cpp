@@ -4,12 +4,12 @@
 #include <iostream>
 #include <random>
 
-CubeApplication::CubeApplication(int fps, std::string serverUri)
+CubeApplication::CubeApplication(int fps, std::string serverUri, std::string appName)
     :
 #ifdef MATRIXAPPLICATION_STANDALONE
-      MatrixApplicationStandalone(fps, serverUri),
+      MatrixApplicationStandalone(fps, serverUri, appName),
 #else
-      MatrixApplication(fps, serverUri),
+      MatrixApplication(fps, serverUri, appName),
 #endif
       virtualSize_(VIRTUALCUBESIZE),
       virtualSizeAll_(VIRTUALCUBESIZE * VIRTUALCUBESIZE * VIRTUALCUBESIZE) {

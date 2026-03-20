@@ -34,7 +34,7 @@ private:
     std::shared_ptr<SocketConnection> connection;
     boost::thread *mainThread;
     boost::thread *ioThread;
-    boost::asio::io_service io_context;
+    boost::asio::io_context io_context;
 };
 
 

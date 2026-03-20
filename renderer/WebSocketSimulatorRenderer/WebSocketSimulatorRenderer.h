@@ -46,6 +46,8 @@ public:
 
   int getGlobalBrightness() override;
 
+  void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) override;
+
   void setClientMessageCallback(
       std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
           cb) override;

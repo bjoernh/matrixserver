@@ -68,10 +68,10 @@ public:
     do_read();
   }
 
-  void send_msg(std::string msg) {
+  void send_msg(std::string msg, bool droppable = true) {
     net::post(ws_.get_executor(), [self = shared_from_this(),
-                                   msg = std::move(msg)]() mutable {
-      if (self->write_queue_.size() > 2) {
+                                   msg = std::move(msg), droppable]() mutable {
+      if (droppable && self->write_queue_.size() > 2) {
         return; // Drop frames to prevent latency buildup and memory issues
       }
       bool empty = self->write_queue_.empty();
