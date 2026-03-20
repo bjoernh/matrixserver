@@ -5,6 +5,7 @@
 App::App(std::shared_ptr<UniversalConnection> setCon) {
     connection = setCon;
     appId = generateAppId();
+    hasSchema = false;
 }
 
 int App::getAppId() {
@@ -25,6 +26,19 @@ AppState App::getAppState(){
 
 std::shared_ptr<UniversalConnection> App::getConnection() {
     return connection;
+}
+
+void App::setParamSchema(const matrixserver::AppParamSchema& schema) {
+    paramSchema = schema;
+    hasSchema = true;
+}
+
+const matrixserver::AppParamSchema& App::getParamSchema() const {
+    return paramSchema;
+}
+
+bool App::hasParamSchema() const {
+    return hasSchema;
 }
 
 int App::generateAppId() {

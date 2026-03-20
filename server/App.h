@@ -27,12 +27,18 @@ public:
 
     std::shared_ptr<UniversalConnection> getConnection();
 
+    void setParamSchema(const matrixserver::AppParamSchema& schema);
+    const matrixserver::AppParamSchema& getParamSchema() const;
+    bool hasParamSchema() const;
+
     int generateAppId();
 
 private:
     int appId;
     AppState appState;
     std::shared_ptr<UniversalConnection> connection;
+    matrixserver::AppParamSchema paramSchema;
+    bool hasSchema;
 };
 
 

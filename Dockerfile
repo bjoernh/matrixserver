@@ -1,7 +1,7 @@
 # Web Build Stage
 FROM node:24 AS web-builder
 WORKDIR /app
-COPY CubeSimulator/web ./
+COPY CubeWebapp/web ./
 RUN npm install && npm run build
 
 # C++ Build Stage
@@ -61,7 +61,7 @@ WORKDIR /app
 
 # Copy the built server executable and required resources from the builder stage
 COPY --from=builder /app/build/server_simulator/server_simulator /usr/local/bin/server_simulator
-COPY --from=web-builder /app/dist /app/dist/CubeSimulator
+COPY --from=web-builder /app/dist /app/dist/CubeWebapp
 COPY entrypoint.sh /app/entrypoint.sh
 COPY nginx.conf /etc/nginx/sites-available/default
 RUN chmod +x /app/entrypoint.sh
@@ -70,7 +70,7 @@ RUN chmod +x /app/entrypoint.sh
 RUN mkdir -p /etc/nginx/ssl && \
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt \
-    -subj "/C=DE/ST=Augsburg/L=Augsburg/O=CubeSimulator/OU=Dev/CN=localhost"
+    -subj "/C=DE/ST=Augsburg/L=Augsburg/O=CubeWebapp/OU=Dev/CN=localhost"
 
 # Default entrypoint (starts both Nginx and WebSocket servers)
 CMD ["/app/entrypoint.sh"]

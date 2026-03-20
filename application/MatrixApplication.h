@@ -5,6 +5,7 @@
 
 #include <IpcConnection.h>
 #include <Screen.h>
+#include <AnimationParams.h>
 #include <TcpClient.h>
 #include <UnixSocketClient.h>
 #include <matrixserver.pb.h>
@@ -25,7 +26,8 @@ enum class AppState { starting, running, paused, ended, killed, failure };
 class MatrixApplication {
 public:
   MatrixApplication(int fps = DEFAULTFPS,
-                    std::string serverUri = DEFAULTSERVERURI);
+                    std::string serverUri = DEFAULTSERVERURI,
+                    std::string appName = "MatrixApp");
 
   ~MatrixApplication() = default;
 
@@ -57,6 +59,9 @@ protected:
   std::vector<std::shared_ptr<Screen>> screens;
 
   long micros();
+
+  matrixserver::AnimationParams params;
+  std::string appName;
 
 private:
   void internalLoop();

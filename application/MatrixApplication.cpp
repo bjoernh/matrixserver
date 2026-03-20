@@ -12,8 +12,8 @@ float MatrixApplication::latestSimulatorImuY = 0.0f;
 float MatrixApplication::latestSimulatorImuZ = 0.0f;
 std::mutex MatrixApplication::simulatorImuMutex;
 
-MatrixApplication::MatrixApplication(int fps, std::string serverUri)
-    : mainThread(), io_context(), serverUri(serverUri) {
+MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string appName)
+    : mainThread(), io_context(), serverUri(serverUri), appName(appName) {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::debug);
   std::random_device rd;
@@ -161,6 +161,15 @@ void MatrixApplication::handleRequest(
       BOOST_LOG_TRIVIAL(debug)
           << "[Application] Register at Server successfull";
       appId = message->appid();
+
+      // Send parameter schema if any are registered
+      auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+      schemaMsg->set_messagetype(matrixserver::appParamSchema);
+      schemaMsg->set_appid(appId);
+      auto schema = params.toSchema(appName);
+      schemaMsg->mutable_appparamschema()->CopyFrom(schema);
+      connection->sendMessage(schemaMsg);
+
       auto response = std::make_shared<matrixserver::MatrixServerMessage>();
       response->set_messagetype(matrixserver::getServerInfo);
       response->set_appid(appId);
@@ -222,14 +231,24 @@ void MatrixApplication::handleRequest(
   case matrixserver::setScreenFrame:
     renderSyncMutex.unlock();
     break;
-  case matrixserver::imuData:
-    if (message->has_imudata()) {
-      std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
-      MatrixApplication::latestSimulatorImuX = message->imudata().accelx();
-      MatrixApplication::latestSimulatorImuY = message->imudata().accely();
       MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
     }
     break;
+  case matrixserver::setAppParam:
+    if (message->has_appparamupdate()) {
+      params.applyUpdate(message->appparamupdate());
+    }
+    break;
+  case matrixserver::getAppParams: {
+    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+    response->set_messagetype(matrixserver::appParamValues);
+    response->set_status(matrixserver::success);
+    response->set_appid(appId);
+    auto values = params.toValues(appName);
+    response->mutable_appparamvalues()->CopyFrom(values);
+    connection->sendMessage(response);
+    break;
+  }
   default:
     break;
   }

@@ -12,8 +12,8 @@ planar screen orientations, as well as other complex screen orientations.
 The easiest way to get started is using the **self-contained simulator Docker image**, which bundles:
 
 - The `server_simulator` matrix server binary
-- The **CubeSimulator** web frontend (built into the image)
-- An **Nginx HTTPS reverse proxy** that serves the simulator UI and proxies the WebSocket connection
+- The **CubeWebapp** web frontend (built into the image)
+- An **Nginx HTTPS reverse proxy** that serves the webapp UI and proxies the WebSocket connection
 
 This means you only need a single container to run the server and access the 3D cube simulator from any browser — no separate processes, no external URLs.
 
@@ -40,14 +40,20 @@ https://localhost:5173
 
 > **Note:** The container uses a self-signed TLS certificate generated at build time. Your browser will show a security warning — this is expected. Accept the exception to proceed (in Chrome: click *Advanced → Proceed to localhost*; in Firefox: click *Accept the Risk and Continue*).
 
-The CubeSimulator will load automatically. To connect it to the matrix server:
+The CubeWebapp will load automatically. To connect it to the matrix server:
 
-1. In the CubeSimulator UI, set the WebSocket address to:
+1. In the CubeWebapp UI, set the WebSocket address to:
    ```
    wss://localhost:5173/matrix-ws
    ```
 2. Click **Connect**
 3. Start a Matrix Application (e.g., from the `exampleApplications` repository) — the server address is `localhost:2017`
+
+### Dynamic Parameter Configuration
+The CubeWebapp features a **Parameter Configuration Panel** (collapsible sidebar via ⚙ icon) that allows you to:
+- Adjust animation parameters in real-time (speed, spawn rate, colors, modes, etc.)
+- The available controls are dynamically generated based on the schema provided by the running application.
+- Save and load **Presets** as JSON files to persist your favorite settings.
 
 ![Picture of Cube Simulator](LEDCubeSim.jpg)
 
@@ -57,7 +63,7 @@ The CubeSimulator will load automatically. To connect it to the matrix server:
 |------|----------|-------------|
 | `2017` | TCP | Matrix Server — client applications connect here |
 | `1337` | TCP/WS | WebSocket Simulator Renderer — raw WebSocket endpoint |
-| `5173` | HTTPS | Nginx — serves the CubeSimulator UI and proxies `/matrix-ws` over TLS |
+| `5173` | HTTPS | Nginx — serves the CubeWebapp UI and proxies `/matrix-ws` over TLS |
 
 > **Tip for mobile / remote access:** Because the browser-side WebSocket is proxied through Nginx over HTTPS/WSS on port `5173`, you can also access the simulator from other devices on your network by replacing `localhost` with your machine's local IP address (e.g., `https://192.168.1.42:5173`). Modern browsers require HTTPS to allow WebSocket connections from a web page, which is why TLS is used even locally.
 
@@ -80,9 +86,9 @@ Browser (https://localhost:5173)
     ▼
   Nginx (inside container)
     │                │
-    │ /CubeSimulator/ │  /matrix-ws  (WSS proxy)
-    ▼                ▼
-  Static UI       ws://localhost:1337
+    │ /CubeWebapp/ │  /matrix-ws  (WSS proxy)
+    ▼             ▼
+  Static UI    ws://localhost:1337
                       │
                       ▼
               server_simulator
@@ -92,7 +98,7 @@ Browser (https://localhost:5173)
 ```
 
 The container runs two processes:
-1. **Nginx** on HTTPS port `5173`: serves the CubeSimulator static web app and proxies WebSocket connections from `/matrix-ws` to the internal raw WebSocket on port `1337`.
+1. **Nginx** on HTTPS port `5173`: serves the CubeWebapp static web app and proxies WebSocket connections from `/matrix-ws` to the internal raw WebSocket on port `1337`.
 2. **server_simulator**: the matrix server, listening on TCP `2017` for Matrix Application clients and on WebSocket `1337` for simulator renderer connections.
 
 ## Simulator Configuration
@@ -119,7 +125,7 @@ on raspbian and ubuntu:
 **Make sure you have cloned with submodules** `git clone --recursive`  
 Tested on Ubuntu, Raspbian & macOS.
 
-The `CubeSimulator` is included as a git submodule under `CubeSimulator/`. It is built as part of the AMD64 simulator Docker image.
+The `CubeWebapp` is included as a git submodule under `CubeWebapp/`. It is built as part of the simulator and RPi Docker images.
 
 By default, on macOS and standard Ubuntu setups, only the development targets (like `server_simulator`) are built to avoid missing hardware dependencies.
 
@@ -149,7 +155,7 @@ Pre-compiled `.deb` packages for both `amd64` (Simulator targets) and `arm64` (R
 
 Pre-built images are hosted on the GitHub Container Registry (GHCR).
 
-**Simulator (AMD64) — includes CubeSimulator UI**
+**Simulator (AMD64) — includes CubeWebapp UI**
 ```bash
 docker pull ghcr.io/bjoernh/matrixserver-simulator:latest
 ```
@@ -227,6 +233,6 @@ The project is thoughtfully divided into logical directories that separate the s
 *   **`MainMenu`**
     *   A built-in example client application that provides a launch interface for the cube.
 
-*   **`CubeSimulator`** *(git submodule)*
-    *   The web-based 3D LED cube simulator, included as a submodule from `git@github.com:bjoernh/CubeSimulator.git`.
-    *   Built automatically as part of the AMD64 simulator Docker image. The compiled static web app is served by Nginx inside the container.
+*   **`CubeWebapp`** *(git submodule)*
+    *   The web-based 3D LED cube simulator and configuration interface, included as a submodule from `git@github.com:bjoernh/CubeWebapp.git`.
+    *   Built automatically as part of the Docker images. The compiled static web app is served by Nginx inside the container.

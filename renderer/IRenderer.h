@@ -25,6 +25,9 @@ public:
       std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>) {
   }
 
+  virtual void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage>) {
+  }
+
 protected:
   std::vector<std::shared_ptr<Screen>> screens;
   int globalBrightness = 100;

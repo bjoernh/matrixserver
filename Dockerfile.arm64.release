@@ -1,10 +1,17 @@
+# Web Build Stage
+FROM node:24 AS web-builder
+WORKDIR /app
+# Note: CubeWebapp is a submodule, ensure it's cloned!
+COPY CubeWebapp/web ./
+RUN npm install && npm run build
+
 # Runtime Stage for Pre-compiled artifacts
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install minimal runtime dependencies
+# Install minimal runtime dependencies + nginx
 RUN apt-get update && apt-get install -y \
     libboost-thread1.83.0 \
     libboost-log1.83.0 \
@@ -19,6 +26,8 @@ RUN apt-get update && apt-get install -y \
     libprotobuf32t64 \
     libimlib2t64 \
     libftdi1-2 \
+    nginx \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -39,7 +48,20 @@ COPY deb-workspace/usr/local/lib/libImu.so /usr/local/lib/
 COPY deb-workspace/usr/local/lib/libwiringPi.so* /usr/local/lib/
 COPY deb-workspace/usr/local/lib/libwiringPiDev.so* /usr/local/lib/
 
+# Copy the built web assets from the web-builder stage
+COPY --from=web-builder /app/dist /app/dist/CubeWebapp
+COPY entrypoint.sh /app/entrypoint.sh
+COPY nginx.conf /etc/nginx/sites-available/default
+RUN chmod +x /app/entrypoint.sh
+
+# Generate self-signed certificate
+RUN mkdir -p /etc/nginx/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt \
+    -subj "/C=DE/ST=Augsburg/L=Augsburg/O=CubeWebapp/OU=Dev/CN=localhost"
+
 RUN ldconfig
 
-# Default entrypoint
+# Default entrypoint (starts both Nginx and MatrixServer)
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["server_FPGA_RPISPI"]

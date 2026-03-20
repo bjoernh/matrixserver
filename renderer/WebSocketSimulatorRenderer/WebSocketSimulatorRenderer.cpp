@@ -105,7 +105,7 @@ void WebSocketSimulatorRenderer::render() {
   }
 
   // Send as WebSocket binary message via queue
-  session->send_msg(serialised);
+  session->send_msg(serialised, true);
 }
 
 void WebSocketSimulatorRenderer::setGlobalBrightness(int brightness) {
@@ -114,4 +114,21 @@ void WebSocketSimulatorRenderer::setGlobalBrightness(int brightness) {
 
 int WebSocketSimulatorRenderer::getGlobalBrightness() {
   return globalBrightness;
+}
+
+void WebSocketSimulatorRenderer::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  std::shared_ptr<WsSession> session;
+  {
+    std::lock_guard<std::mutex> lock(sessionMutex);
+    session = activeSession;
+  }
+
+  if (!session) {
+    return;
+  }
+
+  std::string serialised;
+  if (msg->SerializeToString(&serialised)) {
+    session->send_msg(serialised, false);
+  }
 }
