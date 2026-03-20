@@ -48,8 +48,25 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
                                       boost::log::trivial::debug);
 
   setRenderer->setClientMessageCallback(
-      [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-        if (msg->messagetype() == matrixserver::imuData ||
+      [this, setRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        if (msg->messagetype() == matrixserver::getServerInfo) {
+          auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+          response->set_messagetype(matrixserver::getServerInfo);
+          auto *tempConfig = new matrixserver::ServerConfig();
+          tempConfig->CopyFrom(serverConfig);
+          response->set_allocated_serverconfig(tempConfig);
+          setRenderer->sendMessage(response);
+
+          std::lock_guard<std::mutex> lock(appsMutex);
+          if (!apps.empty()) {
+            auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+            schemaMsg->set_appid(apps.back().getAppId());
+            schemaMsg->set_messagetype(matrixserver::appParamSchema);
+            auto schema = apps.back().getParamSchema();
+            schemaMsg->mutable_appparamschema()->CopyFrom(schema);
+            setRenderer->sendMessage(schemaMsg);
+          }
+        } else if (msg->messagetype() == matrixserver::imuData ||
             msg->messagetype() == matrixserver::joystickData ||
             msg->messagetype() == matrixserver::setAppParam ||
             msg->messagetype() == matrixserver::getAppParams) {
