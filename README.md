@@ -155,7 +155,7 @@ Pre-compiled `.deb` packages for both `amd64` (Simulator targets) and `arm64` (R
 
 Pre-built images are hosted on the GitHub Container Registry (GHCR).
 
-**Simulator (AMD64) — includes CubeWebapp UI**
+**Simulator (AMD64)**
 ```bash
 docker pull ghcr.io/bjoernh/matrixserver-simulator:latest
 ```
