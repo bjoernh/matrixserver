@@ -1,6 +1,6 @@
 project(WebSocketSimulatorRenderer)
 
-find_package(Boost 1.66.0 REQUIRED COMPONENTS thread log system)
+find_package(Boost 1.66.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(SOURCE_FILES

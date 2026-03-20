@@ -231,9 +231,12 @@ void MatrixApplication::handleRequest(
   case matrixserver::setScreenFrame:
     renderSyncMutex.unlock();
     break;
-      MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
-    }
-    break;
+  case matrixserver::imuData: {
+    std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
+    MatrixApplication::latestSimulatorImuX = message->imudata().accelx();
+    MatrixApplication::latestSimulatorImuY = message->imudata().accely();
+    MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
+  } break;
   case matrixserver::setAppParam:
     if (message->has_appparamupdate()) {
       params.applyUpdate(message->appparamupdate());
