@@ -65,8 +65,8 @@ message ImuData{
 }
 
 message AudioData {
-    float volume = 1;
-    repeated float frequencyBands = 2;
+    uint32 volume = 1;
+    repeated uint32 frequencyBands = 2;
 }
 
 message JoystickData {

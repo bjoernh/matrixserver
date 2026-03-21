@@ -12,8 +12,8 @@ float MatrixApplication::latestSimulatorImuY = 0.0f;
 float MatrixApplication::latestSimulatorImuZ = 0.0f;
 std::mutex MatrixApplication::simulatorImuMutex;
 
-float MatrixApplication::latestAudioVolume = 0.0f;
-std::vector<float> MatrixApplication::latestAudioFrequencies;
+uint8_t MatrixApplication::latestAudioVolume = 0;
+std::vector<uint8_t> MatrixApplication::latestAudioFrequencies;
 std::mutex MatrixApplication::audioDataMutex;
 
 MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string appName)
@@ -244,10 +244,12 @@ void MatrixApplication::handleRequest(
   case matrixserver::audioDataMessage: {
     if (message->has_audiodata()) {
       std::lock_guard<std::mutex> lock(MatrixApplication::audioDataMutex);
-      MatrixApplication::latestAudioVolume = message->audiodata().volume();
+      MatrixApplication::latestAudioVolume =
+          static_cast<uint8_t>(message->audiodata().volume());
       MatrixApplication::latestAudioFrequencies.clear();
       for (int i = 0; i < message->audiodata().frequencybands_size(); ++i) {
-        MatrixApplication::latestAudioFrequencies.push_back(message->audiodata().frequencybands(i));
+        MatrixApplication::latestAudioFrequencies.push_back(
+            static_cast<uint8_t>(message->audiodata().frequencybands(i)));
       }
     }
   } break;

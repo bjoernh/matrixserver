@@ -96,8 +96,8 @@ public:
   static float latestSimulatorImuZ;
   static std::mutex simulatorImuMutex;
 
-  static float latestAudioVolume;
-  static std::vector<float> latestAudioFrequencies;
+  static uint8_t latestAudioVolume;
+  static std::vector<uint8_t> latestAudioFrequencies;
   static std::mutex audioDataMutex;
 };
 
