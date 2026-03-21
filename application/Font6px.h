@@ -482,6 +482,42 @@ namespace CharacterBitmaps
     Vector2i(0,4),
   };
 
+  const Bitmap1bpp char_minus = {
+    Vector2i(0,2),
+    Vector2i(1,2),
+    Vector2i(2,2),
+  };
+
+  const Bitmap1bpp char_plus = {
+    Vector2i(1,1),
+    Vector2i(0,2),
+    Vector2i(1,2),
+    Vector2i(2,2),
+    Vector2i(1,3),
+  };
+
+  const Bitmap1bpp char_underscore = {
+    Vector2i(0,5),
+    Vector2i(1,5),
+    Vector2i(2,5),
+  };
+
+  const Bitmap1bpp char_exclamation = {
+    Vector2i(1,0),
+    Vector2i(1,1),
+    Vector2i(1,2),
+    Vector2i(1,4),
+  };
+
+  const Bitmap1bpp char_question = {
+    Vector2i(0,0),
+    Vector2i(1,0),
+    Vector2i(2,0),
+    Vector2i(2,1),
+    Vector2i(1,2),
+    Vector2i(1,4),
+  };
+
   const Bitmap1bpp char_matrix = {
     Vector2i(0,0),
     Vector2i(2,0),
@@ -649,6 +685,21 @@ namespace CharacterBitmaps
       break;
       case ',':
         bitmap = CharacterBitmaps::char_comma;
+      break;
+      case '-':
+        bitmap = CharacterBitmaps::char_minus;
+      break;
+      case '+':
+        bitmap = CharacterBitmaps::char_plus;
+      break;
+      case '_':
+        bitmap = CharacterBitmaps::char_underscore;
+      break;
+      case '!':
+        bitmap = CharacterBitmaps::char_exclamation;
+      break;
+      case '?':
+        bitmap = CharacterBitmaps::char_question;
       break;
       case ' ':
         bitmap.clear();
