@@ -15,6 +15,7 @@ message MatrixServerMessage {
     AppParamSchema appParamSchema = 15;
     AppParamUpdate appParamUpdate = 16;
     AppParamValues appParamValues = 17;
+    AudioData audioData = 18;
 }
 
 enum MessageType {
@@ -33,6 +34,7 @@ enum MessageType {
     setAppParam = 12;
     getAppParams = 13;
     appParamValues = 14;
+    audioDataMessage = 15;
 }
 
 enum Status{
@@ -60,6 +62,11 @@ message ImuData{
     float gyroX = 4;
     float gyroY = 5;
     float gyroZ = 6;
+}
+
+message AudioData {
+    float volume = 1;
+    repeated float frequencyBands = 2;
 }
 
 message JoystickData {

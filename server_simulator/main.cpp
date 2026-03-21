@@ -24,16 +24,21 @@ int main(int argc, char **argv) {
         screenInfo.width(), screenInfo.height(), screenInfo.screenid()));
 
   std::shared_ptr<IRenderer> renderer;
+  std::string simPort = serverConfig.simulatorport();
+  if (simPort.empty()) {
+      simPort = "1337";
+  }
+
   if (useDeprecatedTcp) {
     BOOST_LOG_TRIVIAL(info)
         << "[Server] Initialising legacy TCP SimulatorRenderer";
     renderer = std::make_shared<SimulatorRenderer>(
-        screens, serverConfig.simulatoraddress(), serverConfig.simulatorport());
+        screens, serverConfig.simulatoraddress(), simPort);
   } else {
     BOOST_LOG_TRIVIAL(info)
         << "[Server] Initialising WebSocketSimulatorRenderer";
     renderer = std::make_shared<WebSocketSimulatorRenderer>(
-        screens, serverConfig.simulatorport());
+        screens, simPort);
   }
 
   Server server(renderer, serverConfig);

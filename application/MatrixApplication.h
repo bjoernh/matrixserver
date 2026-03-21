@@ -95,6 +95,10 @@ public:
   static float latestSimulatorImuY;
   static float latestSimulatorImuZ;
   static std::mutex simulatorImuMutex;
+
+  static float latestAudioVolume;
+  static std::vector<float> latestAudioFrequencies;
+  static std::mutex audioDataMutex;
 };
 
 #endif // MATRIXSERVER_MATRIXAPPLICATION_H

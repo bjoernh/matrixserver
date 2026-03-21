@@ -67,6 +67,7 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
             setRenderer->sendMessage(schemaMsg);
           }
         } else if (msg->messagetype() == matrixserver::imuData ||
+            msg->messagetype() == matrixserver::audioDataMessage ||
             msg->messagetype() == matrixserver::joystickData ||
             msg->messagetype() == matrixserver::setAppParam ||
             msg->messagetype() == matrixserver::getAppParams) {
@@ -301,6 +302,7 @@ void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
   newRenderer->setClientMessageCallback(
       [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
         if (msg->messagetype() == matrixserver::imuData ||
+            msg->messagetype() == matrixserver::audioDataMessage ||
             msg->messagetype() == matrixserver::joystickData ||
             msg->messagetype() == matrixserver::setAppParam ||
             msg->messagetype() == matrixserver::getAppParams) {

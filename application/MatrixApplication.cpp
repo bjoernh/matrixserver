@@ -12,6 +12,10 @@ float MatrixApplication::latestSimulatorImuY = 0.0f;
 float MatrixApplication::latestSimulatorImuZ = 0.0f;
 std::mutex MatrixApplication::simulatorImuMutex;
 
+float MatrixApplication::latestAudioVolume = 0.0f;
+std::vector<float> MatrixApplication::latestAudioFrequencies;
+std::mutex MatrixApplication::audioDataMutex;
+
 MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string appName)
     : mainThread(), io_context(), serverUri(serverUri), appName(appName) {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
@@ -236,6 +240,16 @@ void MatrixApplication::handleRequest(
     MatrixApplication::latestSimulatorImuX = message->imudata().accelx();
     MatrixApplication::latestSimulatorImuY = message->imudata().accely();
     MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
+  } break;
+  case matrixserver::audioDataMessage: {
+    if (message->has_audiodata()) {
+      std::lock_guard<std::mutex> lock(MatrixApplication::audioDataMutex);
+      MatrixApplication::latestAudioVolume = message->audiodata().volume();
+      MatrixApplication::latestAudioFrequencies.clear();
+      for (int i = 0; i < message->audiodata().frequencybands_size(); ++i) {
+        MatrixApplication::latestAudioFrequencies.push_back(message->audiodata().frequencybands(i));
+      }
+    }
   } break;
   case matrixserver::setAppParam:
     if (message->has_appparamupdate()) {
