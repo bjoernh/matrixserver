@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.07)
 project(matrixserver VERSION 0.4.5)
 
+cmake_policy(SET CMP0167 NEW)
+
 set(CMAKE_CXX_STANDARD 17)
 
-set(Boost_NO_BOOST_CMAKE ON)
-set(Boost_FIND_QUIETLY ON)
 set(Boost_USE_MULTITHREADED TRUE)
 
 if (EXISTS "/boot/LICENCE.broadcom")
