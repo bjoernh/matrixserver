@@ -5,6 +5,7 @@
 #include "transformer.h"
 
 #include <chrono>
+#include <stdexcept>
 
 rgb_matrix::RGBMatrix::Options RGBmatrixOptions;
 rgb_matrix::RuntimeOptions RGBruntimeOptions;
@@ -39,6 +40,9 @@ void RGBMatrixRenderer::init(std::vector<std::shared_ptr<Screen>> initScreens) {
   RGBruntimeOptions.do_gpio_init = true;
 
   rgbMatrix = CreateMatrixFromOptions(RGBmatrixOptions, RGBruntimeOptions);
+  if (!rgbMatrix) {
+    throw std::runtime_error("Failed to create RGBMatrix — check GPIO permissions and hardware config");
+  }
 
   rgbMatrix->set_luminance_correct(true);
   rgbFrameCanvas = rgbMatrix->CreateFrameCanvas();
