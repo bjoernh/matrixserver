@@ -13,7 +13,59 @@ namespace po = boost::program_options;
 
 namespace ServerSetup {
 
-void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
+static void setScreenDefaults(matrixserver::ScreenInfo *si,
+                              matrixserver::ScreenInfo::ScreenOrientation orient,
+                              HardwareType hwType) {
+  si->set_screenorientation(orient);
+  int oX = 0, oY = 0;
+  auto rot = matrixserver::ScreenInfo::rot0;
+
+  switch (hwType) {
+  case HardwareType::FPGA_FTDI:
+    switch (orient) {
+    case matrixserver::ScreenInfo::front:  oX=4; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
+    case matrixserver::ScreenInfo::right:  oX=3; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
+    case matrixserver::ScreenInfo::back:   oX=1; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
+    case matrixserver::ScreenInfo::left:   oX=5; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
+    case matrixserver::ScreenInfo::top:    oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    case matrixserver::ScreenInfo::bottom: oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    default: break;
+    }
+    break;
+  case HardwareType::FPGA_RPISPI:
+    switch (orient) {
+    case matrixserver::ScreenInfo::front:  oX=1; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
+    case matrixserver::ScreenInfo::right:  oX=2; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
+    case matrixserver::ScreenInfo::back:   oX=1; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
+    case matrixserver::ScreenInfo::left:   oX=0; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
+    case matrixserver::ScreenInfo::top:    oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    case matrixserver::ScreenInfo::bottom: oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    default: break;
+    }
+    break;
+  case HardwareType::RGB_MATRIX:
+    switch (orient) {
+    case matrixserver::ScreenInfo::front:  oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    case matrixserver::ScreenInfo::right:  oX=1; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
+    case matrixserver::ScreenInfo::back:   oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
+    case matrixserver::ScreenInfo::left:   oX=3; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
+    case matrixserver::ScreenInfo::top:    oX=4; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
+    case matrixserver::ScreenInfo::bottom: oX=5; oY=0; rot=matrixserver::ScreenInfo::rot0;   break;
+    default: break;
+    }
+    break;
+  case HardwareType::Simulator:
+    // Simulator uses default (0,0,rot0) for all
+    break;
+  }
+
+  si->set_offsetx(oX);
+  si->set_offsety(oY);
+  si->set_screenrotation(rot);
+}
+
+void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig,
+                             HardwareType hwType) {
   serverConfig.Clear();
   serverConfig.set_globalscreenbrightness(100);
   serverConfig.set_servername("matrixserver");
@@ -24,24 +76,46 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
       matrixserver::Connection_ConnectionType_tcp);
   serverConfig.set_allocated_serverconnection(serverConnection);
   serverConfig.set_assemblytype(matrixserver::ServerConfig_AssemblyType_cube);
+
+  const matrixserver::ScreenInfo::ScreenOrientation orientations[] = {
+      matrixserver::ScreenInfo::front,  matrixserver::ScreenInfo::right,
+      matrixserver::ScreenInfo::back,   matrixserver::ScreenInfo::left,
+      matrixserver::ScreenInfo::top,    matrixserver::ScreenInfo::bottom};
+
   for (int i = 0; i < 6; i++) {
     auto screenInfo = serverConfig.add_screeninfo();
     screenInfo->set_screenid(i);
     screenInfo->set_available(true);
     screenInfo->set_height(64);
     screenInfo->set_width(64);
-    screenInfo->set_screenorientation(
-        (matrixserver::ScreenInfo_ScreenOrientation)(i + 1));
+    setScreenDefaults(screenInfo, orientations[i], hwType);
   }
-  // Included by default for the simulator, ignored by others
+
   serverConfig.set_simulatoraddress("127.0.0.1");
   serverConfig.set_simulatorport("1337");
+
+  // Default tick interval: 100ms for FPGA_RPISPI, 1000ms for others
+  int tickMs = (hwType == HardwareType::FPGA_RPISPI) ? 100 : 1000;
+  serverConfig.set_tickintervalms(tickMs);
+}
+
+std::vector<std::shared_ptr<Screen>>
+createScreensFromConfig(const matrixserver::ServerConfig &serverConfig) {
+  std::vector<std::shared_ptr<Screen>> screens;
+  for (const auto &screenInfo : serverConfig.screeninfo()) {
+    auto screen = std::make_shared<Screen>(screenInfo.width(),
+                                           screenInfo.height(),
+                                           screenInfo.screenid());
+    screen->setOffsetX(screenInfo.offsetx());
+    screen->setOffsetY(screenInfo.offsety());
+    screen->setRotation(static_cast<Rotation>(screenInfo.screenrotation()));
+    screens.push_back(screen);
+  }
+  return screens;
 }
 
 void handleServerConfig(int argc, char **argv,
-                        matrixserver::ServerConfig &serverConfig,
-                        bool &useDeprecatedTcp) {
-  useDeprecatedTcp = false;
+                        matrixserver::ServerConfig &serverConfig) {
   std::string configPath = "";
   std::string serverAddressOverride = "";
 
@@ -51,21 +125,12 @@ void handleServerConfig(int argc, char **argv,
         "config", po::value<std::string>(&configPath),
         "path to configuration file")(
         "address", po::value<std::string>(&serverAddressOverride),
-        "override server address")("use-deprecated-tcp-connection",
-                                   po::bool_switch(&useDeprecatedTcp),
-                                   "Use legacy TCP for simulator");
+        "override server address");
 
     po::positional_options_description p;
-    // Allow positional arguments for legacy support (e.g. simulator used to
-    // take [override_address] [config_path]) But since the order was weird
-    // (simulator: addr config; others: config), we'll prioritize explicit flags
-    // Let's still allow a single positional argument to be the config for
-    // backwards compatibility with non-simulator targets
     p.add("config", 1);
 
     po::variables_map vm;
-    // We use parsed_options allowing unregistered options so we don't break
-    // immediately if an unknown flag is passed
     po::store(po::command_line_parser(argc, argv)
                   .options(desc)
                   .positional(p)
@@ -77,7 +142,6 @@ void handleServerConfig(int argc, char **argv,
     if (vm.count("help")) {
       std::string executableName = argc > 0 ? argv[0] : "matrixserver";
 
-      // Extract just the filename if it's a path
       size_t lastSlash = executableName.find_last_of("/\\");
       if (lastSlash != std::string::npos) {
         executableName = executableName.substr(lastSlash + 1);
@@ -85,18 +149,16 @@ void handleServerConfig(int argc, char **argv,
 
       std::cout
           << executableName
-          << " 1.0.0 - Matrix Server for rendering to LED cubes and other "
+          << " - Matrix Server for rendering to LED cubes and other "
              "matrix displays.\n\n"
           << "USAGE:\n"
           << "  " << executableName << " [OPTIONS] [CONFIG_FILE_PATH]\n\n"
           << "OPTIONS:\n"
-          << "  -h, --help                       Show this help message.\n"
-          << "  --config <path>                  Path to configuration file. "
+          << "  -h, --help              Show this help message.\n"
+          << "  --config <path>         Path to configuration file. "
              "Can also be passed as a positional argument.\n"
-          << "  --address <ip>                   Override the server address "
-             "specified in the config.\n"
-          << "  --use-deprecated-tcp-connection  Use legacy TCP connection for "
-             "simulator renderer.\n\n"
+          << "  --address <ip>          Override the server address "
+             "specified in the config.\n\n"
           << "EXAMPLES:\n"
           << "  " << executableName << " --config myConfig.json\n"
           << "  " << executableName << " default_config.json\n"

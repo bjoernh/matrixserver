@@ -4,6 +4,8 @@ FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
+ARG HARDWARE_BACKEND=FPGA_RPISPI
+
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -47,7 +49,7 @@ RUN make -C renderer/RGBMatrixRenderer/rpi-rgb-led-matrix/lib clean || true
 # Build the project
 RUN mkdir -p build && cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_RASPBERRYPI=ON \
+    -DHARDWARE_BACKEND=${HARDWARE_BACKEND} \
     .. && \
     make -j$(nproc)
 
@@ -78,15 +80,11 @@ WORKDIR /app
 
 # Copy the built server executables from the builder stage
 COPY --from=builder /app/build/MainMenu/MainMenu /usr/local/bin/MainMenu
-COPY --from=builder /app/build/server_FPGA_RPISPI/server_FPGA_RPISPI /usr/local/bin/server_FPGA_RPISPI
-COPY --from=builder /app/build/server_FPGA_FTDI/server_FPGA_FTDI /usr/local/bin/server_FPGA_FTDI
-COPY --from=builder /app/build/server_RGBMatrix/server_RGBMatrix /usr/local/bin/server_RGBMatrix
+COPY --from=builder /app/build/server_hardware/matrix_server /usr/local/bin/matrix_server
 
-# Copy project shared libraries
-COPY --from=builder /app/build/renderer/FPGASPIRenderer/libFPGASPIRenderer.so /usr/local/lib/
-COPY --from=builder /app/build/renderer/FPGAFTDIRenderer/libFPGAFTDIRenderer.so /usr/local/lib/
-COPY --from=builder /app/build/renderer/RGBMatrixRenderer/libRGBMatrixRenderer.so /usr/local/lib/
-COPY --from=builder /app/build/renderer/RGBMatrixRenderer/imu/libImu.so /usr/local/lib/
+# Copy project shared libraries (renderer .so for the selected backend)
+COPY --from=builder /app/build/renderer/ /tmp/renderer-build/
+RUN find /tmp/renderer-build -name '*.so' -exec cp {} /usr/local/lib/ \; && rm -rf /tmp/renderer-build
 
 # Copy wiringPi dynamic libraries (usually installed to /usr/local/lib)
 COPY --from=builder /usr/local/lib/libwiringPi.so* /usr/local/lib/
@@ -94,4 +92,4 @@ COPY --from=builder /usr/local/lib/libwiringPiDev.so* /usr/local/lib/
 RUN ldconfig
 
 # Default entrypoint
-CMD ["server_FPGA_RPISPI"]
+CMD ["matrix_server"]

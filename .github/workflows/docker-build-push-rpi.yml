@@ -49,7 +49,7 @@ jobs:
       - name: Compile Project
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_RASPBERRYPI=ON ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=FPGA_RPISPI ..
           make -j$(nproc)
 
       - name: Create Debian Package Workspace
@@ -59,19 +59,14 @@ jobs:
 
           mkdir -p deb-workspace/usr/local/bin
           mkdir -p deb-workspace/usr/local/lib
-          
+
           # Copy Binaries
           cp build/MainMenu/MainMenu deb-workspace/usr/local/bin/
-          cp build/server_FPGA_RPISPI/server_FPGA_RPISPI deb-workspace/usr/local/bin/
-          cp build/server_FPGA_FTDI/server_FPGA_FTDI deb-workspace/usr/local/bin/
-          cp build/server_RGBMatrix/server_RGBMatrix deb-workspace/usr/local/bin/
-          
+          cp build/server_hardware/matrix_server deb-workspace/usr/local/bin/
+
           # Copy Shared Libraries
-          cp build/renderer/FPGASPIRenderer/libFPGASPIRenderer.so deb-workspace/usr/local/lib/
-          cp build/renderer/FPGAFTDIRenderer/libFPGAFTDIRenderer.so deb-workspace/usr/local/lib/
-          cp build/renderer/RGBMatrixRenderer/libRGBMatrixRenderer.so deb-workspace/usr/local/lib/
-          cp build/renderer/RGBMatrixRenderer/imu/libImu.so deb-workspace/usr/local/lib/
-          
+          find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/local/lib/ \;
+
           # Copy WiringPi Dynamic Libraries
           cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/local/lib/
           cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/local/lib/

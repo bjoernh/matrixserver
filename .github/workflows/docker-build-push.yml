@@ -44,7 +44,7 @@ jobs:
           if [ -z "$PROJECT_VERSION" ]; then echo "Failed to extract version"; exit 1; fi
 
           mkdir -p deb-workspace/usr/local/bin
-          cp build/server_simulator/server_simulator deb-workspace/usr/local/bin/
+          cp build/server_simulator/matrix_server_simulator deb-workspace/usr/local/bin/
 
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control

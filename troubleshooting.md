@@ -10,7 +10,7 @@ The matrix server on the Raspberry Pi (`cube.local`) was failing:
 Despite the server process running, applications cannot establish a connection to port 2017.
 
 ### Current Investigation:
-- **Process Status**: `ps aux` confirms `server_RGBMatrix` is running as root on the Pi.
+- **Process Status**: `ps aux` confirms `matrix_server` is running as root on the Pi.
 - **Port Status**: `netstat -tpln` and `ss -tulpn` show that **nothing is listening on port 2017**.
 - **Log Analysis**: 
     - The server logs show it is "creating default config" and "writing matrixServerConfig.json".

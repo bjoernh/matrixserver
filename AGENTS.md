@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-C++14 LED matrix screen server for the LEDCube project. Modular architecture with
+C++17 LED matrix screen server for the LEDCube project. Modular architecture with
 abstract renderer backends (Simulator, FPGA FTDI/SPI, RGB Matrix) and protobuf-based
 client-server communication over TCP/Unix sockets/IPC.
 
@@ -19,25 +19,43 @@ On Raspberry Pi additionally: `wiringpi`
 ### Build Commands
 
 ```bash
-# Standard build (non-Raspberry Pi)
+# Simulator only (default, non-Raspberry Pi)
 mkdir -p build && cd build && cmake .. && make
 
 # Debug build
 mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
-# Raspberry Pi build (with hardware renderer targets)
-mkdir -p build && cd build && cmake -DBUILD_RASPBERRYPI=ON .. && make
+# Hardware build — select one backend:
+mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
+mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
+mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
 
 # Rebuild after changes (from build/)
 make
 
-# Build a single target
-make server_simulator
+# Build specific targets
+make matrix_server_simulator
+make matrix_server          # requires HARDWARE_BACKEND to be set
 make testAll
 make common
 make server
 make matrixapplication
 ```
+
+### Build Targets
+
+| Target | Binary | Description |
+|--------|--------|-------------|
+| `matrix_server_simulator` | `server_simulator/matrix_server_simulator` | Always built; uses WebSocketSimulatorRenderer |
+| `matrix_server` | `server_hardware/matrix_server` | Built when `HARDWARE_BACKEND` is set |
+
+### HARDWARE_BACKEND Values
+
+| Value | Renderer | Interface |
+|-------|----------|-----------|
+| `FPGA_FTDI` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
+| `FPGA_RPISPI` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
+| `RGB_MATRIX` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
 
 ### Tests (Catch v1, single-header)
 
@@ -70,27 +88,27 @@ Test files use Catch v1 macros: `TEST_CASE`, `SECTION`, `REQUIRE` (fatal),
 
 ```bash
 docker build -t matrixserver .                              # amd64 simulator
-docker build -f Dockerfile.raspberrypi -t matrixserver-rpi . # arm64 RPi
+docker build -f Dockerfile.arm64 --build-arg HARDWARE_BACKEND=FPGA_RPISPI -t matrixserver-rpi .
 ```
 
 ### CI
 
-- GitHub Actions (`.github/workflows/docker-build-push.yml`): Docker multi-arch build on tag push
-- Travis CI (`.travis.yml`, legacy): gcc/clang on Linux + macOS
+- GitHub Actions (`.github/workflows/docker-build-push.yml`): Builds simulator (AMD64) on tag push
+- GitHub Actions (`.github/workflows/docker-build-push-rpi.yml`): Builds hardware target (ARM64) with `HARDWARE_BACKEND=FPGA_RPISPI` on tag push
+- GitHub Actions (`.github/workflows/docker-build-push-simulator-arm64.yml`): Builds simulator (ARM64) on tag push
 
 ## Code Style Guidelines
 
 ### Language Standard
 
-C++14. Do not use C++17 or later features (except `<filesystem>` is used in MainMenu
-via `-lstdc++fs`).
+C++17.
 
 ### File Organization
 
 - One class per file pair: `ClassName.h` + `ClassName.cpp` (PascalCase filenames)
 - Directories are modules, each with its own `CMakeLists.txt`
 - Module structure: `common/` (shared), `server/`, `application/`, `renderer/`,
-  `server_*/` (executables), `tests/`
+  `server_simulator/`, `server_hardware/` (executables), `tests/`
 
 ### Header Guards
 
@@ -188,6 +206,16 @@ try {
 - Proto3 syntax, package `matrixserver`
 - Definition: `common/protobuf/matrixserver.proto`
 - Generated code is built automatically by CMake's `protobuf_generate_cpp`
+- `ServerConfig` includes `tickIntervalMs` (tick loop sleep in milliseconds)
+- `ScreenInfo` includes `screenRotation`, `offsetX`, `offsetY` for hardware-specific screen mapping
+
+### ServerSetup
+
+`server/ServerSetup.h` provides the `ServerSetup` namespace with:
+- `HardwareType` enum: `Simulator`, `FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`
+- `handleServerConfig(argc, argv, serverConfig)` — parses CLI args, loads/generates JSON config
+- `createDefaultCubeConfig(serverConfig, hwType)` — generates hardware-specific defaults including screen orientations
+- `createScreensFromConfig(serverConfig)` — creates `Screen` objects from config (reads offsetX/Y/rotation from JSON)
 
 ### Key Design Patterns
 
@@ -196,6 +224,7 @@ try {
 - **Observer/Callback:** `std::function` callbacks for connection events
 - **Bridge:** `UniversalConnection` abstracts TCP/IPC transports
 - **enable_shared_from_this:** Used by `SocketConnection`, `IpcConnection`
+- **Compile-time renderer selection:** `server_hardware/main.cpp` uses `#ifdef BACKEND_*` defines set by CMake to select the renderer type at compile time
 
 ### Writing Tests
 
@@ -217,9 +246,10 @@ TEST_CASE("descriptive name", "[module-tag]") {
 ### Things to Avoid
 
 - Do NOT use `#pragma once` (project uses `#ifndef` guards)
-- Do NOT use C++17 features (project is C++14)
 - Do NOT use C-style casts (use C++ casts; existing C-style casts are flagged with TODOs)
 - Do NOT catch exceptions by value (use `const&`)
 - Do NOT use `NULL` (use `nullptr`)
 - Do NOT add `using namespace std;` in headers
 - Do NOT use raw `new` without wrapping in a smart pointer
+- Do NOT add new server_* executable directories — use `server_simulator/` or `server_hardware/`
+- Do NOT hard-code screen orientations/offsets in main.cpp — put them in `createDefaultCubeConfig()`
