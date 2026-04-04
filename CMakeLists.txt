@@ -7,6 +7,10 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(Boost_USE_MULTITHREADED TRUE)
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
+
 if (EXISTS "/boot/LICENCE.broadcom")
     set(BUILD_RASPBERRYPI true)
     message("Build on Raspberry Pi is enabled")
