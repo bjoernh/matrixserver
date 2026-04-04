@@ -107,6 +107,7 @@ message ServerConfig {
     string simulatorAddress = 6;
     string simulatorPort = 7;
     int32 tickIntervalMs = 8;
+    bool pixelStreamingEnabled = 9;
 }
 
 message Connection {

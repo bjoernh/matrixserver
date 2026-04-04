@@ -4,6 +4,7 @@
 
 #include <Server.h>
 #include <ServerSetup.h>
+#include <WebSocketSimulatorRenderer.h>
 
 #if defined(BACKEND_FPGA_FTDI)
 #include <FPGARendererFTDI.h>
@@ -35,6 +36,13 @@ int main(int argc, char **argv) {
     BOOST_LOG_TRIVIAL(debug) << "[Server] Renderer initialized";
 
     Server server(renderer, serverConfig);
+
+    // Add WebSocket renderer for webapp parameter control (no pixel streaming)
+    std::string simPort = serverConfig.simulatorport();
+    if (simPort.empty()) simPort = "1337";
+    auto wsRenderer = std::make_shared<WebSocketSimulatorRenderer>(
+        screens, simPort, false);
+    server.addRenderer(wsRenderer);
 
     int tickMs = serverConfig.tickintervalms();
     if (tickMs <= 0) tickMs = 1000;

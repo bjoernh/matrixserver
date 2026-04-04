@@ -300,8 +300,24 @@ bool Server::tick() {
 
 void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
   newRenderer->setClientMessageCallback(
-      [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-        if (msg->messagetype() == matrixserver::imuData ||
+      [this, newRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        if (msg->messagetype() == matrixserver::getServerInfo) {
+          auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+          response->set_messagetype(matrixserver::getServerInfo);
+          auto *cfg = new matrixserver::ServerConfig();
+          cfg->CopyFrom(serverConfig);
+          response->set_allocated_serverconfig(cfg);
+          newRenderer->sendMessage(response);
+
+          std::lock_guard<std::mutex> lock(appsMutex);
+          if (!apps.empty()) {
+            auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+            schemaMsg->set_appid(apps.back().getAppId());
+            schemaMsg->set_messagetype(matrixserver::appParamSchema);
+            schemaMsg->mutable_appparamschema()->CopyFrom(apps.back().getParamSchema());
+            newRenderer->sendMessage(schemaMsg);
+          }
+        } else if (msg->messagetype() == matrixserver::imuData ||
             msg->messagetype() == matrixserver::audioDataMessage ||
             msg->messagetype() == matrixserver::joystickData ||
             msg->messagetype() == matrixserver::setAppParam ||

@@ -229,7 +229,7 @@ The project is divided into logical directories that separate the server daemon,
     *   Contains interchangeable rendering backends that the server uses to output the final pixel buffers to physical or virtual displays.
     *   *Supported Renderers include:*
         *   **`RGBMatrixRenderer`**: Hardware interface driving HUB75 panels directly from Raspberry Pi GPIOs (via `rpi-rgb-led-matrix`).
-        *   **`WebSocketSimulatorRenderer`**: Network interface streaming pixels to the web-based `CubeSimulator` project.
+        *   **`WebSocketSimulatorRenderer`**: Network interface for the web-based `CubeWebapp`. Supports a `streamPixels` flag (default `true`): when `false`, pixel streaming is disabled and the renderer acts as a pure bidirectional control channel (parameter schema + value exchange only).
         *   **`FPGAFTDIRenderer` & `FPGASPIRenderer`**: Protocol implementations for sending pixel data to an IceBreaker FPGA board acting as the HUB75 driver, via USB FTDI or RPi SPI.
 
 *   **`server`**
@@ -242,7 +242,7 @@ The project is divided into logical directories that separate the server daemon,
 
 *   **`server_simulator/`** and **`server_hardware/`** (The Executables)
     *   **`server_simulator`**: Always built. Produces `matrix_server_simulator`, which uses `WebSocketSimulatorRenderer` to interact with the web simulator.
-    *   **`server_hardware`**: Built when `-DHARDWARE_BACKEND=<value>` is set. Produces `matrix_server`, compiled with the selected hardware renderer. The renderer is selected at compile time via preprocessor defines.
+    *   **`server_hardware`**: Built when `-DHARDWARE_BACKEND=<value>` is set. Produces `matrix_server`, compiled with the selected hardware renderer. The renderer is selected at compile time via preprocessor defines. In addition to the hardware renderer, a `WebSocketSimulatorRenderer` (with `streamPixels=false`) is registered as a second renderer so the CubeWebapp can connect on WebSocket port `1337` for runtime parameter control — without any pixel streaming overhead.
 
 *   **`MainMenu`**
     *   A built-in example client application that provides a launch interface for the cube.

@@ -206,7 +206,7 @@ try {
 - Proto3 syntax, package `matrixserver`
 - Definition: `common/protobuf/matrixserver.proto`
 - Generated code is built automatically by CMake's `protobuf_generate_cpp`
-- `ServerConfig` includes `tickIntervalMs` (tick loop sleep in milliseconds)
+- `ServerConfig` includes `tickIntervalMs` (tick loop sleep in milliseconds) and `pixelStreamingEnabled` (set to `true` by the simulator, `false` by all hardware backends — the webapp uses this to decide whether to show the 3D view)
 - `ScreenInfo` includes `screenRotation`, `offsetX`, `offsetY` for hardware-specific screen mapping
 
 ### ServerSetup
@@ -214,7 +214,7 @@ try {
 `server/ServerSetup.h` provides the `ServerSetup` namespace with:
 - `HardwareType` enum: `Simulator`, `FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`
 - `handleServerConfig(argc, argv, serverConfig)` — parses CLI args, loads/generates JSON config
-- `createDefaultCubeConfig(serverConfig, hwType)` — generates hardware-specific defaults including screen orientations
+- `createDefaultCubeConfig(serverConfig, hwType)` — generates hardware-specific defaults including screen orientations and sets `pixelStreamingEnabled` (`true` for `Simulator`, `false` for all hardware types)
 - `createScreensFromConfig(serverConfig)` — creates `Screen` objects from config (reads offsetX/Y/rotation from JSON)
 
 ### Key Design Patterns

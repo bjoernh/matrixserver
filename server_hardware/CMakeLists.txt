@@ -1,7 +1,7 @@
 project(matrix_server)
 
 add_executable(matrix_server main.cpp)
-target_link_libraries(matrix_server server)
+target_link_libraries(matrix_server server wsSimulatorRenderer)
 target_compile_definitions(matrix_server PUBLIC BOOST_LOG_DYN_LINK)
 
 if (HARDWARE_BACKEND STREQUAL "FPGA_FTDI")

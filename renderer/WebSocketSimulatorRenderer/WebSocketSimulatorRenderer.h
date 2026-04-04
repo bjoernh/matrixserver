@@ -34,7 +34,8 @@ class WebSocketSimulatorRenderer : public IRenderer {
 public:
   explicit WebSocketSimulatorRenderer(
       std::vector<std::shared_ptr<Screen>> screens,
-      std::string port = WS_SIMULATOR_DEFAULT_PORT);
+      std::string port = WS_SIMULATOR_DEFAULT_PORT,
+      bool streamPixels = true);
 
   ~WebSocketSimulatorRenderer();
 
@@ -68,6 +69,8 @@ private:
 
   std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
       clientMessageCb;
+
+  bool streamPixels;
 };
 
 #endif // MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H

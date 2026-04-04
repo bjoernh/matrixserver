@@ -97,6 +97,9 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig,
   // Default tick interval: 100ms for FPGA_RPISPI, 1000ms for others
   int tickMs = (hwType == HardwareType::FPGA_RPISPI) ? 100 : 1000;
   serverConfig.set_tickintervalms(tickMs);
+
+  // Pixel streaming is only enabled for the simulator
+  serverConfig.set_pixelstreamingenabled(hwType == HardwareType::Simulator);
 }
 
 std::vector<std::shared_ptr<Screen>>
