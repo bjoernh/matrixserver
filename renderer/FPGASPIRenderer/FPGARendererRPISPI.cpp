@@ -7,6 +7,8 @@
 #include <cstring>
 #include <thread>
 #include <unistd.h>
+#include <boost/log/trivial.hpp>
+#include <stdexcept>
 
 #define TWOBYSIX
 
@@ -88,7 +90,10 @@ bool SpiWriteQueueAddCSTrigger(){
 
 void SpiWriteQueueTrigger(){
     std::thread([&](){
-        ioctl (spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
+        int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
+        if (ret < 0) {
+            BOOST_LOG_TRIVIAL(error) << "[SPI] ioctl write failed: " << strerror(errno);
+        }
     }).detach();
 }
 
@@ -117,6 +122,9 @@ FPGARendererRPISPI::FPGARendererRPISPI(std::vector<std::shared_ptr<Screen>> init
 }
 
 void FPGARendererRPISPI::init(std::vector<std::shared_ptr<Screen>> initScreens) {
+    if (initScreens.empty()) {
+        throw std::runtime_error("[FPGARendererRPISPI] No screens provided");
+    }
     screens = initScreens;
 
     screenWidth = screens[0]->getWidth();
@@ -141,60 +149,53 @@ void FPGARendererRPISPI::init(std::vector<std::shared_ptr<Screen>> initScreens) 
 
 bool FPGARendererRPISPI::initSpi() const {
     int ret;
-    std::cout << "Init SPI Driver" << std::endl;
+    BOOST_LOG_TRIVIAL(info) << "[SPI] Initializing SPI driver";
 
-    /* Device oeffen */
     if ((spiDevFilehandle = open(spiDevice, O_RDWR)) < 0) {
-        perror("Fehler Open Device");
-        exit(1);
+        throw std::runtime_error("[SPI] Failed to open device " + std::string(spiDevice) + ": " + strerror(errno));
     }
-/* Mode setzen */
+
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_MODE, &spiMode);
     if (ret < 0) {
-        perror("Fehler Set SPI-Modus");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to set SPI mode: " + std::string(strerror(errno)));
     }
 
-/* Mode abfragen */
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_MODE, &spiMode);
     if (ret < 0) {
-        perror("Fehler Get SPI-Modus");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to get SPI mode: " + std::string(strerror(errno)));
     }
 
-/* Wortlaenge setzen */
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_BITS_PER_WORD, &spiBits);
     if (ret < 0) {
-        perror("Fehler Set Wortlaenge");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to set bits per word: " + std::string(strerror(errno)));
     }
 
-/* Wortlaenge abfragen */
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_BITS_PER_WORD, &spiBits);
     if (ret < 0) {
-        perror("Fehler Get Wortlaenge");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to get bits per word: " + std::string(strerror(errno)));
     }
 
-/* Datenrate setzen */
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeed);
     if (ret < 0) {
-        perror("Fehler Set Speed");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to set speed: " + std::string(strerror(errno)));
     }
 
-/* Datenrate abfragen */
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeed);
     if (ret < 0) {
-        perror("Fehler Get Speed");
-        exit(1);
+        close(spiDevFilehandle);
+        throw std::runtime_error("[SPI] Failed to get speed: " + std::string(strerror(errno)));
     }
 
-/* Kontrollausgabe */
-    printf("SPI-Device.....: %s\n", spiDevice);
-    printf("SPI-Mode.......: %d\n", spiMode);
-    printf("Wortlaenge.....: %d\n", spiBits);
-    printf("Geschwindigkeit: %d Hz (%d MHz)\n", spiSpeed, spiSpeed / 1000000);
+    BOOST_LOG_TRIVIAL(info) << "[SPI] Device: " << spiDevice
+                            << " Mode: " << (int)spiMode
+                            << " Bits: " << (int)spiBits
+                            << " Speed: " << spiSpeed << " Hz (" << spiSpeed / 1000000 << " MHz)";
+    return true;
 }
 
 void FPGARendererRPISPI::setScreenData(int screenId, Color *screenData) {

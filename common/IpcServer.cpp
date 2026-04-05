@@ -18,24 +18,29 @@ void IpcServer::startAccepting() {
 
 void IpcServer::acceptLoop() {
     while(1){
-        boost::interprocess::message_queue::size_type recvd_size;
-        unsigned int priority;
-        this->serverMQ->receive(&receiveBuffer, SERVERMESSAGESIZE, recvd_size, priority); //blocking
+        try {
+            boost::interprocess::message_queue::size_type recvd_size;
+            unsigned int priority;
+            this->serverMQ->receive(&receiveBuffer, SERVERMESSAGESIZE, recvd_size, priority);
 
-        std::stringstream sendMQname;
-        for(int i = 0; i < 20; i++)
-            sendMQname << (char)(rand()%26+'a'); // add random character [a...z]
+            std::stringstream sendMQname;
+            for(int i = 0; i < 20; i++)
+                sendMQname << (char)(rand()%26+'a');
 
-        auto receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, sendMQname.str().data(), 10, SERVERMESSAGESIZE, boost::interprocess::permissions(0666));
-        auto sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(receiveBuffer, recvd_size).data());
-        sendMQ->send(sendMQname.str().data(), sendMQname.str().size(), 0);
+            auto receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, sendMQname.str().data(), 10, SERVERMESSAGESIZE, boost::interprocess::permissions(0666));
+            auto sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(receiveBuffer, recvd_size).data());
+            sendMQ->send(sendMQname.str().data(), sendMQname.str().size(), 0);
 
-        BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection, sendMQ " << receiveBuffer << " receiveMQ " << sendMQname.str();
+            BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection, sendMQ " << receiveBuffer << " receiveMQ " << sendMQname.str();
 
-        auto connection = std::make_shared<IpcConnection>(sendMQ, receiveMQ);
-        if (acceptCallback != NULL) {
-            acceptCallback(connection);
-            connection->startReceiving();
+            auto connection = std::make_shared<IpcConnection>(sendMQ, receiveMQ);
+            if (acceptCallback != NULL) {
+                acceptCallback(connection);
+                connection->startReceiving();
+            }
+        } catch (const boost::interprocess::interprocess_exception &e) {
+            BOOST_LOG_TRIVIAL(error) << "[IpcServer] Accept error: " << e.what();
+            continue;
         }
     }
 }

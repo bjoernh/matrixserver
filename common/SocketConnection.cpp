@@ -62,6 +62,7 @@ void SocketConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMes
 
     boost::asio::post(io, [this, self=shared_from_this(), sendBuffer=std::move(sendBuffer)]() mutable {
         if (write_queue.size() > 5) {
+            BOOST_LOG_TRIVIAL(warning) << "[SOCK CON] Write queue full, dropping message";
             return;
         }
         bool empty = write_queue.empty();
@@ -103,8 +104,8 @@ bool SocketConnection::isDead() {
 }
 
 SocketConnection::~SocketConnection() {
-//    BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Shutdown socket";
-//    this->socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+    boost::system::error_code ec;
+    socket.close(ec);
 }
 
 void SocketConnection::setDead(bool sDead) {

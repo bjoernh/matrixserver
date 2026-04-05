@@ -36,7 +36,12 @@ jobs:
         run: |
           mkdir build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
-          make -j$(nproc) matrix_server_simulator
+          make -j$(nproc)
+
+      - name: Run Tests
+        run: |
+          cd build
+          ./tests/testAll
 
       - name: Create Debian Package Workspace
         run: |

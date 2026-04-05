@@ -55,6 +55,9 @@ if (BUILD_RASPBERRYPI)
     add_subdirectory(MainMenu)
 endif()
 
+# Tests
+add_subdirectory(tests)
+
 install(EXPORT matrixapplication-targets
         NAMESPACE matrixapplication::
         FILE matrixapplication-config.cmake

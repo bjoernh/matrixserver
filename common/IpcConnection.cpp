@@ -30,15 +30,21 @@ void IpcConnection::readLoop() {
     unsigned int priority;
     BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] start read loop";
     while(!dead){
-        this->receiveMQ->receive(&receiveData, MAXIPCMESSAGESIZE, recvd_size, priority); //blocking
-        auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
-        if (receiveMessage->ParseFromString(std::string(receiveData, recvd_size))) {
-            BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] Recieved full Protobuf MatrixServerMessage";
-            if (this->receiveCallback != NULL) {
-                this->receiveCallback(shared_from_this(), receiveMessage);
-            }else{
-                BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] NO CALLBACK!";
+        try {
+            this->receiveMQ->receive(&receiveData, MAXIPCMESSAGESIZE, recvd_size, priority);
+            auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
+            if (receiveMessage->ParseFromString(std::string(receiveData, recvd_size))) {
+                BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] Recieved full Protobuf MatrixServerMessage";
+                if (this->receiveCallback != NULL) {
+                    this->receiveCallback(shared_from_this(), receiveMessage);
+                }else{
+                    BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] NO CALLBACK!";
+                }
             }
+        } catch (const boost::interprocess::interprocess_exception &e) {
+            BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Receive error: " << e.what();
+            setDead(true);
+            break;
         }
     }
 }
@@ -64,7 +70,17 @@ void IpcConnection::doRead() {
 
 void IpcConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) {
     auto sendBuffer = message->SerializeAsString();
-    sendMQ->send(sendBuffer.data(), sendBuffer.size(), 0);
+    if (sendBuffer.size() > MAXIPCMESSAGESIZE) {
+        BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Message too large: "
+                                 << sendBuffer.size() << " > " << MAXIPCMESSAGESIZE;
+        return;
+    }
+    try {
+        sendMQ->send(sendBuffer.data(), sendBuffer.size(), 0);
+    } catch (const boost::interprocess::interprocess_exception &e) {
+        BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Send failed: " << e.what();
+        setDead(true);
+    }
 }
 
 bool IpcConnection::isDead() {

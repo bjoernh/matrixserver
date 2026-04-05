@@ -62,7 +62,7 @@ TcpClient::connect(boost::asio::io_context &io, std::string serverAddress, std::
                                      << " and port: " << endpoint.port();
             sockConnection->startReceiving();
         }
-    } catch (boost::system::system_error e) {
+    } catch (const boost::system::system_error &e) {
         BOOST_LOG_TRIVIAL(debug) << "[TcpClient] " << e.what();
         sockConnection->setDead(true);
     }

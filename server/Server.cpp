@@ -167,9 +167,14 @@ void Server::handleRequest(
     if (isTopApp) {
       for (auto renderer : renderers) {
         for (auto screenInfo : message->screendata()) {
-          renderer->setScreenData(screenInfo.screenid(),
+          int sid = screenInfo.screenid();
+          if (sid < 0 || sid >= static_cast<int>(serverConfig.screeninfo_size())) {
+            BOOST_LOG_TRIVIAL(warning) << "[Server] Invalid screen ID: " << sid;
+            continue;
+          }
+          renderer->setScreenData(sid,
                                   (Color *)screenInfo.framedata()
-                                      .data()); // TODO: remove C style cast
+                                      .data());
         }
         auto usStart = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch());
@@ -265,7 +270,11 @@ bool Server::tick() {
     std::lock_guard<std::mutex> lock(appsMutex);
     if (apps.size() == 0 && !defaultAppStarted) {
       BOOST_LOG_TRIVIAL(debug) << "starting default app" << std::endl;
-      system(defaultApp.data());
+      BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << defaultApp;
+      int ret = system(defaultApp.data());
+      if (ret != 0) {
+        BOOST_LOG_TRIVIAL(warning) << "[Server] Default app returned: " << ret;
+      }
       defaultAppStarted = true;
     }
     if (apps.size() > 0) {

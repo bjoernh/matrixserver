@@ -52,6 +52,11 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=FPGA_RPISPI ..
           make -j$(nproc)
 
+      - name: Run Tests
+        run: |
+          cd build
+          ./tests/testAll
+
       - name: Create Debian Package Workspace
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)

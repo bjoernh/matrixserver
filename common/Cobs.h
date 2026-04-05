@@ -12,6 +12,7 @@
 
 class Cobs {
 public:
+    static constexpr size_t MAX_STREAM_BUFFER_SIZE = 1048576;
     Cobs(int bufferSize);
     std::vector<std::string> insertBytesAndReturnDecodedPackets(const uint8_t *inputData, size_t length);
     static const std::string decode(std::string input);

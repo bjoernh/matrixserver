@@ -124,26 +124,25 @@ void MatrixApplication::renderToScreens() {
 void MatrixApplication::internalLoop() {
   bool running = true;
   while (running) {
-    auto startTime = micros();
-    if (appState == AppState::running) {
-      renderSyncMutex.lock();
-      running = loop();
-      renderToScreens();
+    try {
+      auto startTime = micros();
+      if (appState == AppState::running) {
+        renderSyncMutex.lock();
+        running = loop();
+        renderToScreens();
+      }
+      if (appState == AppState::killed) {
+        running = false;
+      }
+      checkConnection();
+      auto sleepTime = (1000000 / fps) - (micros() - startTime);
+      if (sleepTime > 0) {
+        usleep(sleepTime);
+      }
+      load = 1.0f - ((float)sleepTime / (1000000.0f / (float)fps));
+    } catch (const std::exception &e) {
+      BOOST_LOG_TRIVIAL(error) << "[Application] Loop error: " << e.what();
     }
-    if (appState == AppState::killed) {
-      running = false;
-    }
-    checkConnection();
-    auto sleepTime = (1000000 / fps) - (micros() - startTime);
-    if (sleepTime > 0) {
-      usleep(sleepTime);
-    } else {
-      //            BOOST_LOG_TRIVIAL(warning) << "[Application] FPS drop, load:
-      //            " << load;
-    }
-    load = 1.0f - ((float)sleepTime / (1000000.0f / (float)fps));
-    //        BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " <<
-    //        micros()-startTime << " us";
   }
 }
 
@@ -308,16 +307,13 @@ bool MatrixApplication::resume() {
 }
 
 void MatrixApplication::stop() {
-  exit(0); // exit immediately because the below thread join won't work all the
-           // time TODO:fix this!
-  //    if (mainThread != NULL) {
-  //        appState = AppState::killed;
-  //        mainThread->interrupt();
-  //        mainThread->join();
-  //        mainThread = NULL;
-  //    }
-  //    BOOST_LOG_TRIVIAL(debug)  << "app stop successfull";
-  //    exit(0);
+  appState = AppState::killed;
+  if (mainThread != nullptr) {
+    mainThread->join();
+    delete mainThread;
+    mainThread = nullptr;
+  }
+  BOOST_LOG_TRIVIAL(debug) << "[Application] App stopped";
 }
 
 int MatrixApplication::getBrightness() {
