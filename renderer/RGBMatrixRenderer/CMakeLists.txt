@@ -20,6 +20,16 @@ if (${BUILD_RASPBERRYPI})
     target_include_directories(RGBMatrixRenderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     add_custom_command(TARGET RGBMatrixRenderer PRE_LINK COMMAND "make" WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/${RGB_LIB_DISTRIBUTION}/lib)
+
+    install(TARGETS RGBMatrixRenderer
+            EXPORT matrixapplication-targets
+            LIBRARY
+            DESTINATION lib
+            COMPONENT RGBMatrixRenderer
+            PUBLIC_HEADER
+            DESTINATION include/matrixapplication
+            COMPONENT RGBMatrixRenderer
+            )
 endif ()
 
 add_subdirectory(imu)
