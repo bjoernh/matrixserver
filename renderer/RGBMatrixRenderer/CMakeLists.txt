@@ -17,7 +17,7 @@ if (${BUILD_RASPBERRYPI})
 
     add_library(RGBMatrixRenderer SHARED ${SOURCE_FILES})
     target_link_libraries(RGBMatrixRenderer PRIVATE renderer Imu ${RGB_LIBRARIES})
-    target_include_directories(RGBMatrixRenderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(RGBMatrixRenderer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 
     add_custom_command(TARGET RGBMatrixRenderer PRE_LINK COMMAND "make" WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/${RGB_LIB_DISTRIBUTION}/lib)
 
