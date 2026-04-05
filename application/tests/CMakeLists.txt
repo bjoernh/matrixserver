@@ -14,6 +14,6 @@ target_include_directories(Mpu6050_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(
     Mpu6050_test
     GTest::gtest_main
-    pthread
+    Threads::Threads
     matrixserver_proto
 )

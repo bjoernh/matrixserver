@@ -7,7 +7,7 @@ nginx -g "daemon on;"
 
 if [ $# -eq 0 ]; then
   echo "Starting MatrixServer Simulator (fallback)..."
-  exec server_simulator
+  exec matrix_server_simulator
 else
   echo "Starting command: $@"
   exec "$@"

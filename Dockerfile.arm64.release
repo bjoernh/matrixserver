@@ -34,15 +34,10 @@ WORKDIR /app
 
 # Copy the pre-built server executables from the deb-workspace created by GitHub Actions
 COPY deb-workspace/usr/local/bin/MainMenu /usr/local/bin/MainMenu
-COPY deb-workspace/usr/local/bin/server_FPGA_RPISPI /usr/local/bin/server_FPGA_RPISPI
-COPY deb-workspace/usr/local/bin/server_FPGA_FTDI /usr/local/bin/server_FPGA_FTDI
-COPY deb-workspace/usr/local/bin/server_RGBMatrix /usr/local/bin/server_RGBMatrix
+COPY deb-workspace/usr/local/bin/matrix_server /usr/local/bin/matrix_server
 
 # Copy project shared libraries
-COPY deb-workspace/usr/local/lib/libFPGASPIRenderer.so /usr/local/lib/
-COPY deb-workspace/usr/local/lib/libFPGAFTDIRenderer.so /usr/local/lib/
-COPY deb-workspace/usr/local/lib/libRGBMatrixRenderer.so /usr/local/lib/
-COPY deb-workspace/usr/local/lib/libImu.so /usr/local/lib/
+COPY deb-workspace/usr/local/lib/*.so /usr/local/lib/
 
 # Copy wiringPi dynamic libraries
 COPY deb-workspace/usr/local/lib/libwiringPi.so* /usr/local/lib/
@@ -64,4 +59,4 @@ RUN ldconfig
 
 # Default entrypoint (starts both Nginx and MatrixServer)
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["server_FPGA_RPISPI"]
+CMD ["matrix_server"]

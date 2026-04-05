@@ -38,13 +38,18 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           make -j$(nproc)
 
+      - name: Run Tests
+        run: |
+          cd build
+          ./tests/testAll
+
       - name: Create Debian Package Workspace
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
           if [ -z "$PROJECT_VERSION" ]; then echo "Failed to extract version"; exit 1; fi
 
           mkdir -p deb-workspace/usr/local/bin
-          cp build/server_simulator/server_simulator deb-workspace/usr/local/bin/
+          cp build/server_simulator/matrix_server_simulator deb-workspace/usr/local/bin/
 
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control

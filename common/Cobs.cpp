@@ -75,6 +75,11 @@ std::vector<std::string> Cobs::insertBytesAndReturnDecodedPackets(const uint8_t 
 //    BOOST_LOG_TRIVIAL(trace) << "[Cobs] Insert data with length " << length;
     std::lock_guard<std::mutex> lock(internalStreamBufferLock);
     std::vector<std::string> result;
+    if (internalStreamBuffer.size() + length > MAX_STREAM_BUFFER_SIZE) {
+        BOOST_LOG_TRIVIAL(warning) << "[Cobs] Stream buffer exceeded max size, clearing";
+        internalStreamBuffer.clear();
+        return result;
+    }
     internalStreamBuffer.reserve(internalStreamBuffer.size()+length);
     int zeroCounter = 0;
     for (int i = 0; i < length; i++) {

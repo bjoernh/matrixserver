@@ -4,8 +4,9 @@
 #include <matrixserver.pb.h>
 
 WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
-    std::vector<std::shared_ptr<Screen>> initScreens, std::string setPort)
-    : port(std::move(setPort)), ioContext() {
+    std::vector<std::shared_ptr<Screen>> initScreens, std::string setPort,
+    bool setStreamPixels)
+    : port(std::move(setPort)), ioContext(), streamPixels(setStreamPixels) {
 
   IRenderer::screens = std::move(initScreens);
 
@@ -67,12 +68,14 @@ void WebSocketSimulatorRenderer::do_accept() {
 
 // ── IRenderer interface ──────────────────────────────────────────────────────
 void WebSocketSimulatorRenderer::setScreenData(int screenId, Color *data) {
+  if (!streamPixels) return;
   if (screenId < static_cast<int>(screens.size())) {
     screens.at(screenId)->setScreenData(data);
   }
 }
 
 void WebSocketSimulatorRenderer::render() {
+  if (!streamPixels) return;
   std::shared_ptr<WsSession> session;
   {
     std::lock_guard<std::mutex> lock(sessionMutex);
