@@ -69,7 +69,7 @@ jobs:
 
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control
-          Package: matrixserver-RGB_MATRIX
+          Package: matrixserver_RGB_MATRIX
           Version: ${PROJECT_VERSION}
           Section: base
           Priority: optional
@@ -82,13 +82,13 @@ jobs:
       - name: Build Debian Package
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
-          dpkg-deb --build deb-workspace "matrixserver-RGB_MATRIX_${PROJECT_VERSION}_arm64.deb"
+          dpkg-deb --build deb-workspace "matrixserver_RGB_MATRIX_${PROJECT_VERSION}_arm64.deb"
 
       - name: Upload Debian Package Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: matrixserver-RGB_MATRIX-arm64
-          path: matrixserver-RGB_MATRIX_*.deb
+          name: matrixserver_RGB_MATRIX-arm64
+          path: matrixserver_RGB_MATRIX_*.deb
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
