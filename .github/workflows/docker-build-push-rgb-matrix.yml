@@ -1,4 +1,4 @@
-name: Build and Push FPGA_RPISPI (ARM64)
+name: Build and Push RGB_MATRIX (ARM64)
 
 on:
   push:
@@ -8,10 +8,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-FPGA_RPISPI
+  IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-RGB_MATRIX
 
 jobs:
-  build-and-push-rpi:
+  build-and-push-rgb-matrix:
     name: Build DEB and Push to GHCR (ARM64)
     runs-on: [self-hosted, linux, ARM64]
     permissions:
@@ -33,12 +33,7 @@ jobs:
             libboost-system-dev libboost-regex-dev libboost-chrono-dev \
             libboost-date-time-dev libboost-filesystem-dev libboost-atomic-dev \
             libboost-program-options-dev libasound2-dev libprotobuf-dev \
-            protobuf-compiler libimlib2-dev libftdi1-dev
-
-      - name: Build and install wiringPi natively
-        run: |
-          git clone https://github.com/WiringPi/WiringPi.git
-          cd WiringPi && sudo ./build && cd .. && rm -rf WiringPi
+            protobuf-compiler libimlib2-dev
 
       - name: Mock Raspberry Pi detection for CMake
         run: sudo mkdir -p /boot && sudo touch /boot/LICENCE.broadcom
@@ -49,7 +44,7 @@ jobs:
       - name: Compile Project
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=FPGA_RPISPI ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=RGB_MATRIX ..
           make -j$(nproc)
 
       - name: Run Tests
@@ -72,32 +67,28 @@ jobs:
           # Copy Shared Libraries
           find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/local/lib/ \;
 
-          # Copy WiringPi Dynamic Libraries
-          cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/local/lib/
-          cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/local/lib/
-
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control
-          Package: matrixserver-FPGA_RPISPI
+          Package: matrixserver-RGB_MATRIX
           Version: ${PROJECT_VERSION}
           Section: base
           Priority: optional
           Architecture: arm64
           Maintainer: Bjoern Hauffe<oss@64b.de>
-          Description: LEDCube matrixserver FPGA RPISPI binaries
-          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2
+          Description: LEDCube matrixserver RGB Matrix binaries
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64
           EOF
 
       - name: Build Debian Package
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
-          dpkg-deb --build deb-workspace "matrixserver-FPGA_RPISPI_${PROJECT_VERSION}_arm64.deb"
+          dpkg-deb --build deb-workspace "matrixserver-RGB_MATRIX_${PROJECT_VERSION}_arm64.deb"
 
       - name: Upload Debian Package Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: matrixserver-FPGA_RPISPI-arm64
-          path: matrixserver-FPGA_RPISPI_*.deb
+          name: matrixserver-RGB_MATRIX-arm64
+          path: matrixserver-RGB_MATRIX_*.deb
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
