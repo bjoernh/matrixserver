@@ -35,8 +35,12 @@ target_link_libraries(matrixapplication
         ${Boost_LIBRARIES} Imlib2
         $<$<PLATFORM_ID:Linux>:rt>
          )
-if (BUILD_RASPBERRYPI)
-	target_link_libraries(matrixapplication wiringPi FPGASPIRenderer)
+if (HARDWARE_BACKEND STREQUAL "FPGA_RPISPI")
+    target_link_libraries(matrixapplication wiringPi FPGASPIRenderer)
+elseif (HARDWARE_BACKEND STREQUAL "RGB_MATRIX")
+    target_link_libraries(matrixapplication RGBMatrixRenderer)
+elseif (HARDWARE_BACKEND STREQUAL "FPGA_FTDI")
+    target_link_libraries(matrixapplication FPGAFTDIRenderer)
 endif ()
 
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
