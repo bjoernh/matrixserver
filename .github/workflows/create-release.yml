@@ -53,6 +53,10 @@ jobs:
             ["Build and Push RGB_MATRIX (ARM64)"]="matrixserver-rgb-matrix-arm64"
           )
 
+          # Expand short SHA to full 40-char SHA (API requires full SHA)
+          HEAD_SHA=$(gh api "repos/$REPO/commits/$HEAD_SHA" --jq '.sha')
+          echo "Resolved HEAD_SHA: $HEAD_SHA"
+
           ALL_SUCCESS=true
           RUN_ARTIFACT_PAIRS=()
 
