@@ -1,0 +1,88 @@
+name: Create Pre-Release
+
+on:
+  workflow_run:
+    workflows:
+      - "Build and Push Simulator (AMD64)"
+      - "Build and Push Simulator (ARM64)"
+      - "Build and Push FPGA_RPISPI (ARM64)"
+      - "Build and Push RGB_MATRIX (ARM64)"
+    types: [completed]
+
+jobs:
+  release:
+    # Only run when the triggering workflow succeeded on a v* tag
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Check all builds succeeded for this tag
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          WORKFLOWS=(
+            "Build and Push Simulator (AMD64)"
+            "Build and Push Simulator (ARM64)"
+            "Build and Push FPGA_RPISPI (ARM64)"
+            "Build and Push RGB_MATRIX (ARM64)"
+          )
+
+          ALL_SUCCESS=true
+          RUN_IDS=()
+
+          for WF_NAME in "${WORKFLOWS[@]}"; do
+            WF_ID=$(gh api "repos/$REPO/actions/workflows" \
+              --jq ".workflows[] | select(.name == \"$WF_NAME\") | .id")
+
+            RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=1" \
+              --jq '.workflow_runs[0]')
+
+            CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
+            RUN_ID=$(echo "$RUN" | jq -r '.id')
+
+            echo "  $WF_NAME → conclusion=$CONCLUSION run_id=$RUN_ID"
+
+            if [ "$CONCLUSION" != "success" ]; then
+              ALL_SUCCESS=false
+            else
+              RUN_IDS+=("$RUN_ID")
+            fi
+          done
+
+          echo "all_success=$ALL_SUCCESS" >> $GITHUB_OUTPUT
+          # Store run IDs as space-separated string
+          echo "run_ids=${RUN_IDS[*]}" >> $GITHUB_OUTPUT
+
+      - name: Download .deb artifacts from all workflow runs
+        if: steps.check.outputs.all_success == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p debs
+          for RUN_ID in ${{ steps.check.outputs.run_ids }}; do
+            gh run download "$RUN_ID" --repo "$REPO" --dir debs/ || true
+          done
+          echo "Downloaded packages:"
+          find debs/ -name "*.deb" | sort
+
+      - name: Create GitHub pre-release
+        if: steps.check.outputs.all_success == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          DEB_FILES=$(find debs/ -name "*.deb" | tr '\n' ' ')
+          gh release create "$TAG" $DEB_FILES \
+            --repo "${{ github.repository }}" \
+            --prerelease \
+            --generate-notes \
+            --title "Release $TAG"
