@@ -12,6 +12,7 @@ public:
     void init();
     Eigen::Vector3i getCubeAccIntersect();
     Eigen::Vector3f getAcceleration();
+    Eigen::Vector3f getGyroscope();
 private:
     void startRefreshThread();
     void internalLoop();
@@ -20,6 +21,7 @@ private:
     int fd;
 
     Eigen::Vector3f acceleration;
+    Eigen::Vector3f gyroscope{0, 0, 0};
 };
 
 

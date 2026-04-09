@@ -10,6 +10,9 @@ bool updateBrightness = false;
 float MatrixApplication::latestSimulatorImuX = 0.0f;
 float MatrixApplication::latestSimulatorImuY = 0.0f;
 float MatrixApplication::latestSimulatorImuZ = 0.0f;
+float MatrixApplication::latestSimulatorGyroX = 0.0f;
+float MatrixApplication::latestSimulatorGyroY = 0.0f;
+float MatrixApplication::latestSimulatorGyroZ = 0.0f;
 std::mutex MatrixApplication::simulatorImuMutex;
 
 uint8_t MatrixApplication::latestAudioVolume = 0;
@@ -239,6 +242,9 @@ void MatrixApplication::handleRequest(
     MatrixApplication::latestSimulatorImuX = message->imudata().accelx();
     MatrixApplication::latestSimulatorImuY = message->imudata().accely();
     MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
+    MatrixApplication::latestSimulatorGyroX = message->imudata().gyrox();
+    MatrixApplication::latestSimulatorGyroY = message->imudata().gyroy();
+    MatrixApplication::latestSimulatorGyroZ = message->imudata().gyroz();
   } break;
   case matrixserver::audioDataMessage: {
     if (message->has_audiodata()) {

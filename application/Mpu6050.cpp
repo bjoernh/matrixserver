@@ -112,8 +112,32 @@ void Mpu6050::internalLoop() {
     acceleration[1] = rotated[1];
     acceleration[2] = ay;
 
+    Vector2f gtemp;
+    gtemp[0] = gx;
+    gtemp[1] = gz;
+    auto grotated = RotateVector2d(gtemp, 45.0f);
+    gyroscope[0] = grotated[0];
+    gyroscope[1] = grotated[1];
+    gyroscope[2] = gy;
+
     usleep(10000);
   }
+}
+
+Vector3f Mpu6050::getGyroscope() {
+  if (fd == -1) {
+    std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
+    float gx = MatrixApplication::latestSimulatorGyroX;
+    float gy = MatrixApplication::latestSimulatorGyroY;
+    float gz = MatrixApplication::latestSimulatorGyroZ;
+
+    Vector2f gtemp;
+    gtemp[0] = gx;
+    gtemp[1] = gz;
+    auto grotated = RotateVector2d(gtemp, 45.0f);
+    return Vector3f(grotated[0], grotated[1], gy);
+  }
+  return gyroscope;
 }
 
 Vector3f Mpu6050::getAcceleration() {

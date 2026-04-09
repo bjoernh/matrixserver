@@ -94,6 +94,9 @@ public:
   static float latestSimulatorImuX;
   static float latestSimulatorImuY;
   static float latestSimulatorImuZ;
+  static float latestSimulatorGyroX;
+  static float latestSimulatorGyroY;
+  static float latestSimulatorGyroZ;
   static std::mutex simulatorImuMutex;
 
   static uint8_t latestAudioVolume;
