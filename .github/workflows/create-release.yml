@@ -35,8 +35,16 @@ jobs:
             "Build and Push RGB_MATRIX (ARM64)"
           )
 
+          # Map workflow name → artifact name
+          declare -A WF_ARTIFACTS=(
+            ["Build and Push Simulator (AMD64)"]="matrixserver-simulator"
+            ["Build and Push Simulator (ARM64)"]="matrixserver-simulator-arm64"
+            ["Build and Push FPGA_RPISPI (ARM64)"]="matrixserver-fpga-rpispi-arm64"
+            ["Build and Push RGB_MATRIX (ARM64)"]="matrixserver-rgb-matrix-arm64"
+          )
+
           ALL_SUCCESS=true
-          RUN_IDS=()
+          RUN_ARTIFACT_PAIRS=()
 
           for WF_NAME in "${WORKFLOWS[@]}"; do
             WF_ID=$(gh api "repos/$REPO/actions/workflows" \
@@ -53,13 +61,13 @@ jobs:
             if [ "$CONCLUSION" != "success" ]; then
               ALL_SUCCESS=false
             else
-              RUN_IDS+=("$RUN_ID")
+              RUN_ARTIFACT_PAIRS+=("$RUN_ID:${WF_ARTIFACTS[$WF_NAME]}")
             fi
           done
 
           echo "all_success=$ALL_SUCCESS" >> $GITHUB_OUTPUT
-          # Store run IDs as space-separated string
-          echo "run_ids=${RUN_IDS[*]}" >> $GITHUB_OUTPUT
+          # Store as space-separated "run_id:artifact_name" pairs
+          echo "run_artifact_pairs=${RUN_ARTIFACT_PAIRS[*]}" >> $GITHUB_OUTPUT
 
       - name: Download .deb artifacts from all workflow runs
         if: steps.check.outputs.all_success == 'true'
@@ -68,8 +76,10 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           mkdir -p debs
-          for RUN_ID in ${{ steps.check.outputs.run_ids }}; do
-            gh run download "$RUN_ID" --repo "$REPO" --dir debs/ || true
+          for PAIR in ${{ steps.check.outputs.run_artifact_pairs }}; do
+            RUN_ID="${PAIR%%:*}"
+            ARTIFACT="${PAIR##*:}"
+            gh run download "$RUN_ID" --repo "$REPO" --name "$ARTIFACT" --dir debs/
           done
           echo "Downloaded packages:"
           find debs/ -name "*.deb" | sort
