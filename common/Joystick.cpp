@@ -1,12 +1,17 @@
 #include "Joystick.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "unistd.h"
+#include <chrono>
+#include <thread>
+
+#ifndef _WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 Joystick::Joystick()
 {
@@ -46,6 +51,7 @@ void Joystick::init(std::string devicePath, bool blocking){
     startRefreshThread();
 }
 
+#ifndef _WIN32
 void Joystick::openPath()
 {
     struct stat buffer;
@@ -83,6 +89,12 @@ bool Joystick::isFound()
     struct stat buffer;
     return (stat (devicePath_.c_str(), &buffer) == 0);
 }
+#else
+void Joystick::openPath() { _fd = -1; }
+void Joystick::recheckFilePath() {}
+bool Joystick::sample(Joystick::Event *) { return false; }
+bool Joystick::isFound() { return false; }
+#endif
 
 void Joystick::refresh()
 {
@@ -127,7 +139,7 @@ void Joystick::internalLoop()
             recheckFilePath();
         refresh();
         loopcount++;
-        usleep(10000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -181,7 +193,9 @@ void Joystick::clearAllButtonPresses(){
 Joystick::~Joystick()
 {
     stopThread();
+#ifndef _WIN32
     close(_fd);
+#endif
 }
 
 

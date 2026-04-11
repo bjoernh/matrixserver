@@ -1,3 +1,4 @@
+#ifndef _WIN32
 #include "UnixSocketClient.h"
 #include <boost/log/trivial.hpp>
 
@@ -18,3 +19,4 @@ UnixSocketClient::connect(boost::asio::io_context &io, std::string socketFile) {
     }
     return sockConnection;
 }
+#endif // _WIN32

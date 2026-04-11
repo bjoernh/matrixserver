@@ -6,7 +6,9 @@
 #include <future>
 #include <iostream>
 #include <random>
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 #include <vector>
 
 #include "Server.h"

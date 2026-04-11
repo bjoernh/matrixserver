@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_UNIXSOCKETSERVER_H
 #define MATRIXSERVER_UNIXSOCKETSERVER_H
 
+#ifndef _WIN32
 #include <boost/asio.hpp>
 #include <functional>
 #include <SocketConnection.h>
@@ -22,6 +23,7 @@ private:
     boost::asio::local::stream_protocol::acceptor acceptor;
     std::function<void(std::shared_ptr<SocketConnection>)> acceptCallback;
 };
+#endif // _WIN32
 
 
 #endif //MATRIXSERVER_UNIXSOCKETSERVER_H

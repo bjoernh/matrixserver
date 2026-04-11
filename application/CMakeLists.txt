@@ -3,7 +3,8 @@ project(application)
 find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+get_target_property(EIGEN3_INCLUDE_DIRS Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
 IF(APPLE)
@@ -31,8 +32,11 @@ add_library(matrixapplication STATIC ${SOURCE_FILES} MatrixApplication.cpp)
 
 target_link_libraries(matrixapplication common renderer)
 
+if(NOT WIN32)
+    target_link_libraries(matrixapplication Imlib2)
+endif()
 target_link_libraries(matrixapplication
-        ${Boost_LIBRARIES} Imlib2
+        ${Boost_LIBRARIES}
         $<$<PLATFORM_ID:Linux>:rt>
          )
 if (BUILD_RASPBERRYPI)

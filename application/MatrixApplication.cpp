@@ -3,7 +3,11 @@
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
 #include <random>
+#include <chrono>
+#include <thread>
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 
 bool updateBrightness = false;
 
@@ -27,7 +31,7 @@ MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string
   appState = AppState::starting;
   //    ioThread = new boost::thread([this]() { io_context.run(); });
   while (!connect(serverUri)) {
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   registerAtServer();
 }
@@ -65,10 +69,15 @@ bool MatrixApplication::connect(const std::string &server_uri) {
     std::string port = rest.substr(colonPos + 1);
     connection = TcpClient::connect(io_context, host, port);
   } else if (scheme == "unix") {
+#ifndef _WIN32
     // unix:///tmp/<path>.socket
     // After "unix://", rest includes the full path (e.g.
     // "/tmp/matrixserver.sock")
     connection = UnixSocketClient::connect(io_context, rest);
+#else
+    BOOST_LOG_TRIVIAL(error) << "[Application] Unix sockets not supported on Windows";
+    return false;
+#endif
   } else {
     BOOST_LOG_TRIVIAL(error) << "[Application] Unknown URI scheme: " << scheme;
     return false;
@@ -136,7 +145,7 @@ void MatrixApplication::internalLoop() {
     checkConnection();
     auto sleepTime = (1000000 / fps) - (micros() - startTime);
     if (sleepTime > 0) {
-      usleep(sleepTime);
+      std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
     } else {
       //            BOOST_LOG_TRIVIAL(warning) << "[Application] FPS drop, load:
       //            " << load;
@@ -330,8 +339,13 @@ void MatrixApplication::setBrightness(int setBrightness) {
 }
 
 long MatrixApplication::micros() {
+#ifdef _WIN32
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+#else
   struct timeval tp;
   gettimeofday(&tp, nullptr);
   long us = tp.tv_sec * 1000000 + tp.tv_usec;
   return us;
+#endif
 }

@@ -2,6 +2,14 @@
 
 #include <boost/log/trivial.hpp>
 
+static boost::interprocess::permissions ipcPermissions() {
+#ifdef _WIN32
+    return boost::interprocess::permissions();
+#else
+    return boost::interprocess::permissions(0666);
+#endif
+}
+
 IpcConnection::IpcConnection(){
     receiveCallback = NULL;
 }
@@ -86,7 +94,7 @@ bool IpcConnection::connectToServer(std::string serverAddress) {
             receiveMQname << (char)(rand()%26+'a'); // add random character [a...z]
 
         auto tempServer = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, serverAddress.data());
-        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.str().data(), 10, MAXIPCMESSAGESIZE, boost::interprocess::permissions(0666));
+        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.str().data(), 10, MAXIPCMESSAGESIZE, ipcPermissions());
         tempServer->send(receiveMQname.str().data(), receiveMQname.str().size(), 0);
         char tempData[MAXIPCMESSAGESIZE];
         boost::interprocess::message_queue::size_type recvd_size;

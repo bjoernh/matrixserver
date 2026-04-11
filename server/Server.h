@@ -11,7 +11,9 @@
 #include <IRenderer.h>
 #include <matrixserver.pb.h>
 #include <TcpServer.h>
+#ifndef _WIN32
 #include <UnixSocketServer.h>
+#endif
 #include <IpcServer.h>
 #include <Joystick.h>
 

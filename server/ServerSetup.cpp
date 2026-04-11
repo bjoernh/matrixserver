@@ -9,6 +9,14 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define PATH_MAX MAX_PATH
+static char* realpath(const char* path, char* resolved) {
+    return _fullpath(resolved, path, PATH_MAX) ? resolved : nullptr;
+}
+#endif
+
 namespace po = boost::program_options;
 
 namespace ServerSetup {

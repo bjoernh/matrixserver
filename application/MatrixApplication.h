@@ -7,7 +7,9 @@
 #include <Screen.h>
 #include <AnimationParams.h>
 #include <TcpClient.h>
+#ifndef _WIN32
 #include <UnixSocketClient.h>
+#endif
 #include <matrixserver.pb.h>
 #include <mutex>
 

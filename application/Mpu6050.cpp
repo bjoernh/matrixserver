@@ -4,13 +4,21 @@
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 #define __bswap_16 OSSwapInt16
+#elif defined(_WIN32)
+// byteswap.h not available on Windows; define manually
+#include <stdlib.h>
+#define __bswap_16(x) _byteswap_ushort(x)
 #else
 #include <byteswap.h>
 #endif
 #include <iostream>
 #include <stdint.h>
 #include <stdio.h>
+#include <chrono>
+#include <thread>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #ifdef BUILD_RASPBERRYPI
 #include <wiringPi.h>
@@ -112,7 +120,7 @@ void Mpu6050::internalLoop() {
     acceleration[1] = rotated[1];
     acceleration[2] = ay;
 
-    usleep(10000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
 

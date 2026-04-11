@@ -25,7 +25,12 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
             "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif ()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+if(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+    add_compile_definitions(_WIN32_WINNT=0x0A00)  # Windows 10
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+endif()
 
 add_subdirectory(common)
 add_subdirectory(renderer)

@@ -2,10 +2,12 @@
 #include <iostream>
 
 Image::Image() {
-
+    width = 0;
+    height = 0;
 }
 
 bool Image::loadImage(std::string filepath) {
+#ifndef _WIN32
     image = Imlib2::imlib_load_image(filepath.data());
     if(image){
         Imlib2::imlib_context_set_image(image);
@@ -19,22 +21,26 @@ bool Image::loadImage(std::string filepath) {
                 Imlib2::Imlib_Color tempColor;
                 Imlib2::imlib_image_query_pixel(cols, rows, &tempColor);
                 imageData[rows + cols * height] = Color(tempColor.red,tempColor.green,tempColor.blue);
-//            std::cout << cols << ", " << rows << ": " << tempColor.red << " " << tempColor.green << " " << tempColor.blue << std::endl;
             }
         }
     }else{
         return false;
     }
     return true;
+#else
+    (void)filepath;
+    return false;
+#endif
 }
 
 Color Image::at(int col, int row) {
     int idx = row + col * height;
-//    return imageData[idx];
-    if (idx < imageData.size())
+    if (idx < (int)imageData.size())
         return imageData[idx];
-    else
+    else if (!imageData.empty())
         return imageData[0];
+    else
+        return Color::black();
 }
 
 int Image::getHeight() {

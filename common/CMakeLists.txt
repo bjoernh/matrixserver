@@ -1,7 +1,5 @@
 project(common)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PROTO_PC REQUIRED protobuf)
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -11,17 +9,23 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS protobuf/matrixserver.proto)
 find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
-set(CMAKE_CXX_FLAGS "-fPIC")
+if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
 
 set(SOURCE_FILES
         Color.cpp
         Screen.cpp
         Joystick.cpp
-        TcpServer.cpp TcpServer.h TcpClient.cpp TcpClient.h Cobs.cpp Cobs.h SocketConnection.cpp SocketConnection.h UnixSocketServer.cpp UnixSocketServer.h UnixSocketClient.cpp UnixSocketClient.h UniversalConnection.cpp UniversalConnection.h IpcServer.cpp IpcServer.h IpcConnection.cpp IpcConnection.h)
+        TcpServer.cpp TcpServer.h TcpClient.cpp TcpClient.h Cobs.cpp Cobs.h SocketConnection.cpp SocketConnection.h UniversalConnection.cpp UniversalConnection.h IpcServer.cpp IpcServer.h IpcConnection.cpp IpcConnection.h)
+
+if(NOT WIN32)
+    list(APPEND SOURCE_FILES UnixSocketServer.cpp UnixSocketServer.h UnixSocketClient.cpp UnixSocketClient.h)
+endif()
 
 add_library(common STATIC ${SOURCE_FILES} ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(common PUBLIC protobuf::libprotobuf ${PROTO_PC_LDFLAGS})
-target_link_libraries(common PUBLIC ${Boost_LIBRARIES} $<$<PLATFORM_ID:Linux>:rt>)
+target_link_libraries(common PUBLIC protobuf::libprotobuf)
+target_link_libraries(common PUBLIC Boost::log Boost::thread ${Boost_LIBRARIES} $<$<PLATFORM_ID:Linux>:rt>)
 target_include_directories(common PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 target_include_directories(common PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:lib>)
 target_include_directories(common PUBLIC ${PROTOBUF_INCLUDE_DIRS})

@@ -1,3 +1,4 @@
+#ifndef _WIN32
 #include "UnixSocketServer.h"
 #include <boost/log/trivial.hpp>
 
@@ -39,3 +40,4 @@ void UnixSocketServer::handleAccept(const boost::system::error_code &error, std:
 void UnixSocketServer::setAcceptCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback) {
     acceptCallback = callback;
 }
+#endif // _WIN32

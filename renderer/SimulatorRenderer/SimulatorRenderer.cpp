@@ -2,6 +2,8 @@
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
+#include <chrono>
+#include <thread>
 
 SimulatorRenderer::SimulatorRenderer()
     : mainThread(), io_context(), serverAddress(DEFAULTSERVERADRESS),
@@ -14,7 +16,7 @@ SimulatorRenderer::SimulatorRenderer(
       serverPort(setServerPort) {
   init(screens);
   while (!connect()) {
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
 
