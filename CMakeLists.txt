@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.07)
-project(matrixserver VERSION 0.4.5)
+project(matrixserver VERSION 0.4.6)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
@@ -14,17 +14,17 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 if (EXISTS "/boot/LICENCE.broadcom")
-    set(BUILD_RASPBERRYPI true)
-    message("Build on Raspberry Pi is enabled")
+  set(BUILD_RASPBERRYPI true)
+  message("Build on Raspberry Pi is enabled")
 endif ()
 
 set(default_build_type "Release")
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
             STRING "Choose the type of build." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
             "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif ()
 
@@ -35,7 +35,7 @@ set(HARDWARE_BACKEND "" CACHE STRING "Hardware renderer backend: FPGA_FTDI, FPGA
 set(VALID_BACKENDS "FPGA_FTDI" "FPGA_RPISPI" "RGB_MATRIX")
 
 if (HARDWARE_BACKEND AND NOT HARDWARE_BACKEND IN_LIST VALID_BACKENDS)
-    message(FATAL_ERROR "Invalid HARDWARE_BACKEND '${HARDWARE_BACKEND}'. "
+  message(FATAL_ERROR "Invalid HARDWARE_BACKEND '${HARDWARE_BACKEND}'. "
             "Must be one of: FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX")
 endif ()
 
@@ -50,11 +50,11 @@ add_subdirectory(server_simulator)
 
 # Hardware target (only when a backend is selected)
 if (HARDWARE_BACKEND)
-    add_subdirectory(server_hardware)
+  add_subdirectory(server_hardware)
 endif ()
 
 if (BUILD_RASPBERRYPI)
-    add_subdirectory(MainMenu)
+  add_subdirectory(MainMenu)
 endif()
 
 # Tests

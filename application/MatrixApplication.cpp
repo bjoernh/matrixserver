@@ -32,7 +32,6 @@ MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string
   while (!connect(serverUri)) {
     sleep(1);
   }
-  registerAtServer();
 }
 
 bool MatrixApplication::connect(const std::string &server_uri) {
@@ -293,6 +292,10 @@ AppState MatrixApplication::getAppState() { return appState; }
 float MatrixApplication::getLoad() { return load; }
 
 void MatrixApplication::start() {
+  // Register at the server here (not in the constructor) so that derived-class
+  // constructors have already run and any params.register*() calls are done
+  // before we send the schema to the server.
+  registerAtServer();
   mainThread = new boost::thread(&MatrixApplication::internalLoop, this);
 }
 
