@@ -25,7 +25,7 @@ constexpr auto kHwType = ServerSetup::HardwareType::RGB_MATRIX;
 int main(int argc, char **argv) {
   try {
     matrixserver::ServerConfig serverConfig;
-    ServerSetup::handleServerConfig(argc, argv, serverConfig);
+    ServerSetup::handleServerConfig(argc, argv, serverConfig, kHwType);
 
     BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl
                             << serverConfig.DebugString() << std::endl;

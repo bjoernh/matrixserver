@@ -5,6 +5,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include <google/protobuf/util/json_util.h>
@@ -102,8 +103,65 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig,
   serverConfig.set_pixelstreamingenabled(hwType == HardwareType::Simulator);
 }
 
+static void warnIfConfigSuspicious(
+    const matrixserver::ServerConfig &serverConfig) {
+  // Orientations that legitimately map to offsetX=0,offsetY=0,rot0 are only
+  // valid for the very first panel. Any other orientation at (0,0,rot0) is a
+  // sign that the layout fields were never written (old config format).
+  const auto defaultOrientation =
+      matrixserver::ScreenInfo::defaultScreenOrientation;
+  const auto defaultRotation = matrixserver::ScreenInfo::rot0;
+
+  // Track (offsetX, offsetY) usage to detect duplicates.
+  std::map<std::pair<int, int>, std::vector<int>> offsetUsers;
+
+  bool anyOrientationSet = false;
+  for (const auto &si : serverConfig.screeninfo()) {
+    if (si.screenorientation() != defaultOrientation)
+      anyOrientationSet = true;
+    offsetUsers[{si.offsetx(), si.offsety()}].push_back(si.screenid());
+  }
+
+  // Warn about screens that have orientation set but all layout fields at zero.
+  // (0,0,rot0) is only plausible for the front/first panel.
+  if (anyOrientationSet) {
+    for (const auto &si : serverConfig.screeninfo()) {
+      bool layoutIsAllZero =
+          si.offsetx() == 0 && si.offsety() == 0 &&
+          si.screenrotation() == defaultRotation;
+      bool orientationImpliesNonZeroLayout =
+          si.screenorientation() != defaultOrientation &&
+          si.screenorientation() != matrixserver::ScreenInfo::front;
+      if (layoutIsAllZero && orientationImpliesNonZeroLayout) {
+        BOOST_LOG_TRIVIAL(warning)
+            << "[ServerSetup] Screen " << si.screenid() << " (orientation="
+            << matrixserver::ScreenInfo::ScreenOrientation_Name(
+                   si.screenorientation())
+            << ") has offsetX=0, offsetY=0, screenRotation=rot0 — layout "
+               "fields may be missing from the config file. Delete the config "
+               "file and restart to regenerate it with correct layout values.";
+      }
+    }
+  }
+
+  // Warn about duplicate (offsetX, offsetY) pairs across different screens.
+  for (const auto &[offset, ids] : offsetUsers) {
+    if (ids.size() > 1) {
+      std::string idList;
+      for (int id : ids)
+        idList += std::to_string(id) + " ";
+      BOOST_LOG_TRIVIAL(warning)
+          << "[ServerSetup] Screens " << idList
+          << "share the same offset (" << offset.first << "," << offset.second
+          << "). This is almost certainly wrong — layout fields (offsetX, "
+             "offsetY, screenRotation) may be missing from the config file.";
+    }
+  }
+}
+
 std::vector<std::shared_ptr<Screen>>
 createScreensFromConfig(const matrixserver::ServerConfig &serverConfig) {
+  warnIfConfigSuspicious(serverConfig);
   std::vector<std::shared_ptr<Screen>> screens;
   for (const auto &screenInfo : serverConfig.screeninfo()) {
     auto screen = std::make_shared<Screen>(screenInfo.width(),
@@ -118,7 +176,8 @@ createScreensFromConfig(const matrixserver::ServerConfig &serverConfig) {
 }
 
 void handleServerConfig(int argc, char **argv,
-                        matrixserver::ServerConfig &serverConfig) {
+                        matrixserver::ServerConfig &serverConfig,
+                        HardwareType hwType) {
   std::string configPath = "";
   std::string serverAddressOverride = "";
 
@@ -217,7 +276,7 @@ void handleServerConfig(int argc, char **argv,
 
     if (response == "y" || response == "Y") {
       BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Creating default config...";
-      createDefaultCubeConfig(serverConfig);
+      createDefaultCubeConfig(serverConfig, hwType);
       std::string configString;
       google::protobuf::util::JsonPrintOptions jsonOptions;
       jsonOptions.add_whitespace = true;
@@ -235,7 +294,7 @@ void handleServerConfig(int argc, char **argv,
     } else {
       BOOST_LOG_TRIVIAL(info)
           << "[ServerSetup] Starting with default in-memory config.";
-      createDefaultCubeConfig(serverConfig);
+      createDefaultCubeConfig(serverConfig, hwType);
     }
   }
 
