@@ -30,8 +30,6 @@ other stuff:
 
 #include "Color.h"
 #include "Font6px.h"
-#include "Image.h"
-
 #include <boost/multi_array.hpp>
 #include <unistd.h>
 #include <vector>
@@ -88,7 +86,6 @@ public:
     void drawRectCentered2D(ScreenNumber screenNr, int x0, int y0, int w, int h, Color col, bool filled = false, Color fillColor = Color::black());
     void drawText(ScreenNumber screenNr, Vector2i topLeftPoint, Color col, std::string text);
     void drawBitmap1bpp(ScreenNumber screenNr, Vector2i topLeftPoint, Color col, Bitmap1bpp bitmap);
-    void drawImage(ScreenNumber screenNr, Vector2i topLeftPoint, Image &image, Vector2i imageStartPoint);
     bool isOnSurface(Vector3i point);
     ScreenNumber getScreenNumber(Vector3i point);
     bool isOnEdge(Vector3i point);

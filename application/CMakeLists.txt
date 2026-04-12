@@ -17,8 +17,7 @@ ENDIF()
 set(SOURCE_FILES
         CubeApplication.cpp
         Mpu6050.cpp
-        AnimationParams.cpp
-        Image.cpp)
+        AnimationParams.cpp)
 
 if (BUILD_RASPBERRYPI)
 	set(SOURCE_FILES
@@ -32,7 +31,7 @@ add_library(matrixapplication STATIC ${SOURCE_FILES} MatrixApplication.cpp)
 target_link_libraries(matrixapplication common renderer)
 
 target_link_libraries(matrixapplication
-        ${Boost_LIBRARIES} Imlib2
+        ${Boost_LIBRARIES}
         $<$<PLATFORM_ID:Linux>:rt>
          )
 if (BUILD_RASPBERRYPI)
@@ -51,7 +50,7 @@ target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CU
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}> $<INSTALL_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
 
 target_compile_definitions(matrixapplication PUBLIC BOOST_LOG_DYN_LINK)
-set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;Image.h;MatrixApplication.h")
+set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h")
 
 install(TARGETS matrixapplication
         EXPORT matrixapplication-targets
