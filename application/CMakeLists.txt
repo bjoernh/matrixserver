@@ -35,6 +35,7 @@ target_link_libraries(matrixapplication
         $<$<PLATFORM_ID:Linux>:rt>
          )
 if (BUILD_RASPBERRYPI)
+    target_compile_definitions(matrixapplication PUBLIC BUILD_RASPBERRYPI)
     target_link_libraries(matrixapplication wiringPi)
 endif ()
 
