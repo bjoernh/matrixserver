@@ -16,9 +16,14 @@ public:
 private:
     void startRefreshThread();
     void internalLoop();
+    Eigen::Vector3f applyOrientation(float x, float y, float z) const;
     boost::thread * thread_;
     boost::mutex threadLock_;
     int fd;
+
+    float xyRotDeg_{0.0f};
+    float xzRotDeg_{0.0f};
+    float yzRotDeg_{0.0f};
 
     Eigen::Vector3f acceleration;
     Eigen::Vector3f gyroscope{0, 0, 0};

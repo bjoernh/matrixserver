@@ -15,5 +15,5 @@ target_link_libraries(
     Mpu6050_test
     GTest::gtest_main
     Threads::Threads
-    matrixserver_proto
+    common
 )

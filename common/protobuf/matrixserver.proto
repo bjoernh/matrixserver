@@ -93,6 +93,12 @@ message JoystickData {
     bool buttonDpadRight = 21;
 }
 
+message ImuOrientation {
+    float xyRotationDeg = 1;   // rotation in XY plane (around Z axis), degrees
+    float xzRotationDeg = 2;   // rotation in XZ plane (around Y axis), degrees
+    float yzRotationDeg = 3;   // rotation in YZ plane (around X axis), degrees
+}
+
 message ServerConfig {
     repeated ScreenInfo screenInfo = 1;
     enum AssemblyType {
@@ -108,6 +114,7 @@ message ServerConfig {
     string simulatorPort = 7;
     int32 tickIntervalMs = 8;
     bool pixelStreamingEnabled = 9;
+    ImuOrientation imuOrientation = 10;
 }
 
 message Connection {

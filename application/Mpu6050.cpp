@@ -22,6 +22,9 @@ inline int wiringPiI2CReadReg8(int fd, int reg) { return -1; }
 inline int wiringPiI2CReadReg16(int fd, int reg) { return -1; }
 inline int wiringPiI2CWriteReg16(int fd, int reg, int val) { return -1; }
 #endif
+#include <fstream>
+#include <google/protobuf/util/json_util.h>
+#include <matrixserver.pb.h>
 
 #include <cmath>
 #define PI 3.14159265
@@ -69,7 +72,37 @@ Vector3i Mpu6050::getCubeAccIntersect() {
   return accCubePos;
 }
 
+Eigen::Vector3f Mpu6050::applyOrientation(float x, float y, float z) const {
+  if (xyRotDeg_ != 0.0f) {
+    auto r = RotateVector2d(Vector2f(x, y), xyRotDeg_);
+    x = r[0]; y = r[1];
+  }
+  if (xzRotDeg_ != 0.0f) {
+    auto r = RotateVector2d(Vector2f(x, z), xzRotDeg_);
+    x = r[0]; z = r[1];
+  }
+  if (yzRotDeg_ != 0.0f) {
+    auto r = RotateVector2d(Vector2f(y, z), yzRotDeg_);
+    y = r[0]; z = r[1];
+  }
+  return Vector3f(x, y, z);
+}
+
 void Mpu6050::init() {
+  // Load IMU orientation from server config file
+  std::ifstream f("matrixServerConfig.json");
+  if (f.good()) {
+    std::string json((std::istreambuf_iterator<char>(f)),
+                      std::istreambuf_iterator<char>());
+    matrixserver::ServerConfig cfg;
+    auto status = google::protobuf::util::JsonStringToMessage(json, &cfg);
+    if (status.ok()) {
+      xyRotDeg_ = cfg.imuorientation().xyrotationdeg();
+      xzRotDeg_ = cfg.imuorientation().xzrotationdeg();
+      yzRotDeg_ = cfg.imuorientation().yzrotationdeg();
+    }
+  }
+
   fd = wiringPiI2CSetup(MPU6050_I2C_ADDRESS);
   if (fd == -1) {
     std::cout
@@ -103,22 +136,8 @@ void Mpu6050::internalLoop() {
     ay = read_word_2c(fd, MPU6050_ACCEL_YOUT_H) / 16384.0f;
     az = read_word_2c(fd, MPU6050_ACCEL_ZOUT_H) / 16384.0f;
 
-    Vector2f temp;
-    temp[0] = ax;
-    temp[1] = az;
-    auto rotated = RotateVector2d(temp, 45.0f);
-
-    acceleration[0] = rotated[0];
-    acceleration[1] = rotated[1];
-    acceleration[2] = ay;
-
-    Vector2f gtemp;
-    gtemp[0] = gx;
-    gtemp[1] = gz;
-    auto grotated = RotateVector2d(gtemp, 45.0f);
-    gyroscope[0] = grotated[0];
-    gyroscope[1] = grotated[1];
-    gyroscope[2] = gy;
+    acceleration = applyOrientation(ax, ay, az);
+    gyroscope = applyOrientation(gx, gy, gz);
 
     usleep(10000);
   }
@@ -130,12 +149,7 @@ Vector3f Mpu6050::getGyroscope() {
     float gx = MatrixApplication::latestSimulatorGyroX;
     float gy = MatrixApplication::latestSimulatorGyroY;
     float gz = MatrixApplication::latestSimulatorGyroZ;
-
-    Vector2f gtemp;
-    gtemp[0] = gx;
-    gtemp[1] = gz;
-    auto grotated = RotateVector2d(gtemp, 45.0f);
-    return Vector3f(grotated[0], grotated[1], gy);
+    return applyOrientation(gx, gy, gz);
   }
   return gyroscope;
 }
@@ -151,13 +165,7 @@ Vector3f Mpu6050::getAcceleration() {
     float ax = MatrixApplication::latestSimulatorImuX * 0.1019368f; // 1 / 9.81
     float ay = MatrixApplication::latestSimulatorImuY * 0.1019368f;
     float az = MatrixApplication::latestSimulatorImuZ * 0.1019368f;
-
-    Vector2f temp;
-    temp[0] = ax;
-    temp[1] = az;
-    auto rotated = RotateVector2d(temp, 45.0f);
-
-    return Vector3f(rotated[0], rotated[1], ay);
+    return applyOrientation(ax, ay, az);
   }
   return acceleration;
 }
