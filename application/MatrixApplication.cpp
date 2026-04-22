@@ -1,4 +1,5 @@
 #include "MatrixApplication.h"
+#include <Joystick.h>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
@@ -236,6 +237,13 @@ void MatrixApplication::handleRequest(
   case matrixserver::setScreenFrame:
     renderSyncMutex.unlock();
     break;
+  case matrixserver::joystickData: {
+    for (int i = 0; i < message->joystickdata_size(); ++i) {
+      const auto& joystickData = message->joystickdata(i);
+      BOOST_LOG_TRIVIAL(debug) << "[Application] Received joystickData for ID: " << joystickData.joystickid() << " data: " << joystickData.ShortDebugString();
+      Joystick::updateSimulatorState(joystickData);
+    }
+  } break;
   case matrixserver::imuData: {
     std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
     MatrixApplication::latestSimulatorImuX = message->imudata().accelx();

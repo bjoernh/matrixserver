@@ -53,9 +53,7 @@ if (HARDWARE_BACKEND)
   add_subdirectory(server_hardware)
 endif ()
 
-if (BUILD_RASPBERRYPI)
-  add_subdirectory(MainMenu)
-endif()
+add_subdirectory(MainMenu)
 
 # Tests
 add_subdirectory(tests)

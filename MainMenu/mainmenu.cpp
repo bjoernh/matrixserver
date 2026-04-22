@@ -24,8 +24,13 @@ enum MenuState {
 MenuState menuState = applist;
 
 MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
-    const char *homeDir = std::getenv("HOME");
-    searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
+    const char *appPath = std::getenv("CUBE_APP_PATH");
+    if (appPath) {
+        searchDirectory = std::string(appPath);
+    } else {
+        const char *homeDir = std::getenv("HOME");
+        searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
+    }
     if (std::filesystem::is_directory(searchDirectory)) {
         for (const auto &p : std::filesystem::directory_iterator(searchDirectory)) {
             //if(p.path().extension() == "cube"){

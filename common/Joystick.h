@@ -12,9 +12,29 @@
 
 #define MAXBUTTONAXISCOUNT 16
 
+namespace matrixserver {
+    class JoystickData;
+}
+
 class Joystick {
 public:
     class Event;
+
+    struct SimulatorState {
+        std::array<bool, MAXBUTTONAXISCOUNT> button_;
+        std::array<bool, MAXBUTTONAXISCOUNT> buttonPress_;
+        std::array<float, MAXBUTTONAXISCOUNT> axis_;
+        std::array<float, MAXBUTTONAXISCOUNT> axisPress_;
+        
+        SimulatorState() {
+            button_.fill(false);
+            buttonPress_.fill(false);
+            axis_.fill(0.0f);
+            axisPress_.fill(0.0f);
+        }
+    };
+
+    static void updateSimulatorState(const matrixserver::JoystickData& data);
 
     ~Joystick();
 
@@ -69,6 +89,12 @@ private:
     std::array<bool, MAXBUTTONAXISCOUNT> buttonPress_;
     std::array<float, MAXBUTTONAXISCOUNT> axis_;
     std::array<float, MAXBUTTONAXISCOUNT> axisPress_;
+
+    int joystickNumber_;
+    bool useSimulatorFallback_;
+
+    static std::map<int, SimulatorState> simulatorStates_;
+    static boost::mutex simulatorMutex_;
 };
 
 class Joystick::Event {

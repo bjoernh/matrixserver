@@ -8,6 +8,7 @@ add_executable(testAll
     tests-screen.cpp
     tests-animationparams.cpp
     tests-tcp.cpp
+    tests-joystick.cpp
     test-unixSocket.cpp
     ${CMAKE_SOURCE_DIR}/application/AnimationParams.cpp
 )

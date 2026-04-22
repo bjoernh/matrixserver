@@ -268,6 +268,8 @@ The project is divided into logical directories that separate the server daemon,
 
 *   **`MainMenu`**
     *   A built-in example client application that provides a launch interface for the cube.
+    *   Scans a directory for executable applications and lets the user browse and launch them via joystick.
+    *   The search directory is configured via the `CUBE_APP_PATH` environment variable. If unset, it defaults to `$HOME/APPS`.
 
 *   **`CubeWebapp`** *(git submodule)*
     *   The web-based 3D LED cube simulator and configuration interface, included as a submodule from `git@github.com:bjoernh/CubeWebapp.git`.

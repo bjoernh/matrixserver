@@ -25,7 +25,7 @@ if (BUILD_RASPBERRYPI)
 endif ()
 
 
-add_library(matrixapplication STATIC ${SOURCE_FILES} MatrixApplication.cpp)
+add_library(matrixapplication SHARED ${SOURCE_FILES} MatrixApplication.cpp)
 
 target_link_libraries(matrixapplication common renderer Eigen3::Eigen)
 

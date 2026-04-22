@@ -1,4 +1,6 @@
 #include "Joystick.h"
+#include "matrixserver.pb.h"
+#include <boost/log/trivial.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -7,6 +9,9 @@
 #include <string>
 #include <sstream>
 #include "unistd.h"
+
+std::map<int, Joystick::SimulatorState> Joystick::simulatorStates_;
+boost::mutex Joystick::simulatorMutex_;
 
 Joystick::Joystick()
 {
@@ -39,11 +44,26 @@ void Joystick::resetVariables(){
 }
 
 void Joystick::init(std::string devicePath, bool blocking){
+    _fd = -1;
+    thread_ = nullptr;
     resetVariables();
     devicePath_ = devicePath;
     blocking_ = blocking;
-    openPath();
-    startRefreshThread();
+    useSimulatorFallback_ = false;
+    joystickNumber_ = 0;
+
+    if (devicePath.find("/dev/input/js") != std::string::npos) {
+        try { joystickNumber_ = std::stoi(devicePath.substr(13)); } catch(...) {}
+    }
+
+    struct stat buffer;
+    if (stat(devicePath_.c_str(), &buffer) != 0) {
+        useSimulatorFallback_ = true;
+        BOOST_LOG_TRIVIAL(debug) << "Joystick " << joystickNumber_ << " not found (" << devicePath << "). Falling back to simulator mode.";
+    } else {
+        openPath();
+        startRefreshThread();
+    }
 }
 
 void Joystick::openPath()
@@ -80,6 +100,7 @@ bool Joystick::sample(Joystick::Event * event)
 
 bool Joystick::isFound()
 {
+    if (useSimulatorFallback_) return true;
     struct stat buffer;
     return (stat (devicePath_.c_str(), &buffer) == 0);
 }
@@ -134,6 +155,11 @@ void Joystick::internalLoop()
 
 bool Joystick::getButton(unsigned int num)
 {
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        if (num < MAXBUTTONAXISCOUNT) return simulatorStates_[joystickNumber_].button_[num];
+        return false;
+    }
     if(num < MAXBUTTONAXISCOUNT)
         return button_[num];
     return false;
@@ -141,6 +167,16 @@ bool Joystick::getButton(unsigned int num)
 
 bool Joystick::getButtonPress(unsigned int num)
 {
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        if(num < MAXBUTTONAXISCOUNT){
+            if(simulatorStates_[joystickNumber_].buttonPress_[num]){
+                simulatorStates_[joystickNumber_].buttonPress_[num] = false;
+                return true;
+            }
+        }
+        return false;
+    }
     if(num < MAXBUTTONAXISCOUNT){
         if(buttonPress_[num]){
             buttonPress_[num] = false;
@@ -152,12 +188,28 @@ bool Joystick::getButtonPress(unsigned int num)
 
 float Joystick::getAxis(unsigned int num)
 {
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        if (num < MAXBUTTONAXISCOUNT) return simulatorStates_[joystickNumber_].axis_[num];
+        return 0.0f;
+    }
     if(num < MAXBUTTONAXISCOUNT)
         return axis_[num];
     return 0;
 }
 
 float Joystick::getAxisPress(unsigned int num) {
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        if(num < MAXBUTTONAXISCOUNT){
+            if(simulatorStates_[joystickNumber_].axisPress_[num] != 0){
+                auto returnValue = simulatorStates_[joystickNumber_].axisPress_[num];
+                simulatorStates_[joystickNumber_].axisPress_[num] = 0.0f;
+                return returnValue;
+            }
+        }
+        return 0.0f;
+    }
     if(num < MAXBUTTONAXISCOUNT){
         if(axisPress_[num] != 0){
             auto returnValue = axisPress_[num];
@@ -170,12 +222,63 @@ float Joystick::getAxisPress(unsigned int num) {
 
 
 void Joystick::clearAllButtonPresses(){
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        for(int i = 0; i < MAXBUTTONAXISCOUNT; i++){
+            simulatorStates_[joystickNumber_].buttonPress_[i] = false;
+            simulatorStates_[joystickNumber_].axisPress_[i] = 0.0f;
+        }
+        return;
+    }
     for(int i = 0; i < MAXBUTTONAXISCOUNT; i++){
         buttonPress_[i] = false;
     }
     for(int i = 0; i < MAXBUTTONAXISCOUNT; i++){
         axisPress_[i] = 0.0f;
     }
+}
+
+void Joystick::updateSimulatorState(const matrixserver::JoystickData& data) {
+    boost::mutex::scoped_lock lock(simulatorMutex_);
+    int id = data.joystickid();
+    auto& state = simulatorStates_[id];
+    
+    auto updateBtn = [](bool& btn, bool& press, bool newVal) {
+        if (!btn && newVal) press = true;
+        btn = newVal;
+    };
+    auto updateAxis = [](float& axis, float& press, float newVal) {
+        if (axis == 0.0f && newVal != 0.0f) press = newVal;
+        axis = newVal;
+    };
+
+    updateBtn(state.button_[0], state.buttonPress_[0], data.buttona());
+    updateBtn(state.button_[1], state.buttonPress_[1], data.buttonb());
+    updateBtn(state.button_[2], state.buttonPress_[2], data.buttonx());
+    updateBtn(state.button_[3], state.buttonPress_[3], data.buttony());
+    updateBtn(state.button_[4], state.buttonPress_[4], data.buttonl());
+    updateBtn(state.button_[5], state.buttonPress_[5], data.buttonr());
+    updateBtn(state.button_[6], state.buttonPress_[6], data.buttonselect());
+    updateBtn(state.button_[7], state.buttonPress_[7], data.buttonstart());
+    updateBtn(state.button_[8], state.buttonPress_[8], data.leftstickbutton());
+    updateBtn(state.button_[9], state.buttonPress_[9], data.rightstickbutton());
+    
+    float dpadx = 0.0f;
+    if (data.buttondpadleft()) dpadx = -1.0f;
+    else if (data.buttondpadright()) dpadx = 1.0f;
+    
+    float dpady = 0.0f;
+    if (data.buttondpadup()) dpady = -1.0f;
+    else if (data.buttondpaddown()) dpady = 1.0f;
+
+    updateAxis(state.axis_[0], state.axisPress_[0], data.axisx());
+    updateAxis(state.axis_[1], state.axisPress_[1], data.axisy());
+    updateAxis(state.axis_[2], state.axisPress_[2], data.lefttrigger());
+    updateAxis(state.axis_[3], state.axisPress_[3], data.rightaxisx());
+    updateAxis(state.axis_[4], state.axisPress_[4], data.rightaxisy());
+    updateAxis(state.axis_[5], state.axisPress_[5], data.righttrigger());
+    updateAxis(state.axis_[6], state.axisPress_[6], dpadx);
+    updateAxis(state.axis_[7], state.axisPress_[7], dpady);
 }
 
 Joystick::~Joystick()
