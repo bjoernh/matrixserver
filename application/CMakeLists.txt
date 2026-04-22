@@ -16,7 +16,15 @@ ENDIF()
 set(SOURCE_FILES
         CubeApplication.cpp
         Mpu6050.cpp
-        AnimationParams.cpp)
+        AnimationParams.cpp
+        ui/MenuItem.cpp
+        ui/ActionMenuItem.cpp
+        ui/SubmenuMenuItem.cpp
+        ui/BackMenuItem.cpp
+        ui/CheckboxMenuItem.cpp
+        ui/Menu.cpp
+        ui/MenuNavigator.cpp
+        ui/StatusBar.cpp)
 
 if (BUILD_RASPBERRYPI)
 	set(SOURCE_FILES
@@ -61,4 +69,9 @@ install(TARGETS matrixapplication
         DESTINATION include/matrixapplication
         COMPONENT matrixapplication
         )
+
+install(DIRECTORY ui/
+        DESTINATION include/matrixapplication/ui
+        COMPONENT matrixapplication
+        FILES_MATCHING PATTERN "*.h")
 

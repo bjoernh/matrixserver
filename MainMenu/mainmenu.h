@@ -1,43 +1,42 @@
-#ifndef SNAKE_PIXELFLOW_H
-#define SNAKE_PIXELFLOW_H
+#ifndef MATRIXSERVER_MAINMENU_H
+#define MATRIXSERVER_MAINMENU_H
+
+#include <string>
 
 #include "CubeApplication.h"
-
 #include "Joystick.h"
+#include "ui/MenuUI.h"
+
 #ifdef BUILD_RASPBERRYPI
 #include "ADS1000.h"
 #endif
-
-#include <filesystem>
-
-namespace fs = std::filesystem;
 
 class MainMenu : public CubeApplication {
 public:
     MainMenu();
 
-    bool loop();
+    bool loop() override;
 
 private:
-    class AppListItem;
+    void buildMenus();
+    void discoverApps(Menu *root);
+    Menu *buildSettingsMenu();
+    void launchApp(const std::string &execPath);
+    void drawRootBranding(Color accent);
+    void drawUpdateScreen(Color accent);
 
-    JoystickManager joystickmngr;
-    std::vector<AppListItem> appList;
-    std::vector<AppListItem> settingsList;
-    std::string searchDirectory;
+    JoystickManager joystickmngr_;
+    MenuNavigator navigator_;
+    StatusBar statusBar_;
+    Menu *rootMenu_ = nullptr;
+    Color accentColor_;
+    int loopCount_ = 0;
+    bool updateInProgress_ = false;
+    bool demoMode_ = false;
+    std::string searchDirectory_;
 #ifdef BUILD_RASPBERRYPI
-    ADS1000 adcBattery;
+    ADS1000 adcBattery_;
 #endif
 };
 
-class MainMenu::AppListItem {
-public:
-    AppListItem(std::string setName, std::string setExecPath, bool setInternal = false, Color setColor = Color::white());
-
-    std::string name;
-    std::string execPath;
-    bool isInternal = false;
-    Color color = Color::white();
-};
-
-#endif //SNAKE_PIXELFLOW_H
+#endif

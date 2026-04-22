@@ -1,201 +1,230 @@
 #include "mainmenu.h"
 
-#include <stdio.h>
 #include <algorithm>
-#include <iterator>
-#include <cmath>
-#include <cstdio>
 #include <cstdlib>
-#include <iostream>
+#include <filesystem>
 #include <memory>
-#include <stdexcept>
 #include <string>
-#include <array>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
+
 #include <boost/log/trivial.hpp>
 
-size_t hostnameLen = 20;
-char hostname[20];
+#include "Font6px.h"
 
-enum MenuState {
-    applist, settings, settingsUpdate
-};
+namespace {
 
-MenuState menuState = applist;
+bool isExecutableFile(const std::filesystem::path &path) {
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(path, ec)) return false;
+    return access(path.c_str(), X_OK) == 0;
+}
 
-MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
+std::vector<std::filesystem::path> collectExecutables(const std::filesystem::path &dir) {
+    std::vector<std::filesystem::path> out;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(dir, ec)) return out;
+    for (const auto &entry : std::filesystem::directory_iterator(dir, ec)) {
+        if (isExecutableFile(entry.path())) {
+            out.push_back(entry.path());
+        }
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
+}  // namespace
+
+MainMenu::MainMenu() : CubeApplication(40), joystickmngr_(8) {
     const char *appPath = std::getenv("CUBE_APP_PATH");
     if (appPath) {
-        searchDirectory = std::string(appPath);
+        searchDirectory_ = std::string(appPath);
     } else {
         const char *homeDir = std::getenv("HOME");
-        searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
-    }
-    if (std::filesystem::is_directory(searchDirectory)) {
-        for (const auto &p : std::filesystem::directory_iterator(searchDirectory)) {
-            //if(p.path().extension() == "cube"){
-            appList.push_back(AppListItem(std::string(p.path().filename()), std::string(p.path())));
-            //}
-        }
-    } else {
-        BOOST_LOG_TRIVIAL(warning) << "[MainMenu] Apps directory not found: " << searchDirectory;
+        searchDirectory_ = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
     }
 
-    appList.push_back(AppListItem("settings", "settings", true, Color::blue()));
-    settingsList.push_back(AppListItem("brightness: "+std::to_string(getBrightness()), "brightness", true));
-    settingsList.push_back(AppListItem("update", "update", true));
-    settingsList.push_back(AppListItem("shutdown", "shutdown", true));
-    settingsList.push_back(AppListItem("return", "return", true, Color::blue()));
+    statusBar_.setHostname(StatusBar::fetchHostname());
+#ifdef BUILD_RASPBERRYPI
+    statusBar_.setVoltageProvider([this]() { return adcBattery_.getVoltage(); });
+#endif
 
-    gethostname(hostname, hostnameLen);
-    menuState = applist;
-    setBrightness(getBrightness()); // fix for apply brightness stored in matrixserver config on startup
+    buildMenus();
+
+    // Apply brightness from the matrixserver config on startup.
+    setBrightness(getBrightness());
 }
 
+void MainMenu::buildMenus() {
+    auto root = std::make_unique<Menu>();
+    rootMenu_ = navigator_.addMenu(std::move(root));
+    navigator_.setRootMenu(rootMenu_);
+
+    discoverApps(rootMenu_);
+
+    Menu *settings = buildSettingsMenu();
+    rootMenu_->addItem(std::make_unique<SubmenuMenuItem>("settings", settings, Color::blue()));
+
+    // Items were added after addMenu() registration; patch in navigator pointers now.
+    navigator_.rewireAll();
+}
+
+void MainMenu::discoverApps(Menu *root) {
+    std::error_code ec;
+    if (!std::filesystem::is_directory(searchDirectory_, ec)) {
+        BOOST_LOG_TRIVIAL(warning) << "[MainMenu] Apps directory not found: " << searchDirectory_;
+        return;
+    }
+
+    struct Category {
+        std::string name;
+        std::vector<std::filesystem::path> apps;
+    };
+
+    std::vector<Category> categories;
+    std::vector<std::filesystem::path> looseApps;
+
+    for (const auto &entry : std::filesystem::directory_iterator(searchDirectory_, ec)) {
+        if (std::filesystem::is_directory(entry.path(), ec)) {
+            auto apps = collectExecutables(entry.path());
+            if (!apps.empty()) {
+                categories.push_back({entry.path().filename().string(), std::move(apps)});
+            }
+        } else if (isExecutableFile(entry.path())) {
+            looseApps.push_back(entry.path());
+        }
+    }
+
+    std::sort(looseApps.begin(), looseApps.end());
+
+    // Preferred-order-first, then remaining categories alphabetically.
+    const std::vector<std::string> preferredOrder = {"Animation", "Demos", "Games"};
+    std::vector<Category> ordered;
+    for (const auto &name : preferredOrder) {
+        auto it = std::find_if(categories.begin(), categories.end(),
+                               [&](const Category &c) { return c.name == name; });
+        if (it != categories.end()) {
+            ordered.push_back(std::move(*it));
+            categories.erase(it);
+        }
+    }
+    std::sort(categories.begin(), categories.end(),
+              [](const Category &a, const Category &b) { return a.name < b.name; });
+    for (auto &c : categories) ordered.push_back(std::move(c));
+
+    // If there are no categories at all, put loose apps directly on root
+    // (backward-compat with the old flat layout).
+    bool flatLayout = ordered.empty();
+
+    for (auto &cat : ordered) {
+        auto submenu = std::make_unique<Menu>(cat.name);
+        Menu *submenuPtr = navigator_.addMenu(std::move(submenu));
+        for (auto &path : cat.apps) {
+            std::string execPath = path.string();
+            std::string name = path.filename().string();
+            submenuPtr->addItem(std::make_unique<ActionMenuItem>(
+                name, [this, execPath]() { launchApp(execPath); }));
+        }
+        submenuPtr->addItem(std::make_unique<BackMenuItem>());
+        root->addItem(std::make_unique<SubmenuMenuItem>(cat.name, submenuPtr));
+    }
+
+    if (!looseApps.empty()) {
+        if (flatLayout) {
+            for (auto &path : looseApps) {
+                std::string execPath = path.string();
+                std::string name = path.filename().string();
+                root->addItem(std::make_unique<ActionMenuItem>(
+                    name, [this, execPath]() { launchApp(execPath); }));
+            }
+        } else {
+            auto appsMenu = std::make_unique<Menu>("Apps");
+            Menu *appsPtr = navigator_.addMenu(std::move(appsMenu));
+            for (auto &path : looseApps) {
+                std::string execPath = path.string();
+                std::string name = path.filename().string();
+                appsPtr->addItem(std::make_unique<ActionMenuItem>(
+                    name, [this, execPath]() { launchApp(execPath); }));
+            }
+            appsPtr->addItem(std::make_unique<BackMenuItem>());
+            root->addItem(std::make_unique<SubmenuMenuItem>("Apps", appsPtr));
+        }
+    }
+}
+
+Menu *MainMenu::buildSettingsMenu() {
+    auto settings = std::make_unique<Menu>("Settings");
+    Menu *ptr = navigator_.addMenu(std::move(settings));
+
+    ptr->addItem(std::make_unique<IntSliderMenuItem>(
+        "brightness",
+        0, 100, 5,
+        [this]() { return getBrightness(); },
+        [this](int v) { setBrightness(v); }));
+
+    ptr->addItem(std::make_unique<CheckboxMenuItem>(
+        "demo mode",
+        [this]() { return demoMode_; },
+        [this](bool v) { demoMode_ = v; }));
+
+    ptr->addItem(std::make_unique<ActionMenuItem>(
+        "update",
+        [this]() {
+            updateInProgress_ = true;
+            std::system("nohup /usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
+        }));
+
+    ptr->addItem(std::make_unique<ActionMenuItem>(
+        "shutdown",
+        []() { std::system("sudo shutdown now"); }));
+
+    ptr->addItem(std::make_unique<BackMenuItem>("return"));
+
+    return ptr;
+}
+
+void MainMenu::launchApp(const std::string &execPath) {
+    std::string cmd = "nohup " + execPath + " 1>/dev/null 2>/dev/null &";
+    BOOST_LOG_TRIVIAL(info) << "[MainMenu] launch: " << cmd;
+    std::system(cmd.c_str());
+}
+
+void MainMenu::drawRootBranding(Color accent) {
+    drawRect2D(top, 10, 10, 53, 53, accent);
+    drawText(top, Eigen::Vector2i(CharacterBitmaps::centered, 22), accent, "DOT");
+    drawText(top, Eigen::Vector2i(CharacterBitmaps::centered, 30), accent, "THE");
+    drawText(top, Eigen::Vector2i(CharacterBitmaps::centered, 38), accent, "LEDCUBE");
+}
+
+void MainMenu::drawUpdateScreen(Color accent) {
+    for (int screenCounter = 0; screenCounter < 5; ++screenCounter) {
+        auto screen = static_cast<ScreenNumber>(screenCounter);
+        drawText(screen, Eigen::Vector2i(CharacterBitmaps::centered, 22), accent, "Update");
+        drawText(screen, Eigen::Vector2i(CharacterBitmaps::centered, 30), accent, "in");
+        drawText(screen, Eigen::Vector2i(CharacterBitmaps::centered, 38), accent, "progress");
+    }
+}
 
 bool MainMenu::loop() {
-    static int loopcount = 0;
-    static int selectedExec = appList.size() / 2;
-    static int lastSelectedExec = selectedExec;
-    static int animationOffset = 0;
-
-    static Color colSelectedText = Color::white();
-    static Color colVoltageText = Color::blue();
-
     clear();
+    accentColor_.fromHSV(static_cast<float>(loopCount_ % 360), 1.0f, 1.0f);
+    navigator_.setAccentColor(accentColor_);
 
-    colSelectedText.fromHSV((loopcount % 360 / 1.0f), 1.0, 1.0);
-
-    switch (menuState) {
-        case applist: {
-            selectedExec += (int) joystickmngr.getAxisPress(1);
-            if (selectedExec < 0) {
-                selectedExec = appList.size() - 1;
-            } else {
-                selectedExec %= appList.size();
-            }
-            if(lastSelectedExec != selectedExec){
-                animationOffset = (selectedExec-lastSelectedExec)*7;
-            }
-            lastSelectedExec = selectedExec;
-            animationOffset *= 0.85;
-
-
-
-            if (joystickmngr.getButtonPress(0)) {
-                if (appList.at(selectedExec).execPath == "settings") {
-                    selectedExec = 0;
-                    lastSelectedExec = selectedExec;
-                    animationOffset = 0;
-                    menuState = settings;
-                } else {
-                    std::string temp = appList.at(selectedExec).execPath;
-                    temp += std::string(" 1>/dev/null 2>/dev/null &");
-                    temp = std::string("nohup ") + temp;
-                    std::cout << "start: " << temp << std::endl;
-                    system(temp.data());
-                }
-
-            }
-
-            for (uint i = 0; i < appList.size(); i++) {
-                int yPos = 29 + ((i - selectedExec) * 7) + animationOffset;
-                Color textColor = appList.at(i).color;
-                if (i == (uint) selectedExec)
-                    textColor = colSelectedText;
-                for (uint screenCounter = 0; screenCounter < 4; screenCounter++) {
-                    if (yPos < CUBEMAXINDEX && yPos > 0) {
-                        drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::centered, yPos), textColor, appList.at(i).name);
-                    }
-                }
-            }
-
-            drawRect2D(top, 10, 10, 53, 53, colSelectedText);
-            drawText(top, Vector2i(CharacterBitmaps::centered, 22), colSelectedText, "DOT");
-            drawText(top, Vector2i(CharacterBitmaps::centered, 30), colSelectedText, "THE");
-            drawText(top, Vector2i(CharacterBitmaps::centered, 38), colSelectedText, "LEDCUBE");
+    if (updateInProgress_) {
+        drawUpdateScreen(accentColor_);
+    } else {
+        navigator_.update(joystickmngr_);
+        navigator_.draw(*this);
+        if (navigator_.current() == rootMenu_) {
+            drawRootBranding(accentColor_);
         }
-            break;
-        case settings: {
-            drawText(top, Vector2i(CharacterBitmaps::centered, 30), Color::blue(), "Settings");
-
-            selectedExec += (int) joystickmngr.getAxisPress(1);
-            if (selectedExec < 0) {
-                selectedExec = settingsList.size() - 1;
-            } else {
-                selectedExec %= settingsList.size();
-            }
-            if(lastSelectedExec != selectedExec){
-                animationOffset = (selectedExec-lastSelectedExec)*7;
-            }
-            lastSelectedExec = selectedExec;
-            animationOffset *= 0.85;
-
-            if (joystickmngr.getButtonPress(0)) {
-                if (settingsList.at(selectedExec).execPath == "return") {
-                    menuState = applist;
-                    selectedExec = appList.size() - 1;
-                    lastSelectedExec = selectedExec;
-                    animationOffset = 0;
-                } else if (settingsList.at(selectedExec).execPath == "shutdown") {
-                    auto temp = std::string("sudo shutdown now");
-                    system(temp.data());
-                } else if (settingsList.at(selectedExec).execPath == "update") {
-                    menuState = settingsUpdate;
-                    auto temp = std::string("/usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
-                    temp = std::string("nohup ") + temp;
-                    system(temp.data());
-                }
-            }
-
-            if (menuState == settings && settingsList.at(selectedExec).execPath == "brightness") {
-                setBrightness(constrain(getBrightness()+(int)(joystickmngr.getAxisPress(0)*10),0,100));
-                settingsList.at(selectedExec).name = "brightness: " + std::to_string(getBrightness());
-            }
-
-            for (uint i = 0; i < settingsList.size(); i++) {
-                int yPos = 29 + ((i - selectedExec) * 7) + animationOffset;
-                Color textColor = settingsList.at(i).color;
-                if (i == (uint) selectedExec)
-                    textColor = colSelectedText;
-                for (uint screenCounter = 0; screenCounter < 4; screenCounter++) {
-                    if (yPos < 57 && yPos > 6) {
-                        drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::centered, yPos), textColor, settingsList.at(i).name);
-                    }
-                }
-            }
-        }
-            break;
-        case settingsUpdate:
-            for (uint screenCounter = 0; screenCounter < 5; screenCounter++) {
-                drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::centered, 22), colSelectedText, "Update");
-                drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::centered, 30), colSelectedText, "in");
-                drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::centered, 38), colSelectedText, "progress");
-            }
-            break;
-
     }
 
-    for (uint screenCounter = 0; screenCounter < 4; screenCounter++) {
-        drawRect2D((ScreenNumber) screenCounter, 0, 0, CUBEMAXINDEX, 6, Color::black(), true, Color::black());
-        drawRect2D((ScreenNumber) screenCounter, 0, CUBEMAXINDEX-6, CUBEMAXINDEX, CUBEMAXINDEX, Color::black(), true, Color::black());
-#ifdef BUILD_RASPBERRYPI
-        auto battValue = adcBattery.getVoltage();
-        drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::right, 58), colVoltageText, std::to_string(battValue).substr(0, 5) + " V");
-#endif
-        drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::left, 1), colVoltageText, hostname);
-    }
+    statusBar_.draw(*this);
 
-    joystickmngr.clearAllButtonPresses();
-
+    joystickmngr_.clearAllButtonPresses();
     render();
-    loopcount++;
+    ++loopCount_;
     return true;
 }
-
-MainMenu::AppListItem::AppListItem(std::string setName, std::string setExecPath, bool setInternal, Color setColor) {
-    name = setName;
-    execPath = setExecPath;
-    color = setColor;
-    isInternal = setInternal;
-};
