@@ -4,11 +4,13 @@
 #include "CubeApplication.h"
 
 #include "Joystick.h"
+#ifdef BUILD_RASPBERRYPI
 #include "ADS1000.h"
+#endif
 
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 class MainMenu : public CubeApplication {
 public:
@@ -23,7 +25,9 @@ private:
     std::vector<AppListItem> appList;
     std::vector<AppListItem> settingsList;
     std::string searchDirectory;
+#ifdef BUILD_RASPBERRYPI
     ADS1000 adcBattery;
+#endif
 };
 
 class MainMenu::AppListItem {

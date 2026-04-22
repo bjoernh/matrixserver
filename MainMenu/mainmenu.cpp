@@ -26,8 +26,8 @@ MenuState menuState = applist;
 MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
     const char *homeDir = std::getenv("HOME");
     searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
-    if (std::experimental::filesystem::is_directory(searchDirectory)) {
-        for (const auto &p : std::experimental::filesystem::directory_iterator(searchDirectory)) {
+    if (std::filesystem::is_directory(searchDirectory)) {
+        for (const auto &p : std::filesystem::directory_iterator(searchDirectory)) {
             //if(p.path().extension() == "cube"){
             appList.push_back(AppListItem(std::string(p.path().filename()), std::string(p.path())));
             //}
@@ -171,11 +171,13 @@ bool MainMenu::loop() {
 
     }
 
-    auto battValue = adcBattery.getVoltage();
     for (uint screenCounter = 0; screenCounter < 4; screenCounter++) {
         drawRect2D((ScreenNumber) screenCounter, 0, 0, CUBEMAXINDEX, 6, Color::black(), true, Color::black());
         drawRect2D((ScreenNumber) screenCounter, 0, CUBEMAXINDEX-6, CUBEMAXINDEX, CUBEMAXINDEX, Color::black(), true, Color::black());
+#ifdef BUILD_RASPBERRYPI
+        auto battValue = adcBattery.getVoltage();
         drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::right, 58), colVoltageText, std::to_string(battValue).substr(0, 5) + " V");
+#endif
         drawText((ScreenNumber) screenCounter, Vector2i(CharacterBitmaps::left, 1), colVoltageText, hostname);
     }
 

@@ -199,6 +199,28 @@ When starting a server without an existing configuration file, it will explicitl
 
 The generated config includes per-screen `screenRotation`, `offsetX`, `offsetY` fields that specify how each cube face maps to physical display positions. These defaults are set correctly for the selected hardware backend and can be adjusted in the JSON file.
 
+## IMU Orientation Configuration
+To align a mounted orientation of the IMU sensor with the software, rotation to the gravity vector can be applied.
+
+Applications using the MPU6050 IMU sensor (Raspberry Pi only) read orientation corrections from `matrixServerConfig.json`:
+
+```json
+{
+  "imuOrientation": {
+    "xyRotationDeg": 0.0,
+    "xzRotationDeg": 45.0,
+    "yzRotationDeg": 0.0
+  }
+}
+```
+
+The three rotation angles compensate for how the sensor is physically mounted:
+- `xyRotationDeg`: Rotation around the Z axis
+- `xzRotationDeg`: Rotation around the Y axis
+- `yzRotationDeg`: Rotation around the X axis
+
+All values default to 0° when omitted, ensuring backwards compatibility with existing configurations.
+
 # Important: Running an Application
 
 The matrix server only acts as a display driver. By itself, it will only maintain the connection and show a blank screen or default background. 

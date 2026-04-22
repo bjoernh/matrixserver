@@ -6,7 +6,7 @@ set(MAINSRC
 
 set(MAINLIBS
         matrixapplication
-        stdc++fs
+        $<$<PLATFORM_ID:Linux>:stdc++fs>
         )
 
 add_executable(MainMenu ${MAINSRC})

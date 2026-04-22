@@ -3,8 +3,7 @@ project(application)
 find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
 include_directories(${Boost_INCLUDE_DIRS})
 
-find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIRS})
+find_package(Eigen3 REQUIRED NO_MODULE)
 
 IF(APPLE)
 	# Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
@@ -28,7 +27,7 @@ endif ()
 
 add_library(matrixapplication STATIC ${SOURCE_FILES} MatrixApplication.cpp)
 
-target_link_libraries(matrixapplication common renderer)
+target_link_libraries(matrixapplication common renderer Eigen3::Eigen)
 
 target_link_libraries(matrixapplication
         ${Boost_LIBRARIES}
@@ -48,7 +47,7 @@ elseif (HARDWARE_BACKEND STREQUAL "FPGA_FTDI")
 endif ()
 
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
-target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIRS}> $<INSTALL_INTERFACE:${EIGEN3_INCLUDE_DIRS}>)
+
 
 target_compile_definitions(matrixapplication PUBLIC BOOST_LOG_DYN_LINK)
 set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h")
