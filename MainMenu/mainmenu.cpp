@@ -172,12 +172,12 @@ Menu *MainMenu::buildSettingsMenu() {
         "update",
         [this]() {
             updateInProgress_ = true;
-            std::system("nohup /usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
+            (void)std::system("nohup /usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
         }));
 
     ptr->addItem(std::make_unique<ActionMenuItem>(
         "shutdown",
-        []() { std::system("sudo shutdown now"); }));
+        []() { (void)std::system("sudo shutdown now"); }));
 
     ptr->addItem(std::make_unique<BackMenuItem>("return"));
 
@@ -187,7 +187,7 @@ Menu *MainMenu::buildSettingsMenu() {
 void MainMenu::launchApp(const std::string &execPath) {
     std::string cmd = "nohup " + execPath + " 1>/dev/null 2>/dev/null &";
     BOOST_LOG_TRIVIAL(info) << "[MainMenu] launch: " << cmd;
-    std::system(cmd.c_str());
+    (void)std::system(cmd.c_str());
 }
 
 void MainMenu::drawRootBranding(Color accent) {
