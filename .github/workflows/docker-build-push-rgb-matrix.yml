@@ -1,9 +1,9 @@
 name: Build and Push RGB_MATRIX (ARM64)
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Build and Push Simulator (AMD64)"]
+    types: [completed]
   workflow_dispatch:
 
 env:
@@ -13,6 +13,7 @@ env:
 jobs:
   build-and-push-rgb-matrix:
     name: Build DEB and Push to GHCR (ARM64)
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request') }}
     runs-on: [self-hosted, linux, ARM64]
     permissions:
       contents: read
@@ -46,12 +47,6 @@ jobs:
           mkdir build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=RGB_MATRIX ..
           make -j$(nproc)
-
-      - name: Run Tests
-        run: |
-          cd build
-          make testAll
-          ./tests/testAll
 
       - name: Create Debian Package Workspace
         run: |
