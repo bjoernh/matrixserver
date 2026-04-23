@@ -1,6 +1,6 @@
 project(tests)
 
-add_executable(testAll
+add_executable(testAll EXCLUDE_FROM_ALL
     tests-main.cpp
     tests-cobs.cpp
     tests-cobs-stream.cpp
