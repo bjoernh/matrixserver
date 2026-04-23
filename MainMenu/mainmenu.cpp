@@ -93,7 +93,7 @@ bool MainMenu::loop() {
                     temp += std::string(" 1>/dev/null 2>/dev/null &");
                     temp = std::string("nohup ") + temp;
                     std::cout << "start: " << temp << std::endl;
-                    system(temp.data());
+                    (void)system(temp.data());
                 }
 
             }
@@ -139,12 +139,12 @@ bool MainMenu::loop() {
                     animationOffset = 0;
                 } else if (settingsList.at(selectedExec).execPath == "shutdown") {
                     auto temp = std::string("sudo shutdown now");
-                    system(temp.data());
+                    (void)system(temp.data());
                 } else if (settingsList.at(selectedExec).execPath == "update") {
                     menuState = settingsUpdate;
                     auto temp = std::string("/usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
                     temp = std::string("nohup ") + temp;
-                    system(temp.data());
+                    (void)system(temp.data());
                 }
             }
 
