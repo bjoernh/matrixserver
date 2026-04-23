@@ -1,6 +1,8 @@
 #include "Joystick.h"
 #include "matrixserver.pb.h"
 #include <boost/log/trivial.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/chrono.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,6 +13,7 @@
 #include "unistd.h"
 
 std::map<int, Joystick::SimulatorState> Joystick::simulatorStates_;
+std::map<int, std::chrono::steady_clock::time_point> Joystick::simulatorLastUpdate_;
 boost::mutex Joystick::simulatorMutex_;
 
 Joystick::Joystick()
@@ -60,6 +63,7 @@ void Joystick::init(std::string devicePath, bool blocking){
     if (stat(devicePath_.c_str(), &buffer) != 0) {
         useSimulatorFallback_ = true;
         BOOST_LOG_TRIVIAL(debug) << "Joystick " << joystickNumber_ << " not found (" << devicePath << "). Falling back to simulator mode.";
+        startRefreshThread();
     } else {
         openPath();
         startRefreshThread();
@@ -78,10 +82,24 @@ void Joystick::openPath()
 void Joystick::recheckFilePath()
 {
     struct stat buffer;
-    if (stat (devicePath_.c_str(), &buffer) != 0){
+    bool fileExists = (stat(devicePath_.c_str(), &buffer) == 0);
+
+    if (useSimulatorFallback_) {
+        // Late-pairing: if a physical device has appeared while we were in fallback, transition out.
+        if (fileExists) {
+            BOOST_LOG_TRIVIAL(info) << "Joystick " << joystickNumber_
+                                    << " device appeared, switching out of simulator fallback.";
+            resetVariables();
+            openPath();
+            useSimulatorFallback_ = false;
+        }
+        return;
+    }
+
+    if (!fileExists) {
         _fd = 0;
     }
-    if(_fd == 0){
+    if (_fd == 0) {
         resetVariables();
         openPath();
     }
@@ -100,7 +118,16 @@ bool Joystick::sample(Joystick::Event * event)
 
 bool Joystick::isFound()
 {
-    if (useSimulatorFallback_) return true;
+    // For simulator-fallback slots, only report active once recent input has been received.
+    // This prevents idle slots from forcing games into unwanted multiplayer mode.
+    if (useSimulatorFallback_) {
+        boost::mutex::scoped_lock lock(simulatorMutex_);
+        auto it = simulatorLastUpdate_.find(joystickNumber_);
+        if (it == simulatorLastUpdate_.end()) return false;
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - it->second).count();
+        return elapsed < SIMULATOR_ACTIVITY_TIMEOUT_MS;
+    }
     struct stat buffer;
     return (stat (devicePath_.c_str(), &buffer) == 0);
 }
@@ -148,7 +175,8 @@ void Joystick::internalLoop()
             recheckFilePath();
         refresh();
         loopcount++;
-        usleep(10000);
+        // Use boost sleep so thread interruption in stopThread() works correctly.
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
     }
 }
 
@@ -239,8 +267,11 @@ void Joystick::clearAllButtonPresses(){
 }
 
 void Joystick::updateSimulatorState(const matrixserver::JoystickData& data) {
+    // Record activity timestamp for lazy activation: isFound() uses this to determine
+    // whether a simulator-fallback slot has received input recently enough to be considered active.
     boost::mutex::scoped_lock lock(simulatorMutex_);
     int id = data.joystickid();
+    simulatorLastUpdate_[id] = std::chrono::steady_clock::now();
     auto& state = simulatorStates_[id];
     
     auto updateBtn = [](bool& btn, bool& press, bool newVal) {

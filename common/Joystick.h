@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <map>
+#include <chrono>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <array>
@@ -34,6 +35,10 @@ public:
         }
     };
 
+    /// Timeout in milliseconds after which a simulator-fallback slot is considered inactive if no
+    /// simulator input has been received. Used by isFound() to prevent idle slots from appearing active.
+    static constexpr int SIMULATOR_ACTIVITY_TIMEOUT_MS = 3000;
+
     static void updateSimulatorState(const matrixserver::JoystickData& data);
 
     ~Joystick();
@@ -51,6 +56,8 @@ public:
 
     void init(std::string devicePath, bool blocking);
 
+    /// Returns true if the joystick is available. For simulator-fallback slots, returns true only
+    /// after recent simulator input has been received (within SIMULATOR_ACTIVITY_TIMEOUT_MS).
     bool isFound();
 
     bool sample(Joystick::Event *event);
@@ -94,6 +101,7 @@ private:
     bool useSimulatorFallback_;
 
     static std::map<int, SimulatorState> simulatorStates_;
+    static std::map<int, std::chrono::steady_clock::time_point> simulatorLastUpdate_;
     static boost::mutex simulatorMutex_;
 };
 
