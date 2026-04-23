@@ -59,11 +59,12 @@ public:
         if (ratio > 1.0f) ratio = 1.0f;
         int filledWidth = static_cast<int>(ratio * static_cast<float>(barWidth));
 
-        // Outline the bar track (1 px tall) in the base color so it's always visible.
-        Color trackColor = selected ? accent : color_;
+        // Track (unfilled) is always a dim background so the fill stands out.
+        Color trackColor(30, 30, 30);
+        Color fillColor = selected ? accent : color_;
         app.drawLine2D(screen, barX0, barY, barX1, barY, trackColor);
         if (filledWidth > 0) {
-            app.drawLine2D(screen, barX0, barY, barX0 + filledWidth, barY, accent);
+            app.drawLine2D(screen, barX0, barY, barX0 + filledWidth, barY, fillColor);
         }
     }
 
