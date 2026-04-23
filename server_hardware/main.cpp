@@ -1,6 +1,11 @@
 #include <boost/log/trivial.hpp>
+#include <atomic>
+#include <csignal>
 #include <memory>
 #include <unistd.h>
+
+static std::atomic<bool> g_shutdown{false};
+static void signalHandler(int) { g_shutdown = true; }
 
 #include <Server.h>
 #include <ServerSetup.h>
@@ -23,6 +28,9 @@ constexpr auto kHwType = ServerSetup::HardwareType::RGB_MATRIX;
 #endif
 
 int main(int argc, char **argv) {
+  std::signal(SIGTERM, signalHandler);
+  std::signal(SIGINT,  signalHandler);
+
   try {
     matrixserver::ServerConfig serverConfig;
     ServerSetup::handleServerConfig(argc, argv, serverConfig, kHwType);
@@ -47,9 +55,10 @@ int main(int argc, char **argv) {
     int tickMs = serverConfig.tickintervalms();
     if (tickMs <= 0) tickMs = 1000;
 
-    while (server.tick()) {
+    while (!g_shutdown && server.tick()) {
       usleep(tickMs * 1000);
     }
+    server.stopDefaultApp();
   } catch (const std::exception &e) {
     BOOST_LOG_TRIVIAL(fatal) << "[Server] Fatal error: " << e.what();
     return 1;
