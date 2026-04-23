@@ -7,7 +7,9 @@ TEST_CASE("Joystick fallback logic and Simulator Data mapping", "[joystick]") {
     Joystick joystick("/dev/input/js_not_exist");
     
     SECTION("Fallback to Simulator Mode when file doesn't exist") {
-        REQUIRE(joystick.isFound() == true); // Should return true in simulator fallback mode
+        // Without any simulator input, isFound() returns false (lazy activation).
+        // A slot only becomes active once a simulator client sends data for it.
+        REQUIRE(joystick.isFound() == false);
         REQUIRE(joystick.getButton(0) == false); // Should be default false
     }
 
