@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_SERVER_H
 #define MATRIXSERVER_SERVER_H
 
+#include <sys/types.h>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -32,6 +33,8 @@ public:
 
     App * getAppByID(int searchID);
 
+    void stopDefaultApp();
+
 private:
     std::mutex appsMutex;
     std::vector<App> apps;
@@ -45,6 +48,7 @@ private:
     boost::thread *ioThread;
     std::vector<std::shared_ptr<UniversalConnection>> connections;
     JoystickManager joystickmngr;
+    pid_t defaultAppPid_ = -1;
 };
 
 
