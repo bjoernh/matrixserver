@@ -160,6 +160,13 @@ make -j$(nproc)
 make install
 ```
 
+### Tests
+
+The `testAll` target is excluded from the default build (`EXCLUDE_FROM_ALL`). Build and run it explicitly:
+```bash
+cd build && make testAll && ./tests/testAll
+```
+
 # Releases and Docker
 
 Pre-built binaries and Docker images are automatically generated for every repository tag.
