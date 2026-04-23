@@ -160,6 +160,13 @@ make -j$(nproc)
 make install
 ```
 
+### Tests
+
+The `testAll` target is excluded from the default build (`EXCLUDE_FROM_ALL`). Build and run it explicitly:
+```bash
+cd build && make testAll && ./tests/testAll
+```
+
 # Releases and Docker
 
 Pre-built binaries and Docker images are automatically generated for every repository tag.
@@ -220,6 +227,18 @@ The three rotation angles compensate for how the sensor is physically mounted:
 - `yzRotationDeg`: Rotation around the X axis
 
 All values default to 0° when omitted, ensuring backwards compatibility with existing configurations.
+
+## Joystick Behavior
+
+### Simulator fallback and lazy activation
+
+When a joystick device file (`/dev/input/jsX`) is absent at startup, the slot enters **simulator fallback** mode. In this mode, button and axis state are driven by a connected simulator client (e.g., the CubeWebapp) via the WebSocket channel rather than a physical device.
+
+To avoid games launching in unwanted max-multiplayer mode, a simulator slot is only considered **active** (`isFound() == true`) once it has received simulator input within the last 3 seconds. Idle slots that no simulator client is actively driving are treated as absent.
+
+### Late-pairing Bluetooth controllers
+
+If a Bluetooth controller is paired *after* the server has already started, its device file will appear while the slot is still in simulator fallback mode. The per-slot refresh thread (running every ~100 ms) detects this and automatically transitions the slot to the physical device — no server restart required.
 
 # Important: Running an Application
 

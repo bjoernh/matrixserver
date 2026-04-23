@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 env:
@@ -11,12 +12,11 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-simulator
 
 jobs:
-  build-and-push:
-    name: Build Simulator DEB and Push to GHCR (AMD64)
+  build-and-test:
+    name: Build and Test (AMD64)
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
@@ -41,7 +41,37 @@ jobs:
       - name: Run Tests
         run: |
           cd build
+          make testAll
           ./tests/testAll
+
+  package-and-push:
+    name: Package and Push to GHCR (AMD64)
+    needs: build-and-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake git pkg-config \
+            libeigen3-dev libboost-all-dev libasound2-dev \
+            libprotobuf-dev protobuf-compiler libimlib2-dev
+
+      - name: Compile Project
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
 
       - name: Create Debian Package Workspace
         run: |

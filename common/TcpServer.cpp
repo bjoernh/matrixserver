@@ -1,5 +1,6 @@
 #include "TcpServer.h"
 #include <boost/log/trivial.hpp>
+#include <fcntl.h>
 
 TcpServer::TcpServer(boost::asio::io_context &setIo, boost::asio::ip::tcp::endpoint setEndpoint) :
         io(setIo),
@@ -7,6 +8,10 @@ TcpServer::TcpServer(boost::asio::io_context &setIo, boost::asio::ip::tcp::endpo
         acceptor(setIo) {
     acceptCallback = NULL;
     acceptor.open(endpoint.protocol());
+    // Prevent child processes (launched via system()) from inheriting this socket,
+    // which would keep the port bound after the server exits.
+    ::fcntl(acceptor.native_handle(), F_SETFD,
+            ::fcntl(acceptor.native_handle(), F_GETFD) | FD_CLOEXEC);
     acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
     acceptor.bind(endpoint);
     acceptor.listen();

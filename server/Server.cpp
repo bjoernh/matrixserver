@@ -3,19 +3,27 @@
 #include <boost/log/trivial.hpp>
 #include <chrono>
 #include <cstdlib>
+#include <fcntl.h>
 #include <future>
 #include <iostream>
 #include <random>
+#include <signal.h>
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 
 #include "Server.h"
 
-std::string defaultApp([]() -> std::string {
+// Extract the binary path from the env var (first whitespace-separated token).
+// The rest (shell redirections, "&") are handled by fork/exec directly.
+static std::string defaultAppPath([]() -> std::string {
   const char *envVal = std::getenv("MATRIXSERVER_DEFAULT_APP");
-  return envVal
-             ? std::string(envVal)
-             : std::string("/usr/local/bin/MainMenu 1>/dev/null 2>/dev/null &");
+  std::string cmd = envVal ? std::string(envVal)
+                           : std::string("/usr/local/bin/MainMenu");
+  // Trim to first token in case the env var still contains shell arguments
+  auto pos = cmd.find_first_of(" \t");
+  return (pos != std::string::npos) ? cmd.substr(0, pos) : cmd;
 }());
 bool defaultAppStarted = false;
 
@@ -255,7 +263,7 @@ void Server::handleRequest(
 }
 
 bool Server::tick() {
-  if (joystickmngr.getButtonPress(11)) {
+  if (joystickmngr.getButtonPress(7)) {
     std::lock_guard<std::mutex> lock(appsMutex);
     if (apps.size() > 0) {
       BOOST_LOG_TRIVIAL(debug) << "kill current app" << std::endl;
@@ -269,16 +277,32 @@ bool Server::tick() {
   {
     std::lock_guard<std::mutex> lock(appsMutex);
     if (apps.size() == 0 && !defaultAppStarted) {
-      BOOST_LOG_TRIVIAL(debug) << "starting default app" << std::endl;
-      BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << defaultApp;
-      int ret = system(defaultApp.data());
-      if (ret != 0) {
-        BOOST_LOG_TRIVIAL(warning) << "[Server] Default app returned: " << ret;
+      BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << defaultAppPath;
+      pid_t pid = fork();
+      if (pid == 0) {
+        // Child: redirect stdout/stderr to /dev/null and exec the app
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+          dup2(devnull, STDOUT_FILENO);
+          dup2(devnull, STDERR_FILENO);
+          close(devnull);
+        }
+        setsid(); // detach from server's process group
+        execl(defaultAppPath.c_str(), defaultAppPath.c_str(), nullptr);
+        _exit(1); // execl failed
+      } else if (pid > 0) {
+        defaultAppPid_ = pid;
+        BOOST_LOG_TRIVIAL(debug) << "[Server] Default app PID: " << pid;
+      } else {
+        BOOST_LOG_TRIVIAL(warning) << "[Server] fork() failed for default app";
       }
       defaultAppStarted = true;
     }
     if (apps.size() > 0) {
       defaultAppStarted = false;
+      // Reap default app if it exited on its own (e.g. another app took over)
+      if (defaultAppPid_ > 0 && waitpid(defaultAppPid_, nullptr, WNOHANG) != 0)
+        defaultAppPid_ = -1;
     }
 
     apps.erase(std::remove_if(apps.begin(), apps.end(),
@@ -305,6 +329,25 @@ bool Server::tick() {
                      }),
       connections.end());
   return true;
+}
+
+void Server::stopDefaultApp() {
+  if (defaultAppPid_ > 0) {
+    BOOST_LOG_TRIVIAL(info) << "[Server] Stopping default app (PID " << defaultAppPid_ << ")";
+    kill(defaultAppPid_, SIGTERM);
+    // Wait briefly for graceful exit, then force-kill
+    for (int i = 0; i < 30; ++i) {
+      usleep(100'000);
+      if (waitpid(defaultAppPid_, nullptr, WNOHANG) != 0) {
+        defaultAppPid_ = -1;
+        return;
+      }
+    }
+    BOOST_LOG_TRIVIAL(warning) << "[Server] Default app did not exit, sending SIGKILL";
+    kill(defaultAppPid_, SIGKILL);
+    waitpid(defaultAppPid_, nullptr, 0);
+    defaultAppPid_ = -1;
+  }
 }
 
 void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {

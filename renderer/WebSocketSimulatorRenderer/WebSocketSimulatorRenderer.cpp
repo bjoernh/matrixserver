@@ -1,6 +1,7 @@
 #include "WebSocketSimulatorRenderer.h"
 #include "WsSession.h"
 #include <boost/log/trivial.hpp>
+#include <fcntl.h>
 #include <matrixserver.pb.h>
 
 WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
@@ -15,8 +16,14 @@ WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
   auto const portNum = static_cast<unsigned short>(std::stoi(port));
   tcp::endpoint endpoint{address, portNum};
 
-  acceptor = std::make_unique<tcp::acceptor>(ioContext, endpoint);
+  acceptor = std::make_unique<tcp::acceptor>(ioContext);
+  acceptor->open(endpoint.protocol());
+  // Prevent child processes (launched via system()) from inheriting this socket.
+  ::fcntl(acceptor->native_handle(), F_SETFD,
+          ::fcntl(acceptor->native_handle(), F_GETFD) | FD_CLOEXEC);
   acceptor->set_option(tcp::acceptor::reuse_address(true));
+  acceptor->bind(endpoint);
+  acceptor->listen();
 
   BOOST_LOG_TRIVIAL(info) << "[WebSocketRenderer] Listening on WebSocket port "
                           << port;

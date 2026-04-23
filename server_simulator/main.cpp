@@ -1,11 +1,19 @@
 #include <boost/log/trivial.hpp>
+#include <atomic>
+#include <csignal>
 #include <unistd.h>
+
+static std::atomic<bool> g_shutdown{false};
+static void signalHandler(int) { g_shutdown = true; }
 
 #include <Server.h>
 #include <ServerSetup.h>
 #include <WebSocketSimulatorRenderer.h>
 
 int main(int argc, char **argv) {
+  std::signal(SIGTERM, signalHandler);
+  std::signal(SIGINT,  signalHandler);
+
   matrixserver::ServerConfig serverConfig;
   ServerSetup::handleServerConfig(argc, argv, serverConfig);
 
@@ -26,8 +34,9 @@ int main(int argc, char **argv) {
   int tickMs = serverConfig.tickintervalms();
   if (tickMs <= 0) tickMs = 1000;
 
-  while (server.tick())
+  while (!g_shutdown && server.tick())
     usleep(tickMs * 1000);
 
+  server.stopDefaultApp();
   return 0;
 }
