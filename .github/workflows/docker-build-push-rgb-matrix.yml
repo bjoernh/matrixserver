@@ -50,6 +50,7 @@ jobs:
       - name: Run Tests
         run: |
           cd build
+          make testAll
           ./tests/testAll
 
       - name: Create Debian Package Workspace
