@@ -4,3 +4,6 @@
 [submodule "CubeWebapp"]
 	path = CubeWebapp
 	url = https://github.com/bjoernh/CubeSimulator.git
+[submodule "AppLuncher"]
+	path = MainMenuLVGL/AppLuncher
+	url = git@github.com:bjoernh/LEDCube-APP-Luncher.git

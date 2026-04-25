@@ -20,7 +20,7 @@
 static std::string defaultAppPath([]() -> std::string {
   const char *envVal = std::getenv("MATRIXSERVER_DEFAULT_APP");
   std::string cmd = envVal ? std::string(envVal)
-                           : std::string("/usr/local/bin/MainMenu");
+                           : std::string("/usr/local/bin/MainMenuLVGL");
   // Trim to first token in case the env var still contains shell arguments
   auto pos = cmd.find_first_of(" \t");
   return (pos != std::string::npos) ? cmd.substr(0, pos) : cmd;

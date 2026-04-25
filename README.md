@@ -285,10 +285,11 @@ The project is divided into logical directories that separate the server daemon,
     *   **`server_simulator`**: Always built. Produces `matrix_server_simulator`, which uses `WebSocketSimulatorRenderer` to interact with the web simulator.
     *   **`server_hardware`**: Built when `-DHARDWARE_BACKEND=<value>` is set. Produces `matrix_server`, compiled with the selected hardware renderer. The renderer is selected at compile time via preprocessor defines. In addition to the hardware renderer, a `WebSocketSimulatorRenderer` (with `streamPixels=false`) is registered as a second renderer so the CubeWebapp can connect on WebSocket port `1337` for runtime parameter control — without any pixel streaming overhead.
 
-*   **`MainMenu`**
+*   **`MainMenuLVGL`**
     *   A built-in example client application that provides a launch interface for the cube.
-    *   Scans a directory for executable applications and lets the user browse and launch them via joystick.
-    *   The search directory is configured via the `CUBE_APP_PATH` environment variable. If unset, it defaults to `$HOME/APPS`.
+    *   Built on the [`AppLuncher`](MainMenuLVGL/AppLuncher) submodule (LVGL UI) with a `matrixserver` platform backend that mirrors the 64×64 LVGL canvas onto the four side faces (front/right/back/left).
+    *   Default app launched by the server when no `MATRIXSERVER_DEFAULT_APP` env var is set. Started as `/usr/local/bin/MainMenuLVGL`.
+    *   The legacy `MainMenu` directory is preserved in source for reference but is excluded from the build.
 
 *   **`CubeWebapp`** *(git submodule)*
     *   The web-based 3D LED cube simulator and configuration interface, included as a submodule from `git@github.com:bjoernh/CubeWebapp.git`.

@@ -53,7 +53,8 @@ if (HARDWARE_BACKEND)
   add_subdirectory(server_hardware)
 endif ()
 
-add_subdirectory(MainMenu)
+# add_subdirectory(MainMenu)  # superseded by MainMenuLVGL
+add_subdirectory(MainMenuLVGL)
 
 # Tests
 add_subdirectory(tests)
