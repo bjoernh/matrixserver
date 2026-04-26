@@ -42,9 +42,7 @@ WebSocketSimulatorRenderer::~WebSocketSimulatorRenderer() {
   }
 }
 
-void WebSocketSimulatorRenderer::setClientMessageCallback(
-    std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
-        cb) {
+void WebSocketSimulatorRenderer::setClientMessageCallback(MsgCallback cb) {
   clientMessageCb = cb;
 }
 

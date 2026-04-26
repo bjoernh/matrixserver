@@ -1,7 +1,7 @@
 #ifndef MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 #define MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 
-#include <IRenderer.h>
+#include <IBidirectionalRenderer.h>
 #include <Screen.h>
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
@@ -30,7 +30,7 @@ inline constexpr const char* WS_SIMULATOR_DEFAULT_PORT = "1337";
  *     and sends it as a WebSocket binary message (no COBS framing needed).
  *   - Reconnects automatically if the browser disconnects.
  */
-class WebSocketSimulatorRenderer : public IRenderer {
+class WebSocketSimulatorRenderer : public IBidirectionalRenderer {
 public:
   explicit WebSocketSimulatorRenderer(
       std::vector<std::shared_ptr<Screen>> screens,
@@ -49,9 +49,7 @@ public:
 
   void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) override;
 
-  void setClientMessageCallback(
-      std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
-          cb) override;
+  void setClientMessageCallback(MsgCallback cb) override;
 
 private:
   void do_accept();
@@ -67,8 +65,7 @@ private:
   boost::thread ioThread;
   bool running = true;
 
-  std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
-      clientMessageCb;
+  MsgCallback clientMessageCb;
 
   bool streamPixels;
 };

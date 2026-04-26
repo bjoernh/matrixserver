@@ -3,13 +3,8 @@
 
 #include <Color.h>
 #include <Screen.h>
-#include <functional>
 #include <memory>
 #include <vector>
-
-namespace matrixserver {
-class MatrixServerMessage;
-}
 
 class IRenderer {
 public:
@@ -21,12 +16,7 @@ public:
 
   virtual int getGlobalBrightness() = 0;
 
-  virtual void setClientMessageCallback(
-      std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>) {
-  }
-
-  virtual void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage>) {
-  }
+  virtual ~IRenderer() = default;
 
 protected:
   std::vector<std::shared_ptr<Screen>> screens;

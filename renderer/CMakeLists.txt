@@ -3,6 +3,7 @@ project(renderer)
 set(SOURCE_FILES
         IRenderer.cpp
         IRenderer.h
+        IBidirectionalRenderer.h
         )
 
 add_library(renderer STATIC ${SOURCE_FILES})
@@ -19,7 +20,7 @@ elseif (HARDWARE_BACKEND STREQUAL "RGB_MATRIX")
     add_subdirectory(RGBMatrixRenderer)
 endif()
 
-set_target_properties(common PROPERTIES PUBLIC_HEADER "IRenderer.h")
+set_target_properties(common PROPERTIES PUBLIC_HEADER "IRenderer.h;IBidirectionalRenderer.h")
 
 install(TARGETS renderer
         EXPORT matrixapplication-targets

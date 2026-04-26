@@ -9,6 +9,7 @@
 
 #include <Screen.h>
 #include <App.h>
+#include <IBidirectionalRenderer.h>
 #include <IRenderer.h>
 #include <matrixserver.pb.h>
 #include <TcpServer.h>
@@ -62,6 +63,8 @@ private:
     std::mutex appsMutex;
     std::vector<std::shared_ptr<App>> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;
+    // Subset of renderers that implement IBidirectionalRenderer (messaging).
+    std::vector<std::shared_ptr<IBidirectionalRenderer>> biDirRenderers_;
     boost::asio::io_context ioContext;
     std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioWork;
     matrixserver::ServerConfig & serverConfig;
