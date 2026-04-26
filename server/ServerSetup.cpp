@@ -242,7 +242,7 @@ void handleServerConfig(int argc, char **argv,
   if (!configPath.empty()) {
     std::string fullPath = configPath;
     char resolved_path[PATH_MAX];
-    if (realpath(configPath.c_str(), resolved_path) != NULL) {
+    if (realpath(configPath.c_str(), resolved_path) != nullptr) {
       fullPath = std::string(resolved_path);
     }
 
@@ -264,7 +264,7 @@ void handleServerConfig(int argc, char **argv,
     std::string configFileName = "matrixServerConfig.json";
     std::string fullPath = configFileName;
     char resolved_path[PATH_MAX];
-    if (realpath(".", resolved_path) != NULL) {
+    if (realpath(".", resolved_path) != nullptr) {
       fullPath = std::string(resolved_path) + "/" + configFileName;
     }
 

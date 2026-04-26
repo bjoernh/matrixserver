@@ -6,7 +6,7 @@ TcpServer::TcpServer(boost::asio::io_context &setIo, boost::asio::ip::tcp::endpo
         io(setIo),
         endpoint(setEndpoint),
         acceptor(setIo) {
-    acceptCallback = NULL;
+    acceptCallback = nullptr;
     acceptor.open(endpoint.protocol());
     // Prevent child processes (launched via system()) from inheriting this socket,
     // which would keep the port bound after the server exits.
@@ -32,7 +32,7 @@ void TcpServer::handleAccept(const boost::system::error_code &error, std::shared
     if (!error) {
         BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection";
         connection->startReceiving();
-        if (acceptCallback != NULL) {
+        if (acceptCallback != nullptr) {
             acceptCallback(connection);
         }
         doAccept();

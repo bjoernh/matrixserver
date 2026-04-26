@@ -13,15 +13,15 @@
 #include <matrixserver.pb.h>
 #include <mutex>
 
-#define DEFAULTFPS 40
-#define MAXFPS 200
-#define MINFPS 1
+inline constexpr int DEFAULTFPS = 40;
+inline constexpr int MAXFPS = 200;
+inline constexpr int MINFPS = 1;
 
-#define DEFAULTSERVERURI "tcp://127.0.0.1:2017"
+inline constexpr const char* DEFAULTSERVERURI = "tcp://127.0.0.1:2017";
 
-// Legacy defines kept for backward compatibility
-#define DEFAULTSERVERADRESS "127.0.0.1"
-#define DEFAULTSERVERPORT "2017"
+// Legacy constants kept for backward compatibility
+inline constexpr const char* DEFAULTSERVERADRESS = "127.0.0.1";
+inline constexpr const char* DEFAULTSERVERPORT = "2017";
 
 enum class AppState { starting, running, paused, ended, killed, failure };
 

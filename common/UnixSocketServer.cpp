@@ -11,7 +11,7 @@ UnixSocketServer::UnixSocketServer(boost::asio::io_context &setIo, boost::asio::
     acceptor.bind(endpoint);
     acceptor.listen();
     this->doAccept();
-    acceptCallback = NULL;
+    acceptCallback = nullptr;
 }
 
 void UnixSocketServer::doAccept() {
@@ -27,7 +27,7 @@ void UnixSocketServer::handleAccept(const boost::system::error_code &error, std:
     if (!error) {
         BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection";
         connection->startReceiving();
-        if (acceptCallback != NULL) {
+        if (acceptCallback != nullptr) {
             acceptCallback(connection);
         }
         doAccept();

@@ -105,7 +105,7 @@ void MatrixApplication::renderToScreens() {
   setScreenMessage->set_messagetype(matrixserver::setScreenFrame);
   setScreenMessage->set_appid(appId);
   int i = 0;
-  for (auto screen : screens) {
+  for (const auto& screen : screens) {
     auto screenData = setScreenMessage->add_screendata();
     screenData->set_screenid(screen->getScreenId());
     screenData->set_framedata((char *)screen->getScreenData().data(),

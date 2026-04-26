@@ -202,10 +202,10 @@ bool MatrixApplicationStandalone::resume() {
 }
 
 void MatrixApplicationStandalone::stop() {
-    if (mainThread != NULL) {
+    if (mainThread != nullptr) {
         mainThread->interrupt();
         mainThread->join();
-        mainThread = NULL;
+        mainThread = nullptr;
     }
     appState = AppState::killed;
 }

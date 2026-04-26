@@ -12,7 +12,7 @@
 #include <array>
 #include <vector>
 
-#define MAXBUTTONAXISCOUNT 16
+inline constexpr int MAXBUTTONAXISCOUNT = 16;
 
 namespace matrixserver {
     class JoystickData;

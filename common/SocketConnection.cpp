@@ -4,7 +4,7 @@
 
 SocketConnection::SocketConnection(boost::asio::io_context &io_context) :
         io(io_context), socket(io), cobsDecoder(RECEIVE_BUFFER_SIZE) {
-    receiveCallback = NULL;
+    receiveCallback = nullptr;
 }
 
 boost::asio::generic::stream_protocol::socket &SocketConnection::getSocket() {
@@ -36,11 +36,11 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
     if (!error) {
         BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Received: " << bytes_transferred << " bytes";
         auto packets = cobsDecoder.insertBytesAndReturnDecodedPackets((uint8_t *) this->recv_buffer, bytes_transferred);
-        for (auto packet : packets) {
+        for (const auto& packet : packets) {
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
             if (receiveMessage->ParseFromString(packet)) {
                 BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Recieved full Protobuf MatrixServerMessage";
-                if (receiveCallback != NULL) {
+                if (receiveCallback != nullptr) {
                     receiveCallback(shared_from_this(), receiveMessage);
                 }
             } else {

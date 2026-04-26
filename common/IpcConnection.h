@@ -10,8 +10,8 @@
 #include <matrixserver.pb.h>
 #include "UniversalConnection.h"
 
-#define SERVERMESSAGESIZE 1000000
-#define MAXIPCMESSAGESIZE 1000000
+inline constexpr int SERVERMESSAGESIZE = 1000000;
+inline constexpr int MAXIPCMESSAGESIZE = 1000000;
 
 class IpcConnection :  public std::enable_shared_from_this<IpcConnection>, public UniversalConnection {
 public:
@@ -23,17 +23,17 @@ public:
 
     bool connectToServer(std::string serverAddress);
 
-    void startReceiving();
+    void startReceiving() override;
 
     void
     setReceiveCallback(std::function<void(std::shared_ptr<UniversalConnection>,
-                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback);
+                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
 
-    void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message);
+    void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) override;
 
-    bool isDead();
+    bool isDead() override;
 
-    void setDead(bool sDead);
+    void setDead(bool sDead) override;
 private:
     void doRead();
 

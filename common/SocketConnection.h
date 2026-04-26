@@ -10,7 +10,7 @@
 #include <matrixserver.pb.h>
 #include "UniversalConnection.h"
 
-#define RECEIVE_BUFFER_SIZE 200000
+inline constexpr int RECEIVE_BUFFER_SIZE = 200000;
 
 class SocketConnection :  public std::enable_shared_from_this<SocketConnection>, public UniversalConnection {
 public:
@@ -20,17 +20,17 @@ public:
 
     boost::asio::generic::stream_protocol::socket &getSocket();
 
-    void startReceiving();
+    void startReceiving() override;
 
     void
     setReceiveCallback(std::function<void(std::shared_ptr<UniversalConnection>,
-                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback);
+                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
 
-    void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message);
+    void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) override;
 
-    bool isDead();
+    bool isDead() override;
 
-    void setDead(bool sDead);
+    void setDead(bool sDead) override;
 
 private:
     void doRead();

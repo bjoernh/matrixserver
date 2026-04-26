@@ -14,7 +14,7 @@ CubeApplication::CubeApplication(int fps, std::string serverUri, std::string app
       virtualSize_(VIRTUALCUBESIZE),
       virtualSizeAll_(VIRTUALCUBESIZE * VIRTUALCUBESIZE * VIRTUALCUBESIZE) {
   clear();
-  srand(time(NULL));
+  srand(time(nullptr));
 }
 
 void CubeApplication::setPixel3D(Vector3i pos, Color col, float intensity,
@@ -477,7 +477,7 @@ Vector3f CubeApplication::getPointOnScreen(ScreenNumber screenNr,
 }
 
 void CubeApplication::fade(float factor) {
-  for (auto screen : screens)
+  for (const auto& screen : screens)
     screen->fade(factor);
 }
 

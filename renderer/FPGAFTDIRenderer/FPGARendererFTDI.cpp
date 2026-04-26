@@ -37,7 +37,7 @@ void FPGARendererFTDI::init(std::vector<std::shared_ptr<Screen>> initScreens) {
     screens = initScreens;
 
     std::cout << "Init SPI Driver" << std::endl;
-    mpsse_init(0, NULL, false);
+    mpsse_init(0, nullptr, false);
 
     // Pre-allocate render buffers so render() never calls malloc per frame.
     if (!screens.empty()) {

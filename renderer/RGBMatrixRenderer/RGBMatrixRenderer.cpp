@@ -61,7 +61,7 @@ void RGBMatrixRenderer::render() {
   Color tempPixelColor;
   //    auto usStart =
   //    std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
-  for (auto screen : screens) {
+  for (const auto& screen : screens) {
     auto ScreenData = screen->getScreenData();
     switch (screen->getRotation()) {
     case Rotation::rot0:

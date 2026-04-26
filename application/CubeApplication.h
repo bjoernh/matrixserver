@@ -13,14 +13,14 @@ other stuff:
 - See if we can optimize the rendertime (currently around 20ms)
 */
 
-#define CUBESIZE 64
-#define CUBEMAXINDEX 63 //CUBESIZE - 1
-#define CUBECENTER 32 //CUBESIZE / 2
+inline constexpr int CUBESIZE = 64;
+inline constexpr int CUBEMAXINDEX = 63;   // CUBESIZE - 1
+inline constexpr int CUBECENTER = 32;    // CUBESIZE / 2
 
-#define VIRTUALCUBESIZE 66
-#define VIRTUALCUBEMININDEX 1
-#define VIRTUALCUBEMAXINDEX 65 //VIRTUALCUBESIZE - 1
-#define VIRTUALCUBECENTER 33 //VIRTUALCUBESIZE / 2
+inline constexpr int VIRTUALCUBESIZE = 66;
+inline constexpr int VIRTUALCUBEMININDEX = 1;
+inline constexpr int VIRTUALCUBEMAXINDEX = 65;  // VIRTUALCUBESIZE - 1
+inline constexpr int VIRTUALCUBECENTER = 33;    // VIRTUALCUBESIZE / 2
 
 #ifdef MATRIXAPPLICATION_STANDALONE
 #include "MatrixApplicationStandalone.h"

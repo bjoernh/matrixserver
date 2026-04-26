@@ -16,7 +16,7 @@ namespace websocket = beast::websocket;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
-#define WS_SIMULATOR_DEFAULT_PORT "1337"
+inline constexpr const char* WS_SIMULATOR_DEFAULT_PORT = "1337";
 
 /**
  * WebSocketSimulatorRenderer

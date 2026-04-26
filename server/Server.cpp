@@ -181,8 +181,8 @@ void Server::handleRequest(
       }
     }
     if (isTopApp) {
-      for (auto renderer : renderers) {
-        for (auto screenInfo : message->screendata()) {
+      for (const auto& renderer : renderers) {
+        for (const auto& screenInfo : message->screendata()) {
           int sid = screenInfo.screenid();
           if (sid < 0 || sid >= static_cast<int>(serverConfig.screeninfo_size())) {
             BOOST_LOG_TRIVIAL(warning) << "[Server] Invalid screen ID: " << sid;
@@ -253,14 +253,14 @@ void Server::handleRequest(
       }
     }
     // Forward to all renderers
-    for (auto renderer : renderers) {
+    for (const auto& renderer : renderers) {
       renderer->sendMessage(message);
     }
     break;
   }
   case matrixserver::appParamValues: {
     // Forward current values to all renderers
-    for (auto renderer : renderers) {
+    for (const auto& renderer : renderers) {
       renderer->sendMessage(message);
     }
     break;

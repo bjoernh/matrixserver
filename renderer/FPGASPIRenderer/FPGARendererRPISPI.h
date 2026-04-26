@@ -13,13 +13,13 @@ public:
 
     void init(std::vector<std::shared_ptr<Screen>>);
 
-    void setScreenData(int, Color *);
+    void setScreenData(int, Color *) override;
 
-    void render();
+    void render() override;
 
-    void setGlobalBrightness(int);
+    void setGlobalBrightness(int) override;
 
-    int getGlobalBrightness();
+    int getGlobalBrightness() override;
 
 private:
     std::vector<std::shared_ptr<Screen>> screens;

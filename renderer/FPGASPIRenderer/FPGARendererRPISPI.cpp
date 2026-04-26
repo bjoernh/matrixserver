@@ -75,8 +75,8 @@ bool SpiWriteQueueAdd(unsigned char * data, unsigned int length) {
 
 bool SpiWriteQueueAddCSTrigger(){
     if(spiIocTransfersPos < spiIocTransfersSize){
-        spiIocTransfers[spiIocTransfersPos].tx_buf        = NULL;
-        spiIocTransfers[spiIocTransfersPos].rx_buf        = NULL;
+        spiIocTransfers[spiIocTransfersPos].tx_buf        = 0;
+        spiIocTransfers[spiIocTransfersPos].rx_buf        = 0;
         spiIocTransfers[spiIocTransfersPos].len           = 0;
         spiIocTransfers[spiIocTransfersPos].delay_usecs   = spiDelay;
         spiIocTransfers[spiIocTransfersPos].speed_hz      = spiSpeed;
