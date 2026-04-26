@@ -18,7 +18,6 @@ set(SOURCE_FILES
         Mpu6050.cpp
         AnimationParams.cpp
         ConnectionFactory.cpp
-        MessageDispatcher.cpp
         InputState.cpp)
 
 if (BUILD_RASPBERRYPI)
@@ -53,7 +52,7 @@ target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CU
 
 
 target_compile_definitions(matrixapplication PUBLIC BOOST_LOG_DYN_LINK)
-set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h;ConnectionFactory.h;MessageDispatcher.h;InputState.h")
+set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h;ConnectionFactory.h;InputState.h")
 
 install(TARGETS matrixapplication
         EXPORT matrixapplication-targets

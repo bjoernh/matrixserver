@@ -6,7 +6,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 set(SOURCE_FILES
         Server.cpp
         ServerSetup.cpp
-        App.cpp)
+        App.cpp
+        DefaultAppLauncher.cpp)
 
 add_library(server STATIC ${SOURCE_FILES})
 target_link_libraries(server common renderer)

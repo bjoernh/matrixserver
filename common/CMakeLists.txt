@@ -17,6 +17,7 @@ set(SOURCE_FILES
         Color.cpp
         Screen.cpp
         Joystick.cpp
+        MessageDispatcher.cpp
         TcpServer.cpp TcpServer.h TcpClient.cpp TcpClient.h Cobs.cpp Cobs.h SocketConnection.cpp SocketConnection.h UnixSocketServer.cpp UnixSocketServer.h UnixSocketClient.cpp UnixSocketClient.h UniversalConnection.cpp UniversalConnection.h IpcServer.cpp IpcServer.h IpcConnection.cpp IpcConnection.h)
 
 add_library(common STATIC ${SOURCE_FILES} ${PROTO_SRCS} ${PROTO_HDRS})
@@ -44,7 +45,7 @@ set(HEADER_FILES
         ${PROTO_HDRS}
         )
 
-set_target_properties(common PROPERTIES PUBLIC_HEADER "Color.h;Screen.h;TcpServer.h;TcpClient.h;Cobs.h;SocketConnection.h;UnixSocketServer.h;UnixSocketClient.h;UniversalConnection.h;IpcServer.h;IpcConnection.h;Joystick.h;${PROTO_HDRS}")#;
+set_target_properties(common PROPERTIES PUBLIC_HEADER "Color.h;Screen.h;TcpServer.h;TcpClient.h;Cobs.h;SocketConnection.h;UnixSocketServer.h;UnixSocketClient.h;UniversalConnection.h;IpcServer.h;IpcConnection.h;Joystick.h;MessageDispatcher.h;${PROTO_HDRS}")#;
 ##set_target_properties(commin PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Joystick.h;Mpu6050.h;ADS1000.h;Image.h;MatrixApplication.h")
 #install(FILES ${HEADER_FILES}
 #        DESTINATION include)
