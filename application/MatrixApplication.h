@@ -14,6 +14,7 @@
 #include <mutex>
 
 #include "MessageDispatcher.h"
+#include "InputState.h"
 
 inline constexpr int DEFAULTFPS = 40;
 inline constexpr int MAXFPS = 200;
@@ -109,6 +110,7 @@ private:
                           std::shared_ptr<matrixserver::MatrixServerMessage> msg);
 
   MessageDispatcher dispatcher_;
+  InputState inputState_;
 
   int appId;
   int fps;

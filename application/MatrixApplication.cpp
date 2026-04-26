@@ -326,27 +326,27 @@ void MatrixApplication::handleJoystickData(
 void MatrixApplication::handleImuData(
     std::shared_ptr<UniversalConnection> /*conn*/,
     std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-  std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
-  MatrixApplication::latestSimulatorImuX = msg->imudata().accelx();
-  MatrixApplication::latestSimulatorImuY = msg->imudata().accely();
-  MatrixApplication::latestSimulatorImuZ = msg->imudata().accelz();
-  MatrixApplication::latestSimulatorGyroX = msg->imudata().gyrox();
-  MatrixApplication::latestSimulatorGyroY = msg->imudata().gyroy();
-  MatrixApplication::latestSimulatorGyroZ = msg->imudata().gyroz();
+  ImuSample sample;
+  sample.ax = msg->imudata().accelx();
+  sample.ay = msg->imudata().accely();
+  sample.az = msg->imudata().accelz();
+  sample.gx = msg->imudata().gyrox();
+  sample.gy = msg->imudata().gyroy();
+  sample.gz = msg->imudata().gyroz();
+  inputState_.setImu(sample);
 }
 
 void MatrixApplication::handleAudioData(
     std::shared_ptr<UniversalConnection> /*conn*/,
     std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
   if (msg->has_audiodata()) {
-    std::lock_guard<std::mutex> lock(MatrixApplication::audioDataMutex);
-    MatrixApplication::latestAudioVolume =
-        static_cast<uint8_t>(msg->audiodata().volume());
-    MatrixApplication::latestAudioFrequencies.clear();
+    uint8_t volume = static_cast<uint8_t>(msg->audiodata().volume());
+    std::vector<uint8_t> frequencies;
+    frequencies.reserve(static_cast<std::size_t>(msg->audiodata().frequencybands_size()));
     for (int i = 0; i < msg->audiodata().frequencybands_size(); ++i) {
-      MatrixApplication::latestAudioFrequencies.push_back(
-          static_cast<uint8_t>(msg->audiodata().frequencybands(i)));
+      frequencies.push_back(static_cast<uint8_t>(msg->audiodata().frequencybands(i)));
     }
+    inputState_.setAudio(volume, frequencies);
   }
 }
 
