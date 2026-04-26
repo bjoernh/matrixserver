@@ -1,15 +1,4 @@
-#include <boost/log/trivial.hpp>
-#include <atomic>
-#include <csignal>
-#include <memory>
-#include <unistd.h>
-
-static std::atomic<bool> g_shutdown{false};
-static void signalHandler(int) { g_shutdown = true; }
-
-#include <Server.h>
-#include <ServerSetup.h>
-#include <WebSocketSimulatorRenderer.h>
+#include <ServerBootstrap.h>
 
 #if defined(BACKEND_FPGA_FTDI)
 #include <FPGARendererFTDI.h>
@@ -28,40 +17,9 @@ constexpr auto kHwType = ServerSetup::HardwareType::RGB_MATRIX;
 #endif
 
 int main(int argc, char **argv) {
-  std::signal(SIGTERM, signalHandler);
-  std::signal(SIGINT,  signalHandler);
-
-  try {
-    matrixserver::ServerConfig serverConfig;
-    ServerSetup::handleServerConfig(argc, argv, serverConfig, kHwType);
-
-    BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl
-                            << serverConfig.DebugString() << std::endl;
-
-    auto screens = ServerSetup::createScreensFromConfig(serverConfig);
-    auto renderer = std::make_shared<HWRenderer>(screens);
-
-    BOOST_LOG_TRIVIAL(debug) << "[Server] Renderer initialized";
-
-    Server server(renderer, serverConfig);
-
-    // Add WebSocket renderer for webapp parameter control (no pixel streaming)
-    std::string simPort = serverConfig.simulatorport();
-    if (simPort.empty()) simPort = "1337";
-    auto wsRenderer = std::make_shared<WebSocketSimulatorRenderer>(
-        screens, simPort, false);
-    server.addRenderer(wsRenderer);
-
-    int tickMs = serverConfig.tickintervalms();
-    if (tickMs <= 0) tickMs = 1000;
-
-    while (!g_shutdown && server.tick()) {
-      usleep(tickMs * 1000);
-    }
-    server.stopDefaultApp();
-  } catch (const std::exception &e) {
-    BOOST_LOG_TRIVIAL(fatal) << "[Server] Fatal error: " << e.what();
-    return 1;
-  }
-  return 0;
+    auto factory = [](const std::vector<std::shared_ptr<Screen>> &screens)
+        -> std::shared_ptr<IRenderer> {
+        return std::make_shared<HWRenderer>(screens);
+    };
+    return ServerBootstrap::runServer(argc, argv, kHwType, factory);
 }

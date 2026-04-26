@@ -7,10 +7,11 @@ set(SOURCE_FILES
         Server.cpp
         ServerSetup.cpp
         App.cpp
-        DefaultAppLauncher.cpp)
+        DefaultAppLauncher.cpp
+        ServerBootstrap.cpp)
 
 add_library(server STATIC ${SOURCE_FILES})
-target_link_libraries(server common renderer)
+target_link_libraries(server common renderer wsSimulatorRenderer)
 target_link_libraries(server ${Boost_LIBRARIES})
 target_include_directories(server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
