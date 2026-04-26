@@ -7,21 +7,36 @@ IpcServer::IpcServer(std::string serverAddress)
 {
     boost::interprocess::message_queue::remove(serverAddress.data());
     serverMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, serverAddress.data(), 10, SERVERMESSAGESIZE, boost::interprocess::permissions(0666));
-    acceptCallback = NULL;
+    acceptCallback = nullptr;
     startAccepting();
     BOOST_LOG_TRIVIAL(debug) << "[Server] Start accepting on IPC Channel: " << serverAddress;
 }
 
+IpcServer::~IpcServer() {
+    running_.store(false);
+    // Unblock the blocking serverMQ->receive() by sending a zero-byte dummy
+    // message on the server queue so the acceptLoop wakes up and checks running_.
+    try {
+        serverMQ->send("", 0, 0);
+    } catch (...) {}
+    if (acceptThread && acceptThread->joinable()) {
+        acceptThread->join();
+    }
+}
+
 void IpcServer::startAccepting() {
-    acceptThread = new boost::thread(&IpcServer::acceptLoop, this);
+    running_.store(true);
+    acceptThread = std::make_unique<std::thread>(&IpcServer::acceptLoop, this);
 }
 
 void IpcServer::acceptLoop() {
-    while(1){
+    while(running_.load()){
         try {
             boost::interprocess::message_queue::size_type recvd_size;
             unsigned int priority;
             this->serverMQ->receive(&receiveBuffer, SERVERMESSAGESIZE, recvd_size, priority);
+            if (!running_.load())
+                break;
 
             std::stringstream sendMQname;
             for(int i = 0; i < 20; i++)
@@ -34,7 +49,7 @@ void IpcServer::acceptLoop() {
             BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection, sendMQ " << receiveBuffer << " receiveMQ " << sendMQname.str();
 
             auto connection = std::make_shared<IpcConnection>(sendMQ, receiveMQ);
-            if (acceptCallback != NULL) {
+            if (acceptCallback != nullptr) {
                 acceptCallback(connection);
                 connection->startReceiving();
             }

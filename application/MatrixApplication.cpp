@@ -21,7 +21,7 @@ std::vector<uint8_t> MatrixApplication::latestAudioFrequencies;
 std::mutex MatrixApplication::audioDataMutex;
 
 MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string appName)
-    : mainThread(), io_context(), serverUri(serverUri), appName(appName) {
+    : io_context(), serverUri(serverUri), appName(appName) {
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::debug);
   std::random_device rd;
@@ -29,7 +29,7 @@ MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string
   setFps(fps);
   appId = 0;
   appState = AppState::starting;
-  //    ioThread = new boost::thread([this]() { io_context.run(); });
+  //    ioThread = std::make_unique<std::thread>([this]() { io_context.run(); });
   while (!connect(serverUri)) {
     sleep(1);
   }
@@ -79,7 +79,9 @@ bool MatrixApplication::connect(const std::string &server_uri) {
 
   if (!connection->isDead()) {
     BOOST_LOG_TRIVIAL(debug) << "[Application] Connection successfull";
-    ioThread = new boost::thread([this]() { io_context.run(); });
+    // Reset io_context before restarting it (needed on reconnect)
+    io_context.restart();
+    ioThread = std::make_unique<std::thread>([this]() { io_context.run(); });
     connection->setReceiveCallback(bind(&MatrixApplication::handleRequest, this,
                                         std::placeholders::_1,
                                         std::placeholders::_2));
@@ -125,14 +127,27 @@ void MatrixApplication::renderToScreens() {
 }
 
 void MatrixApplication::internalLoop() {
+  loopRunning_.store(true);
   bool running = true;
   while (running) {
     try {
       auto startTime = micros();
       if (appState == AppState::running) {
-        renderSyncMutex.lock();
-        running = loop();
-        renderToScreens();
+        // Submit the frame and wait for the server to acknowledge it via
+        // requestScreenAccess / setScreenFrame response. This uses a condition
+        // variable so that the wait is exception-safe and can be interrupted on
+        // shutdown without stranding a lock.
+        {
+          std::unique_lock<std::mutex> lock(screenAccessMutex_);
+          screenAccessGranted_ = false;
+          running = loop();
+          renderToScreens();
+          // Wait for the server to send back setScreenFrame / requestScreenAccess
+          screenAccessCv_.wait(lock, [this] {
+            return screenAccessGranted_ || !loopRunning_.load();
+          });
+          screenAccessGranted_ = false;
+        }
       }
       if (appState == AppState::killed) {
         running = false;
@@ -147,6 +162,7 @@ void MatrixApplication::internalLoop() {
       BOOST_LOG_TRIVIAL(error) << "[Application] Loop error: " << e.what();
     }
   }
+  loopRunning_.store(false);
 }
 
 void MatrixApplication::checkConnection() {
@@ -234,9 +250,12 @@ void MatrixApplication::handleRequest(
     stop();
   } break;
   case matrixserver::requestScreenAccess:
-  case matrixserver::setScreenFrame:
-    renderSyncMutex.unlock();
+  case matrixserver::setScreenFrame: {
+    std::lock_guard<std::mutex> lock(screenAccessMutex_);
+    screenAccessGranted_ = true;
+    screenAccessCv_.notify_one();
     break;
+  }
   case matrixserver::joystickData: {
     for (int i = 0; i < message->joystickdata_size(); ++i) {
       const auto& joystickData = message->joystickdata(i);
@@ -304,7 +323,7 @@ void MatrixApplication::start() {
   // constructors have already run and any params.register*() calls are done
   // before we send the schema to the server.
   registerAtServer();
-  mainThread = new boost::thread(&MatrixApplication::internalLoop, this);
+  mainThread = std::make_unique<std::thread>(&MatrixApplication::internalLoop, this);
 }
 
 bool MatrixApplication::pause() {
@@ -325,12 +344,36 @@ bool MatrixApplication::resume() {
 
 void MatrixApplication::stop() {
   appState = AppState::killed;
-  if (mainThread != nullptr) {
-    mainThread->join();
-    delete mainThread;
-    mainThread = nullptr;
+  // Wake the internalLoop if it is waiting on the condvar so it can exit.
+  {
+    std::lock_guard<std::mutex> lock(screenAccessMutex_);
+    loopRunning_.store(false);
+    screenAccessCv_.notify_all();
   }
+  if (mainThread && mainThread->joinable()) {
+    mainThread->join();
+  }
+  mainThread.reset();
+  // Stop io_context so ioThread can exit cleanly.
+  // Guard against self-join: stop() may be called from within the IO thread
+  // (e.g. via handleRequest appKill). In that case we detach rather than join
+  // so that std::thread::~thread() does not call std::terminate().
+  io_context.stop();
+  if (ioThread && ioThread->joinable()) {
+    if (ioThread->get_id() != std::this_thread::get_id()) {
+      ioThread->join();
+    } else {
+      // Called from the IO thread itself — detach so the thread outlives this
+      // stop() call and cleans up naturally when io_context.run() returns.
+      ioThread->detach();
+    }
+  }
+  ioThread.reset();
   BOOST_LOG_TRIVIAL(debug) << "[Application] App stopped";
+}
+
+MatrixApplication::~MatrixApplication() {
+  stop();
 }
 
 int MatrixApplication::getBrightness() {

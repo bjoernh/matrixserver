@@ -3,11 +3,12 @@
 
 #include <string>
 #include <iostream>
-#include <stdint.h>
 #include <map>
 #include <chrono>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <memory>
 #include <array>
 #include <vector>
 
@@ -88,8 +89,9 @@ private:
     void resetVariables();
 
     int _fd;
-    boost::thread *thread_;
-    boost::mutex threadLock_;
+    std::unique_ptr<std::thread> thread_;
+    std::mutex threadLock_;
+    std::atomic<bool> threadRunning_{false};
     std::string devicePath_;
     bool blocking_;
     std::array<bool, MAXBUTTONAXISCOUNT> button_;
@@ -102,7 +104,7 @@ private:
 
     static std::map<int, SimulatorState> simulatorStates_;
     static std::map<int, std::chrono::steady_clock::time_point> simulatorLastUpdate_;
-    static boost::mutex simulatorMutex_;
+    static std::mutex simulatorMutex_;
 };
 
 class Joystick::Event {
@@ -132,8 +134,12 @@ std::ostream &operator<<(std::ostream &os, const Joystick::Event &e);
 class JoystickManager {
 public:
     JoystickManager(unsigned int maxNum = 8);
+    ~JoystickManager() = default; // unique_ptr handles cleanup
 
-    std::vector<Joystick *> &getJoysticks();
+    // Returns a snapshot vector of raw pointers for callers that iterate.
+    // Ownership remains with JoystickManager; pointers are valid as long as the
+    // JoystickManager is alive and no joysticks are added/removed.
+    std::vector<Joystick *> getJoysticks() const;
 
     bool getButtonPress(unsigned int num);
 
@@ -144,7 +150,7 @@ public:
     void clearAllButtonPresses();
 
 private:
-    std::vector<Joystick *> joysticks;
+    std::vector<std::unique_ptr<Joystick>> joysticks;
 
 };
 

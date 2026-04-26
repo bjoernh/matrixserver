@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
-#include <boost/thread/thread.hpp>
+#include <thread>
 
 #include <Screen.h>
 #include <App.h>
@@ -19,7 +19,7 @@
 class Server {
 public:
 
-    ~Server() = default;
+    ~Server();
 
     Server(std::shared_ptr<IRenderer>, matrixserver::ServerConfig &);
 
@@ -31,13 +31,13 @@ public:
 
     void addRenderer(std::shared_ptr<IRenderer>);
 
-    App * getAppByID(int searchID);
+    std::shared_ptr<App> getAppByID(int searchID);
 
     void stopDefaultApp();
 
 private:
     std::mutex appsMutex;
-    std::vector<App> apps;
+    std::vector<std::shared_ptr<App>> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;
     boost::asio::io_context ioContext;
     std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioWork;
@@ -45,7 +45,7 @@ private:
     TcpServer tcpServer;
 //    UnixSocketServer unixServer;
     IpcServer ipcServer;
-    boost::thread *ioThread;
+    std::unique_ptr<std::thread> ioThread;
     std::vector<std::shared_ptr<UniversalConnection>> connections;
     JoystickManager joystickmngr;
     pid_t defaultAppPid_ = -1;

@@ -1,8 +1,6 @@
 #include "Joystick.h"
 #include "matrixserver.pb.h"
 #include <boost/log/trivial.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/chrono.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -14,7 +12,7 @@
 
 std::map<int, Joystick::SimulatorState> Joystick::simulatorStates_;
 std::map<int, std::chrono::steady_clock::time_point> Joystick::simulatorLastUpdate_;
-boost::mutex Joystick::simulatorMutex_;
+std::mutex Joystick::simulatorMutex_;
 
 Joystick::Joystick()
 {
@@ -121,7 +119,7 @@ bool Joystick::isFound()
     // For simulator-fallback slots, only report active once recent input has been received.
     // This prevents idle slots from forcing games into unwanted multiplayer mode.
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         auto it = simulatorLastUpdate_.find(joystickNumber_);
         if (it == simulatorLastUpdate_.end()) return false;
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -154,29 +152,28 @@ void Joystick::refresh()
 
 void Joystick::startRefreshThread()
 {
-    thread_ = new boost::thread(&Joystick::internalLoop, this);
+    threadRunning_.store(true);
+    thread_ = std::make_unique<std::thread>(&Joystick::internalLoop, this);
 }
 
 void Joystick::stopThread()
 {
-    if(thread_ != NULL)
-    {
-        thread_->interrupt();
+    threadRunning_.store(false);
+    if (thread_ && thread_->joinable()) {
         thread_->join();
-        thread_ = NULL;
     }
+    thread_.reset();
 }
 
 void Joystick::internalLoop()
 {
     int loopcount = 0;
-    while(1){
+    while(threadRunning_.load()){
         if(loopcount % 10 == 0)
             recheckFilePath();
         refresh();
         loopcount++;
-        // Use boost sleep so thread interruption in stopThread() works correctly.
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -184,7 +181,7 @@ void Joystick::internalLoop()
 bool Joystick::getButton(unsigned int num)
 {
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         if (num < MAXBUTTONAXISCOUNT) return simulatorStates_[joystickNumber_].button_[num];
         return false;
     }
@@ -196,7 +193,7 @@ bool Joystick::getButton(unsigned int num)
 bool Joystick::getButtonPress(unsigned int num)
 {
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         if(num < MAXBUTTONAXISCOUNT){
             if(simulatorStates_[joystickNumber_].buttonPress_[num]){
                 simulatorStates_[joystickNumber_].buttonPress_[num] = false;
@@ -217,7 +214,7 @@ bool Joystick::getButtonPress(unsigned int num)
 float Joystick::getAxis(unsigned int num)
 {
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         if (num < MAXBUTTONAXISCOUNT) return simulatorStates_[joystickNumber_].axis_[num];
         return 0.0f;
     }
@@ -228,7 +225,7 @@ float Joystick::getAxis(unsigned int num)
 
 float Joystick::getAxisPress(unsigned int num) {
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         if(num < MAXBUTTONAXISCOUNT){
             if(simulatorStates_[joystickNumber_].axisPress_[num] != 0){
                 auto returnValue = simulatorStates_[joystickNumber_].axisPress_[num];
@@ -251,7 +248,7 @@ float Joystick::getAxisPress(unsigned int num) {
 
 void Joystick::clearAllButtonPresses(){
     if (useSimulatorFallback_) {
-        boost::mutex::scoped_lock lock(simulatorMutex_);
+        std::lock_guard<std::mutex> lock(simulatorMutex_);
         for(int i = 0; i < MAXBUTTONAXISCOUNT; i++){
             simulatorStates_[joystickNumber_].buttonPress_[i] = false;
             simulatorStates_[joystickNumber_].axisPress_[i] = 0.0f;
@@ -269,7 +266,7 @@ void Joystick::clearAllButtonPresses(){
 void Joystick::updateSimulatorState(const matrixserver::JoystickData& data) {
     // Record activity timestamp for lazy activation: isFound() uses this to determine
     // whether a simulator-fallback slot has received input recently enough to be considered active.
-    boost::mutex::scoped_lock lock(simulatorMutex_);
+    std::lock_guard<std::mutex> lock(simulatorMutex_);
     int id = data.joystickid();
     simulatorLastUpdate_[id] = std::chrono::steady_clock::now();
     auto& state = simulatorStates_[id];
@@ -328,17 +325,21 @@ std::ostream& operator<<(std::ostream& os, const Joystick::Event& e)
 }
 
 JoystickManager::JoystickManager(unsigned int maxNum) {
-    for(int i = 0; i<maxNum; i++)
-        joysticks.push_back(new Joystick(i));
+    for(int i = 0; i<(int)maxNum; i++)
+        joysticks.push_back(std::make_unique<Joystick>(i));
 }
 
-std::vector<Joystick *> &JoystickManager::getJoysticks() {
-    return joysticks;
+std::vector<Joystick *> JoystickManager::getJoysticks() const {
+    std::vector<Joystick *> result;
+    result.reserve(joysticks.size());
+    for (const auto &j : joysticks)
+        result.push_back(j.get());
+    return result;
 }
 
 bool JoystickManager::getButtonPress(unsigned int num) {
     bool returnValue = false;
-    for(auto joystick : joysticks){
+    for(const auto& joystick : joysticks){
         returnValue = (returnValue || joystick->getButtonPress(num));
     }
     return returnValue;
@@ -346,7 +347,7 @@ bool JoystickManager::getButtonPress(unsigned int num) {
 
 float JoystickManager::getAxis(unsigned int num) {
     float returnValue = 0;
-    for(auto joystick : joysticks){
+    for(const auto& joystick : joysticks){
         returnValue += joystick->getAxis(num);
     }
     return returnValue;
@@ -354,14 +355,14 @@ float JoystickManager::getAxis(unsigned int num) {
 
 float JoystickManager::getAxisPress(unsigned int num) {
     float returnValue = 0;
-    for(auto joystick : joysticks){
+    for(const auto& joystick : joysticks){
         returnValue += joystick->getAxisPress(num);
     }
     return returnValue;
 }
 
 void JoystickManager::clearAllButtonPresses() {
-    for(auto joystick : joysticks){
+    for(const auto& joystick : joysticks){
         joystick->clearAllButtonPresses();
     }
 }

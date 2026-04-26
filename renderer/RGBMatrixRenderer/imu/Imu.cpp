@@ -5,8 +5,13 @@ Imu::Imu(){
 
 }
 
+Imu::~Imu(){
+  stopThread();
+  // serial unique_ptr cleans up automatically
+}
+
 bool Imu::init(std::string portname){
-  serial = new SerialPort(portname.c_str(), 115200);
+  serial = std::make_unique<SerialPort>(portname.c_str(), 115200);
   startRefreshThread();
   return true;
 }
@@ -44,22 +49,22 @@ void Imu::refresh()
 
 void Imu::startRefreshThread()
 {
-  thread_ = new boost::thread(&Imu::internalLoop, this);
+  threadRunning_.store(true);
+  thread_ = std::make_unique<std::thread>(&Imu::internalLoop, this);
 }
 
 void Imu::stopThread()
 {
-  if(thread_ != NULL)
-  {
-	thread_->interrupt();
+  threadRunning_.store(false);
+  if (thread_ && thread_->joinable()) {
     thread_->join();
-    thread_ = NULL;
   }
+  thread_.reset();
 }
 
 void Imu::internalLoop()
 {
-  while(1){
+  while(threadRunning_.load()){
     refresh();
     usleep(1000);
   }

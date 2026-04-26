@@ -2,7 +2,8 @@
 #define MATRIXSERVER_IPCCONNECTION_H
 
 #include <boost/interprocess/ipc/message_queue.hpp>
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <atomic>
 #include <functional>
 #include <string>
 #include <mutex>
@@ -41,13 +42,13 @@ private:
     std::shared_ptr<boost::interprocess::message_queue> sendMQ;
     std::shared_ptr<boost::interprocess::message_queue> receiveMQ;
 
-    boost::thread * receiveThread;
+    std::unique_ptr<std::thread> receiveThread;
 
     std::mutex sendMutex;
     std::string message_buffer;
     std::function<void(std::shared_ptr<UniversalConnection>,
                        std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
-    bool dead = false;
+    std::atomic<bool> dead{false};
 
     char receiveData[MAXIPCMESSAGESIZE];
 };

@@ -1,7 +1,9 @@
 #ifndef MATRIXSERVER_MATRIXAPPLICATION_H
 #define MATRIXSERVER_MATRIXAPPLICATION_H
 
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <atomic>
+#include <condition_variable>
 
 #include <IpcConnection.h>
 #include <Screen.h>
@@ -29,7 +31,7 @@ public:
                     std::string serverUri = DEFAULTSERVERURI,
                     std::string appName = "MatrixApp");
 
-  ~MatrixApplication() = default;
+  ~MatrixApplication();
 
   void renderToScreens();
 
@@ -82,13 +84,18 @@ private:
   int brightness;
   std::string serverUri;
   std::shared_ptr<UniversalConnection> connection;
-  boost::thread *mainThread;
-  boost::thread *ioThread;
+  std::unique_ptr<std::thread> mainThread;
+  std::unique_ptr<std::thread> ioThread;
   AppState appState;
   boost::asio::io_context io_context;
   matrixserver::ServerConfig serverConfig;
 
-  std::mutex renderSyncMutex;
+  // Condition variable for the render-sync handshake (replaces cross-thread
+  // mutex lock/unlock which was not exception-safe).
+  std::mutex screenAccessMutex_;
+  std::condition_variable screenAccessCv_;
+  bool screenAccessGranted_ = false;
+  std::atomic<bool> loopRunning_{false};
 
 public:
   static float latestSimulatorImuX;

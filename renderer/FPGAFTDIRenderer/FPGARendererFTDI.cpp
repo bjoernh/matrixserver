@@ -1,6 +1,7 @@
 #include "FPGARendererFTDI.h"
 
 #include <cstring>
+#include <cstdlib>
 
 extern "C" {
     #include "mpsse/mpsse.h"
@@ -37,6 +38,18 @@ void FPGARendererFTDI::init(std::vector<std::shared_ptr<Screen>> initScreens) {
 
     std::cout << "Init SPI Driver" << std::endl;
     mpsse_init(0, NULL, false);
+
+    // Pre-allocate render buffers so render() never calls malloc per frame.
+    if (!screens.empty()) {
+        const int screenWidth  = screens[0]->getWidth();
+        const int screenHeight = screens[0]->getHeight();
+        const int bitDepthInBytes = 2;
+        const int screenCount  = static_cast<int>(screens.size());
+        const int llen = screenWidth * bitDepthInBytes * screenCount;
+        const int flen = screenHeight * llen;
+        frameBuf_.resize(static_cast<size_t>(flen), 0);
+        cmdBuf_.resize(static_cast<size_t>(llen + 128), 0);
+    }
 }
 
 void FPGARendererFTDI::setScreenData(int screenId, Color *screenData) {
@@ -61,9 +74,15 @@ void FPGARendererFTDI::render() {
 
     int llen = screenWidth * bitDepthInBytes * screenCount;
     int flen = screenHeight * llen;
-    uint8_t *buf = (uint8_t*)malloc(flen);
 
-    uint8_t *cmd_buf = (uint8_t*)malloc(llen+128);
+    // Grow buffers lazily if screen geometry changed; normal case is no-op.
+    if (static_cast<int>(frameBuf_.size()) < flen)
+        frameBuf_.resize(static_cast<size_t>(flen), 0);
+    if (static_cast<int>(cmdBuf_.size()) < llen + 128)
+        cmdBuf_.resize(static_cast<size_t>(llen + 128), 0);
+
+    uint8_t *buf = frameBuf_.data();
+    uint8_t *cmd_buf = cmdBuf_.data();
 
     /* Doing VSync first */
 #if 1

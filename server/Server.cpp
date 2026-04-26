@@ -4,7 +4,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <fcntl.h>
-#include <future>
 #include <iostream>
 #include <random>
 #include <signal.h>
@@ -27,11 +26,20 @@ static std::string defaultAppPath([]() -> std::string {
 }());
 bool defaultAppStarted = false;
 
-App *Server::getAppByID(int searchID) {
+Server::~Server() {
+  // Stop the io_context so ioThread exits cleanly.
+  ioWork.reset(); // drop work guard so run() can return
+  ioContext.stop();
+  if (ioThread && ioThread->joinable()) {
+    ioThread->join();
+  }
+}
+
+std::shared_ptr<App> Server::getAppByID(int searchID) {
   std::lock_guard<std::mutex> lock(appsMutex);
-  for (unsigned int i = 0; i < apps.size(); i++) {
-    if (apps[i].getAppId() == searchID) {
-      return &apps[i];
+  for (auto &app : apps) {
+    if (app->getAppId() == searchID) {
+      return app;
     }
   }
   return nullptr;
@@ -68,9 +76,9 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
           std::lock_guard<std::mutex> lock(appsMutex);
           if (!apps.empty()) {
             auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
-            schemaMsg->set_appid(apps.back().getAppId());
+            schemaMsg->set_appid(apps.back()->getAppId());
             schemaMsg->set_messagetype(matrixserver::appParamSchema);
-            auto schema = apps.back().getParamSchema();
+            auto schema = apps.back()->getParamSchema();
             schemaMsg->mutable_appparamschema()->CopyFrom(schema);
             setRenderer->sendMessage(schemaMsg);
           }
@@ -85,17 +93,17 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
             // If appID is specified, target that app, else target current top app
             if (msg->appid() != 0) {
               for (auto &app : apps) {
-                if (app.getAppId() == msg->appid()) {
-                  app.getConnection()->sendMessage(msg);
+                if (app->getAppId() == msg->appid()) {
+                  app->getConnection()->sendMessage(msg);
                   break;
                 }
               }
             } else if (!apps.empty()) {
-              apps.back().getConnection()->sendMessage(msg);
+              apps.back()->getConnection()->sendMessage(msg);
             }
           } else {
             for (auto &app : apps) {
-              app.getConnection()->sendMessage(msg);
+              app->getConnection()->sendMessage(msg);
             }
           }
         }
@@ -108,7 +116,7 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
   //    this, std::placeholders::_1));
   ipcServer.setAcceptCallback(
       std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
-  ioThread = new boost::thread([this]() {
+  ioThread = std::make_unique<std::thread>([this]() {
     try {
       this->ioContext.run();
     } catch (const std::exception &e) {
@@ -139,8 +147,8 @@ void Server::handleRequest(
       int newAppId;
       {
         std::lock_guard<std::mutex> lock(appsMutex);
-        apps.push_back(App(connection));
-        newAppId = apps.back().getAppId();
+        apps.push_back(std::make_shared<App>(connection));
+        newAppId = apps.back()->getAppId();
       }
       auto response = std::make_shared<matrixserver::MatrixServerMessage>();
       response->set_appid(newAppId);
@@ -168,7 +176,7 @@ void Server::handleRequest(
     bool isTopApp = false;
     {
       std::lock_guard<std::mutex> lock(appsMutex);
-      if (!apps.empty() && message->appid() == apps.back().getAppId()) {
+      if (!apps.empty() && message->appid() == apps.back()->getAppId()) {
         isTopApp = true;
       }
     }
@@ -220,8 +228,8 @@ void Server::handleRequest(
         << "[Server] appkill " << message->appid() << " successfull";
     std::lock_guard<std::mutex> lock(appsMutex);
     apps.erase(std::remove_if(apps.begin(), apps.end(),
-                              [message](App a) {
-                                if (a.getAppId() == message->appid()) {
+                              [message](const std::shared_ptr<App>& a) {
+                                if (a->getAppId() == message->appid()) {
                                   BOOST_LOG_TRIVIAL(debug)
                                       << "[Server] App " << message->appid()
                                       << " deleted";
@@ -238,8 +246,8 @@ void Server::handleRequest(
     {
       std::lock_guard<std::mutex> lock(appsMutex);
       for (auto &app : apps) {
-        if (app.getAppId() == message->appid()) {
-          app.setParamSchema(message->appparamschema());
+        if (app->getAppId() == message->appid()) {
+          app->setParamSchema(message->appparamschema());
           break;
         }
       }
@@ -269,7 +277,7 @@ bool Server::tick() {
       BOOST_LOG_TRIVIAL(debug) << "kill current app" << std::endl;
       auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
       msg->set_messagetype(matrixserver::appKill);
-      apps.back().sendMsg(msg);
+      apps.back()->sendMsg(msg);
     }
   }
   joystickmngr.clearAllButtonPresses();
@@ -306,11 +314,11 @@ bool Server::tick() {
     }
 
     apps.erase(std::remove_if(apps.begin(), apps.end(),
-                              [](App a) {
-                                bool returnVal = a.getConnection()->isDead();
+                              [](const std::shared_ptr<App>& a) {
+                                bool returnVal = a->getConnection()->isDead();
                                 if (returnVal)
                                   BOOST_LOG_TRIVIAL(debug)
-                                      << "[matrixserver] App " << a.getAppId()
+                                      << "[matrixserver] App " << a->getAppId()
                                       << " deleted";
                                 return returnVal;
                               }),
@@ -364,9 +372,9 @@ void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
           std::lock_guard<std::mutex> lock(appsMutex);
           if (!apps.empty()) {
             auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
-            schemaMsg->set_appid(apps.back().getAppId());
+            schemaMsg->set_appid(apps.back()->getAppId());
             schemaMsg->set_messagetype(matrixserver::appParamSchema);
-            schemaMsg->mutable_appparamschema()->CopyFrom(apps.back().getParamSchema());
+            schemaMsg->mutable_appparamschema()->CopyFrom(apps.back()->getParamSchema());
             newRenderer->sendMessage(schemaMsg);
           }
         } else if (msg->messagetype() == matrixserver::imuData ||
@@ -379,17 +387,17 @@ void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
               msg->messagetype() == matrixserver::getAppParams) {
             if (msg->appid() != 0) {
               for (auto &app : apps) {
-                if (app.getAppId() == msg->appid()) {
-                  app.getConnection()->sendMessage(msg);
+                if (app->getAppId() == msg->appid()) {
+                  app->getConnection()->sendMessage(msg);
                   break;
                 }
               }
             } else if (!apps.empty()) {
-              apps.back().getConnection()->sendMessage(msg);
+              apps.back()->getConnection()->sendMessage(msg);
             }
           } else {
             for (auto &app : apps) {
-              app.getConnection()->sendMessage(msg);
+              app->getConnection()->sendMessage(msg);
             }
           }
         }

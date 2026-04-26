@@ -3,19 +3,19 @@
 #include <boost/log/trivial.hpp>
 
 IpcConnection::IpcConnection(){
-    receiveCallback = NULL;
+    receiveCallback = nullptr;
 }
 
 IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver){
     sendMQ = sender;
     receiveMQ = receiver;
-    receiveCallback = NULL;
-    dead = false;
+    receiveCallback = nullptr;
+    dead.store(false);
 }
 
 
 void IpcConnection::startReceiving() {
-    receiveThread = new boost::thread(&IpcConnection::readLoop, this);
+    receiveThread = std::make_unique<std::thread>(&IpcConnection::readLoop, this);
 }
 
 void IpcConnection::setReceiveCallback(
@@ -29,13 +29,14 @@ void IpcConnection::readLoop() {
     boost::interprocess::message_queue::size_type recvd_size;
     unsigned int priority;
     BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] start read loop";
-    while(!dead){
+    while(!dead.load()){
         try {
             this->receiveMQ->receive(&receiveData, MAXIPCMESSAGESIZE, recvd_size, priority);
+            if (dead.load()) break;
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
             if (receiveMessage->ParseFromString(std::string(receiveData, recvd_size))) {
                 BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] Recieved full Protobuf MatrixServerMessage";
-                if (this->receiveCallback != NULL) {
+                if (this->receiveCallback != nullptr) {
                     this->receiveCallback(shared_from_this(), receiveMessage);
                 }else{
                     BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] NO CALLBACK!";
@@ -84,15 +85,22 @@ void IpcConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessag
 }
 
 bool IpcConnection::isDead() {
-    return dead;
+    return dead.load();
 }
 
 IpcConnection::~IpcConnection() {
-
+    // Signal readLoop to exit and unblock its blocking receive call.
+    dead.store(true);
+    if (receiveMQ) {
+        try { receiveMQ->send("", 0, 0); } catch (...) {}
+    }
+    if (receiveThread && receiveThread->joinable()) {
+        receiveThread->join();
+    }
 }
 
 void IpcConnection::setDead(bool sDead) {
-    dead = sDead;
+    dead.store(sDead);
 }
 
 bool IpcConnection::connectToServer(std::string serverAddress) {

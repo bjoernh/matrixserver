@@ -1,12 +1,16 @@
 #ifndef __IMU__
+#define __IMU__
 #include "SerialPort.h"
 #include <vector>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <memory>
 
 class Imu{
 public:
   Imu();
+  ~Imu();
   bool init(std::string portname);
   float * getAcceleration();
   void startRefreshThread();
@@ -18,9 +22,10 @@ protected:
 private:
   void internalLoop();
   float acceleration[3];
-  SerialPort *serial;
-  boost::thread * thread_;
-  boost::mutex threadLock_;
+  std::unique_ptr<SerialPort> serial;
+  std::unique_ptr<std::thread> thread_;
+  std::mutex threadLock_;
+  std::atomic<bool> threadRunning_{false};
   bool freefall;
   float threshold = 0.1;
 };

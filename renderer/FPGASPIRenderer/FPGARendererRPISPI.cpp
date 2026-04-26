@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <boost/log/trivial.hpp>
 #include <stdexcept>
+#include <vector>
 
 #define TWOBYSIX
 
@@ -20,7 +21,8 @@ uint16_t spiDelay = 1;
 int spiDevFilehandle;
 
 int screenWidth, screenHeight, bitDepthInBytes, screenCount, bytesPerLine, bytesPerScreen, lineCount;
-unsigned char *cmd_buf;
+std::vector<unsigned char> cmd_buf_storage;
+unsigned char *cmd_buf = nullptr;
 
 struct spi_ioc_transfer * spiIocTransfers;
 unsigned int spiIocTransfersSize, spiIocTransfersPos;
@@ -141,7 +143,8 @@ void FPGARendererRPISPI::init(std::vector<std::shared_ptr<Screen>> initScreens) 
     bytesPerLine = bytesPerScreen * screenCount;
     lineCount = screenHeight;
 #endif
-    cmd_buf = (unsigned char*)malloc(bytesPerLine+128);
+    cmd_buf_storage.assign(static_cast<size_t>(bytesPerLine + 128), 0);
+    cmd_buf = cmd_buf_storage.data();
 //    spiWriteQueueBuffer = (unsigned char*)malloc(49346); //hacky test
 
     initSpi();
