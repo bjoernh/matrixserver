@@ -1,5 +1,6 @@
 #include "ServerSetup.h"
 
+#include <array>
 #include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
 #include <exception>
@@ -14,55 +15,91 @@ namespace po = boost::program_options;
 
 namespace ServerSetup {
 
+namespace {
+
+// Layout entry for one (HardwareType, ScreenOrientation) combination.
+struct ScreenLayout {
+  int offsetX;
+  int offsetY;
+  matrixserver::ScreenInfo::ScreenRotation rotation;
+};
+
+// Shorthand aliases to keep table rows concise.
+using SI  = matrixserver::ScreenInfo;
+using Rot = SI::ScreenRotation;
+constexpr Rot R0   = SI::rot0;
+constexpr Rot R90  = SI::rot90;
+constexpr Rot R180 = SI::rot180;
+constexpr Rot R270 = SI::rot270;
+
+// kLayouts[hwType_index][orientation_index]
+//
+// ScreenOrientation enum: defaultScreenOrientation=0, front=1, right=2,
+//   back=3, left=4, top=5, bottom=6.
+// HardwareType enum order: Simulator=0, FPGA_FTDI=1, FPGA_RPISPI=2, RGB_MATRIX=3
+//
+// Index 0 (defaultScreenOrientation) is never queried; filled with a
+// zero-sentinel so every row has the same width.
+constexpr int kHwTypeCount      = 4; // Simulator, FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX
+constexpr int kOrientationCount = 7; // 0 (unused) + front..bottom
+
+constexpr std::array<std::array<ScreenLayout, kOrientationCount>, kHwTypeCount>
+    kLayouts = {{
+        // Simulator — all screens at (0,0,rot0)
+        {{
+            {0, 0, R0}, // [0] unused
+            {0, 0, R0}, // front
+            {0, 0, R0}, // right
+            {0, 0, R0}, // back
+            {0, 0, R0}, // left
+            {0, 0, R0}, // top
+            {0, 0, R0}, // bottom
+        }},
+        // FPGA_FTDI
+        {{
+            {0, 0, R0},   // [0] unused
+            {4, 0, R180}, // front
+            {3, 0, R180}, // right
+            {1, 0, R90},  // back
+            {5, 0, R180}, // left
+            {0, 0, R270}, // top
+            {2, 0, R270}, // bottom
+        }},
+        // FPGA_RPISPI
+        {{
+            {0, 0, R0},   // [0] unused
+            {1, 1, R0},   // front
+            {2, 1, R0},   // right
+            {1, 0, R90},  // back
+            {0, 1, R0},   // left
+            {0, 0, R270}, // top
+            {2, 0, R270}, // bottom
+        }},
+        // RGB_MATRIX
+        {{
+            {0, 0, R0},   // [0] unused
+            {0, 0, R270}, // front
+            {1, 0, R180}, // right
+            {2, 0, R270}, // back
+            {3, 0, R180}, // left
+            {4, 0, R90},  // top
+            {5, 0, R0},   // bottom
+        }},
+    }};
+
+} // anonymous namespace
+
 static void setScreenDefaults(matrixserver::ScreenInfo *si,
                               matrixserver::ScreenInfo::ScreenOrientation orient,
                               HardwareType hwType) {
   si->set_screenorientation(orient);
-  int oX = 0, oY = 0;
-  auto rot = matrixserver::ScreenInfo::rot0;
 
-  switch (hwType) {
-  case HardwareType::FPGA_FTDI:
-    switch (orient) {
-    case matrixserver::ScreenInfo::front:  oX=4; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
-    case matrixserver::ScreenInfo::right:  oX=3; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
-    case matrixserver::ScreenInfo::back:   oX=1; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
-    case matrixserver::ScreenInfo::left:   oX=5; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
-    case matrixserver::ScreenInfo::top:    oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    case matrixserver::ScreenInfo::bottom: oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    default: break;
-    }
-    break;
-  case HardwareType::FPGA_RPISPI:
-    switch (orient) {
-    case matrixserver::ScreenInfo::front:  oX=1; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
-    case matrixserver::ScreenInfo::right:  oX=2; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
-    case matrixserver::ScreenInfo::back:   oX=1; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
-    case matrixserver::ScreenInfo::left:   oX=0; oY=1; rot=matrixserver::ScreenInfo::rot0;   break;
-    case matrixserver::ScreenInfo::top:    oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    case matrixserver::ScreenInfo::bottom: oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    default: break;
-    }
-    break;
-  case HardwareType::RGB_MATRIX:
-    switch (orient) {
-    case matrixserver::ScreenInfo::front:  oX=0; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    case matrixserver::ScreenInfo::right:  oX=1; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
-    case matrixserver::ScreenInfo::back:   oX=2; oY=0; rot=matrixserver::ScreenInfo::rot270; break;
-    case matrixserver::ScreenInfo::left:   oX=3; oY=0; rot=matrixserver::ScreenInfo::rot180; break;
-    case matrixserver::ScreenInfo::top:    oX=4; oY=0; rot=matrixserver::ScreenInfo::rot90;  break;
-    case matrixserver::ScreenInfo::bottom: oX=5; oY=0; rot=matrixserver::ScreenInfo::rot0;   break;
-    default: break;
-    }
-    break;
-  case HardwareType::Simulator:
-    // Simulator uses default (0,0,rot0) for all
-    break;
-  }
+  const auto &layout =
+      kLayouts[static_cast<int>(hwType)][static_cast<int>(orient)];
 
-  si->set_offsetx(oX);
-  si->set_offsety(oY);
-  si->set_screenrotation(rot);
+  si->set_offsetx(layout.offsetX);
+  si->set_offsety(layout.offsetY);
+  si->set_screenrotation(layout.rotation);
 }
 
 void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig,
