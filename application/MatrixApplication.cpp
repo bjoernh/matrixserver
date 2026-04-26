@@ -1,4 +1,5 @@
 #include "MatrixApplication.h"
+#include "ConnectionFactory.h"
 #include <Joystick.h>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
@@ -29,67 +30,35 @@ MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string
   setFps(fps);
   appId = 0;
   appState = AppState::starting;
-  //    ioThread = std::make_unique<std::thread>([this]() { io_context.run(); });
+  setupDispatcher();
   while (!connect(serverUri)) {
     sleep(1);
   }
 }
 
+// ---------------------------------------------------------------------------
+// Connection
+// ---------------------------------------------------------------------------
+
 bool MatrixApplication::connect(const std::string &server_uri) {
   BOOST_LOG_TRIVIAL(debug) << "[Application] Trying to connect to Server: "
                            << server_uri;
 
-  // Parse URI scheme
-  auto schemeEnd = server_uri.find("://");
-  if (schemeEnd == std::string::npos) {
-    BOOST_LOG_TRIVIAL(error)
-        << "[Application] Invalid URI format: " << server_uri;
-    return false;
-  }
+  connection = ConnectionFactory::connectFromUri(io_context, server_uri);
 
-  std::string scheme = server_uri.substr(0, schemeEnd);
-  std::string rest = server_uri.substr(schemeEnd + 3);
-
-  if (scheme == "ipc") {
-    // ipc://<path>
-    auto ipcCon = std::make_shared<IpcConnection>();
-    ipcCon->connectToServer(rest);
-    connection = ipcCon;
-  } else if (scheme == "tcp") {
-    // tcp://<host>:<port>
-    auto colonPos = rest.rfind(':');
-    if (colonPos == std::string::npos) {
-      BOOST_LOG_TRIVIAL(error)
-          << "[Application] Invalid TCP URI, expected tcp://<host>:<port>: "
-          << server_uri;
-      return false;
-    }
-    std::string host = rest.substr(0, colonPos);
-    std::string port = rest.substr(colonPos + 1);
-    connection = TcpClient::connect(io_context, host, port);
-  } else if (scheme == "unix") {
-    // unix:///tmp/<path>.socket
-    // After "unix://", rest includes the full path (e.g.
-    // "/tmp/matrixserver.sock")
-    connection = UnixSocketClient::connect(io_context, rest);
-  } else {
-    BOOST_LOG_TRIVIAL(error) << "[Application] Unknown URI scheme: " << scheme;
-    return false;
-  }
-
-  if (!connection->isDead()) {
-    BOOST_LOG_TRIVIAL(debug) << "[Application] Connection successfull";
-    // Reset io_context before restarting it (needed on reconnect)
-    io_context.restart();
-    ioThread = std::make_unique<std::thread>([this]() { io_context.run(); });
-    connection->setReceiveCallback(bind(&MatrixApplication::handleRequest, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-    return true;
-  } else {
+  if (!connection || connection->isDead()) {
     BOOST_LOG_TRIVIAL(debug) << "[Application] Connection failed";
     return false;
   }
+
+  BOOST_LOG_TRIVIAL(debug) << "[Application] Connection successfull";
+  // Reset io_context before restarting it (needed on reconnect)
+  io_context.restart();
+  ioThread = std::make_unique<std::thread>([this]() { io_context.run(); });
+  connection->setReceiveCallback(bind(&MatrixApplication::handleRequest, this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
+  return true;
 }
 
 void MatrixApplication::registerAtServer() {
@@ -125,6 +94,10 @@ void MatrixApplication::renderToScreens() {
   //    std::cout << "data sent:  " << micros() - startTime << "us" <<
   //    std::endl;
 }
+
+// ---------------------------------------------------------------------------
+// Internal loop
+// ---------------------------------------------------------------------------
 
 void MatrixApplication::internalLoop() {
   loopRunning_.store(true);
@@ -173,136 +146,233 @@ void MatrixApplication::checkConnection() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Message dispatcher setup
+// ---------------------------------------------------------------------------
+
+void MatrixApplication::setupDispatcher() {
+  using Conn = std::shared_ptr<UniversalConnection>;
+  using Msg  = std::shared_ptr<matrixserver::MatrixServerMessage>;
+
+  dispatcher_.registerHandler(matrixserver::registerApp,
+      [this](Conn c, Msg m) { handleRegisterApp(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::getServerInfo,
+      [this](Conn c, Msg m) { handleGetServerInfo(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::appPause,
+      [this](Conn c, Msg m) { handleAppPause(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::appAlive,
+      [this](Conn c, Msg m) { handleAppAlive(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::appResume,
+      [this](Conn c, Msg m) { handleAppResume(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::appKill,
+      [this](Conn c, Msg m) { handleAppKill(std::move(c), std::move(m)); });
+
+  // Both requestScreenAccess and setScreenFrame signal the condvar.
+  dispatcher_.registerHandler(matrixserver::requestScreenAccess,
+      [this](Conn c, Msg m) { handleScreenAccess(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::setScreenFrame,
+      [this](Conn c, Msg m) { handleScreenAccess(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::joystickData,
+      [this](Conn c, Msg m) { handleJoystickData(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::imuData,
+      [this](Conn c, Msg m) { handleImuData(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::audioDataMessage,
+      [this](Conn c, Msg m) { handleAudioData(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::setAppParam,
+      [this](Conn c, Msg m) { handleSetAppParam(std::move(c), std::move(m)); });
+
+  dispatcher_.registerHandler(matrixserver::getAppParams,
+      [this](Conn c, Msg m) { handleGetAppParams(std::move(c), std::move(m)); });
+}
+
+// ---------------------------------------------------------------------------
+// handleRequest — thin shim; real work is in the per-type handlers below
+// ---------------------------------------------------------------------------
+
 void MatrixApplication::handleRequest(
-    std::shared_ptr<UniversalConnection> connection,
+    std::shared_ptr<UniversalConnection> conn,
     std::shared_ptr<matrixserver::MatrixServerMessage> message) {
   BOOST_LOG_TRIVIAL(trace) << "[Application] handleRequest called";
-  switch (message->messagetype()) {
-  case matrixserver::registerApp:
-    if (message->status() == matrixserver::success) {
-      BOOST_LOG_TRIVIAL(debug)
-          << "[Application] Register at Server successfull";
-      appId = message->appid();
+  dispatcher_.dispatch(std::move(conn), std::move(message));
+}
 
-      // Send parameter schema if any are registered
-      auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
-      schemaMsg->set_messagetype(matrixserver::appParamSchema);
-      schemaMsg->set_appid(appId);
-      auto schema = params.toSchema(appName);
-      schemaMsg->mutable_appparamschema()->CopyFrom(schema);
-      connection->sendMessage(schemaMsg);
+// ---------------------------------------------------------------------------
+// Per-message-type handlers
+// ---------------------------------------------------------------------------
 
-      auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-      response->set_messagetype(matrixserver::getServerInfo);
-      response->set_appid(appId);
-      connection->sendMessage(response);
-    }
-    break;
-  case matrixserver::getServerInfo:
+void MatrixApplication::handleRegisterApp(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  if (msg->status() == matrixserver::success) {
     BOOST_LOG_TRIVIAL(debug)
-        << "[Application] ServerInfo received, setup complete!";
-    serverConfig.Clear();
-    serverConfig.CopyFrom(message->serverconfig());
-    for (auto screenInfo : serverConfig.screeninfo()) {
-      screens.push_back(std::make_shared<Screen>(
-          screenInfo.width(), screenInfo.height(), screenInfo.screenid()));
-    }
-    appState = AppState::running;
-    break;
-  case matrixserver::appPause: {
+        << "[Application] Register at Server successfull";
+    appId = msg->appid();
+
+    // Send parameter schema if any are registered
+    auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+    schemaMsg->set_messagetype(matrixserver::appParamSchema);
+    schemaMsg->set_appid(appId);
+    auto schema = params.toSchema(appName);
+    schemaMsg->mutable_appparamschema()->CopyFrom(schema);
+    conn->sendMessage(schemaMsg);
+
     auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-    response->set_messagetype(matrixserver::appPause);
+    response->set_messagetype(matrixserver::getServerInfo);
     response->set_appid(appId);
-    if (pause()) {
-      response->set_status(matrixserver::success);
-      BOOST_LOG_TRIVIAL(debug) << "app Paused";
-    } else
-      response->set_status(matrixserver::error);
-    connection->sendMessage(response);
-  } break;
-  case matrixserver::appAlive: {
-    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-    response->set_messagetype(matrixserver::appAlive);
-    response->set_appid(appId);
-    if (appState == AppState::running || appState == AppState::paused)
-      response->set_status(matrixserver::success);
-    else
-      response->set_status(matrixserver::error);
-    connection->sendMessage(response);
-  } break;
-  case matrixserver::appResume: {
-    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-    response->set_messagetype(matrixserver::appResume);
-    response->set_appid(appId);
-    if (resume())
-      response->set_status(matrixserver::success);
-    else
-      response->set_status(matrixserver::error);
-    connection->sendMessage(response);
-  } break;
-  case matrixserver::appKill: {
-    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-    response->set_messagetype(matrixserver::appKill);
-    response->set_appid(appId);
-    response->set_status(matrixserver::success);
-    connection->sendMessage(response);
-    BOOST_LOG_TRIVIAL(debug) << "app killed";
-    stop();
-  } break;
-  case matrixserver::requestScreenAccess:
-  case matrixserver::setScreenFrame: {
-    std::lock_guard<std::mutex> lock(screenAccessMutex_);
-    screenAccessGranted_ = true;
-    screenAccessCv_.notify_one();
-    break;
-  }
-  case matrixserver::joystickData: {
-    for (int i = 0; i < message->joystickdata_size(); ++i) {
-      const auto& joystickData = message->joystickdata(i);
-      BOOST_LOG_TRIVIAL(debug) << "[Application] Received joystickData for ID: " << joystickData.joystickid() << " data: " << joystickData.ShortDebugString();
-      Joystick::updateSimulatorState(joystickData);
-    }
-  } break;
-  case matrixserver::imuData: {
-    std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
-    MatrixApplication::latestSimulatorImuX = message->imudata().accelx();
-    MatrixApplication::latestSimulatorImuY = message->imudata().accely();
-    MatrixApplication::latestSimulatorImuZ = message->imudata().accelz();
-    MatrixApplication::latestSimulatorGyroX = message->imudata().gyrox();
-    MatrixApplication::latestSimulatorGyroY = message->imudata().gyroy();
-    MatrixApplication::latestSimulatorGyroZ = message->imudata().gyroz();
-  } break;
-  case matrixserver::audioDataMessage: {
-    if (message->has_audiodata()) {
-      std::lock_guard<std::mutex> lock(MatrixApplication::audioDataMutex);
-      MatrixApplication::latestAudioVolume =
-          static_cast<uint8_t>(message->audiodata().volume());
-      MatrixApplication::latestAudioFrequencies.clear();
-      for (int i = 0; i < message->audiodata().frequencybands_size(); ++i) {
-        MatrixApplication::latestAudioFrequencies.push_back(
-            static_cast<uint8_t>(message->audiodata().frequencybands(i)));
-      }
-    }
-  } break;
-  case matrixserver::setAppParam:
-    if (message->has_appparamupdate()) {
-      params.applyUpdate(message->appparamupdate());
-    }
-    break;
-  case matrixserver::getAppParams: {
-    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-    response->set_messagetype(matrixserver::appParamValues);
-    response->set_status(matrixserver::success);
-    response->set_appid(appId);
-    auto values = params.toValues(appName);
-    response->mutable_appparamvalues()->CopyFrom(values);
-    connection->sendMessage(response);
-    break;
-  }
-  default:
-    break;
+    conn->sendMessage(response);
   }
 }
+
+void MatrixApplication::handleGetServerInfo(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  BOOST_LOG_TRIVIAL(debug)
+      << "[Application] ServerInfo received, setup complete!";
+  serverConfig.Clear();
+  serverConfig.CopyFrom(msg->serverconfig());
+  for (const auto& screenInfo : serverConfig.screeninfo()) {
+    screens.push_back(std::make_shared<Screen>(
+        screenInfo.width(), screenInfo.height(), screenInfo.screenid()));
+  }
+  appState = AppState::running;
+}
+
+void MatrixApplication::handleAppPause(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+  response->set_messagetype(matrixserver::appPause);
+  response->set_appid(appId);
+  if (pause()) {
+    response->set_status(matrixserver::success);
+    BOOST_LOG_TRIVIAL(debug) << "app Paused";
+  } else {
+    response->set_status(matrixserver::error);
+  }
+  conn->sendMessage(response);
+}
+
+void MatrixApplication::handleAppAlive(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+  response->set_messagetype(matrixserver::appAlive);
+  response->set_appid(appId);
+  if (appState == AppState::running || appState == AppState::paused)
+    response->set_status(matrixserver::success);
+  else
+    response->set_status(matrixserver::error);
+  conn->sendMessage(response);
+}
+
+void MatrixApplication::handleAppResume(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+  response->set_messagetype(matrixserver::appResume);
+  response->set_appid(appId);
+  if (resume())
+    response->set_status(matrixserver::success);
+  else
+    response->set_status(matrixserver::error);
+  conn->sendMessage(response);
+}
+
+void MatrixApplication::handleAppKill(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+  response->set_messagetype(matrixserver::appKill);
+  response->set_appid(appId);
+  response->set_status(matrixserver::success);
+  conn->sendMessage(response);
+  BOOST_LOG_TRIVIAL(debug) << "app killed";
+  stop();
+}
+
+void MatrixApplication::handleScreenAccess(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  // Both requestScreenAccess and setScreenFrame use this handler.
+  // Signal the internalLoop condvar that the server has acknowledged our frame.
+  std::lock_guard<std::mutex> lock(screenAccessMutex_);
+  screenAccessGranted_ = true;
+  screenAccessCv_.notify_one();
+}
+
+void MatrixApplication::handleJoystickData(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  for (int i = 0; i < msg->joystickdata_size(); ++i) {
+    const auto& joystickData = msg->joystickdata(i);
+    BOOST_LOG_TRIVIAL(debug)
+        << "[Application] Received joystickData for ID: "
+        << joystickData.joystickid()
+        << " data: " << joystickData.ShortDebugString();
+    Joystick::updateSimulatorState(joystickData);
+  }
+}
+
+void MatrixApplication::handleImuData(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  std::lock_guard<std::mutex> lock(MatrixApplication::simulatorImuMutex);
+  MatrixApplication::latestSimulatorImuX = msg->imudata().accelx();
+  MatrixApplication::latestSimulatorImuY = msg->imudata().accely();
+  MatrixApplication::latestSimulatorImuZ = msg->imudata().accelz();
+  MatrixApplication::latestSimulatorGyroX = msg->imudata().gyrox();
+  MatrixApplication::latestSimulatorGyroY = msg->imudata().gyroy();
+  MatrixApplication::latestSimulatorGyroZ = msg->imudata().gyroz();
+}
+
+void MatrixApplication::handleAudioData(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  if (msg->has_audiodata()) {
+    std::lock_guard<std::mutex> lock(MatrixApplication::audioDataMutex);
+    MatrixApplication::latestAudioVolume =
+        static_cast<uint8_t>(msg->audiodata().volume());
+    MatrixApplication::latestAudioFrequencies.clear();
+    for (int i = 0; i < msg->audiodata().frequencybands_size(); ++i) {
+      MatrixApplication::latestAudioFrequencies.push_back(
+          static_cast<uint8_t>(msg->audiodata().frequencybands(i)));
+    }
+  }
+}
+
+void MatrixApplication::handleSetAppParam(
+    std::shared_ptr<UniversalConnection> /*conn*/,
+    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+  if (msg->has_appparamupdate()) {
+    params.applyUpdate(msg->appparamupdate());
+  }
+}
+
+void MatrixApplication::handleGetAppParams(
+    std::shared_ptr<UniversalConnection> conn,
+    std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
+  auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+  response->set_messagetype(matrixserver::appParamValues);
+  response->set_status(matrixserver::success);
+  response->set_appid(appId);
+  auto values = params.toValues(appName);
+  response->mutable_appparamvalues()->CopyFrom(values);
+  conn->sendMessage(response);
+}
+
+// ---------------------------------------------------------------------------
+// Accessors / lifecycle
+// ---------------------------------------------------------------------------
 
 int MatrixApplication::getFps() { return fps; }
 

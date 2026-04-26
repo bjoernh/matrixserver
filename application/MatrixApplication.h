@@ -13,6 +13,8 @@
 #include <matrixserver.pb.h>
 #include <mutex>
 
+#include "MessageDispatcher.h"
+
 inline constexpr int DEFAULTFPS = 40;
 inline constexpr int MAXFPS = 200;
 inline constexpr int MINFPS = 1;
@@ -76,6 +78,37 @@ private:
 
   void handleRequest(std::shared_ptr<UniversalConnection>,
                      std::shared_ptr<matrixserver::MatrixServerMessage>);
+
+  // Dispatcher setup — called once from the constructor.
+  void setupDispatcher();
+
+  // Per-message-type handler methods registered with dispatcher_.
+  void handleRegisterApp(std::shared_ptr<UniversalConnection> conn,
+                         std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleGetServerInfo(std::shared_ptr<UniversalConnection> conn,
+                           std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleAppPause(std::shared_ptr<UniversalConnection> conn,
+                      std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleAppAlive(std::shared_ptr<UniversalConnection> conn,
+                      std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleAppResume(std::shared_ptr<UniversalConnection> conn,
+                       std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleAppKill(std::shared_ptr<UniversalConnection> conn,
+                     std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleScreenAccess(std::shared_ptr<UniversalConnection> conn,
+                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleJoystickData(std::shared_ptr<UniversalConnection> conn,
+                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleImuData(std::shared_ptr<UniversalConnection> conn,
+                     std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleAudioData(std::shared_ptr<UniversalConnection> conn,
+                       std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleSetAppParam(std::shared_ptr<UniversalConnection> conn,
+                         std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+  void handleGetAppParams(std::shared_ptr<UniversalConnection> conn,
+                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+
+  MessageDispatcher dispatcher_;
 
   int appId;
   int fps;
