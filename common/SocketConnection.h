@@ -6,6 +6,7 @@
 #include <string>
 #include <mutex>
 #include <queue>
+#include <vector>
 #include "Cobs.h"
 #include <matrixserver.pb.h>
 #include "UniversalConnection.h"
@@ -43,7 +44,7 @@ private:
 
     boost::asio::io_context &io;
     boost::asio::generic::stream_protocol::socket socket;
-    char recv_buffer[RECEIVE_BUFFER_SIZE];
+    std::vector<uint8_t> recv_buffer;
     std::string message_buffer;
     std::queue<std::string> write_queue;
     bool is_writing = false;

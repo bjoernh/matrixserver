@@ -7,6 +7,7 @@
 #include <functional>
 #include <string>
 #include <mutex>
+#include <vector>
 #include <matrixserver.pb.h>
 #include "UniversalConnection.h"
 
@@ -50,7 +51,7 @@ private:
                        std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
     std::atomic<bool> dead{false};
 
-    char receiveData[MAXIPCMESSAGESIZE];
+    std::vector<uint8_t> receiveData;
 };
 
 

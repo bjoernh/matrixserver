@@ -4,6 +4,7 @@
 
 
 IpcServer::IpcServer(std::string serverAddress)
+    : receiveBuffer(SERVERMESSAGESIZE)
 {
     boost::interprocess::message_queue::remove(serverAddress.data());
     serverMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, serverAddress.data(), 10, SERVERMESSAGESIZE, boost::interprocess::permissions(0666));
@@ -34,7 +35,7 @@ void IpcServer::acceptLoop() {
         try {
             boost::interprocess::message_queue::size_type recvd_size;
             unsigned int priority;
-            this->serverMQ->receive(&receiveBuffer, SERVERMESSAGESIZE, recvd_size, priority);
+            this->serverMQ->receive(receiveBuffer.data(), receiveBuffer.size(), recvd_size, priority);
             if (!running_.load())
                 break;
 
@@ -43,10 +44,10 @@ void IpcServer::acceptLoop() {
                 sendMQname << (char)(rand()%26+'a');
 
             auto receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, sendMQname.str().data(), 10, SERVERMESSAGESIZE, boost::interprocess::permissions(0666));
-            auto sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(receiveBuffer, recvd_size).data());
+            auto sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(reinterpret_cast<const char*>(receiveBuffer.data()), recvd_size).data());
             sendMQ->send(sendMQname.str().data(), sendMQname.str().size(), 0);
 
-            BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection, sendMQ " << receiveBuffer << " receiveMQ " << sendMQname.str();
+            BOOST_LOG_TRIVIAL(debug) << "[Server] Accepted Connection, sendMQ " << std::string(reinterpret_cast<const char*>(receiveBuffer.data()), recvd_size) << " receiveMQ " << sendMQname.str();
 
             auto connection = std::make_shared<IpcConnection>(sendMQ, receiveMQ);
             if (acceptCallback != nullptr) {

@@ -3,7 +3,7 @@
 #include <boost/log/trivial.hpp>
 
 SocketConnection::SocketConnection(boost::asio::io_context &io_context) :
-        io(io_context), socket(io), cobsDecoder(RECEIVE_BUFFER_SIZE) {
+        io(io_context), socket(io), recv_buffer(RECEIVE_BUFFER_SIZE), cobsDecoder(RECEIVE_BUFFER_SIZE) {
     receiveCallback = nullptr;
 }
 
@@ -25,7 +25,7 @@ void SocketConnection::setReceiveCallback(
 void SocketConnection::doRead() {
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Starting Read";
     socket.async_read_some(
-            boost::asio::buffer(this->recv_buffer, RECEIVE_BUFFER_SIZE),
+            boost::asio::buffer(this->recv_buffer),
             [this](boost::system::error_code error, size_t bytes_transferred) {
                 this->handleRead(error, bytes_transferred);
             });
@@ -35,7 +35,7 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Handling Read";
     if (!error) {
         BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Received: " << bytes_transferred << " bytes";
-        auto packets = cobsDecoder.insertBytesAndReturnDecodedPackets((uint8_t *) this->recv_buffer, bytes_transferred);
+        auto packets = cobsDecoder.insertBytesAndReturnDecodedPackets(this->recv_buffer.data(), bytes_transferred);
         for (const auto& packet : packets) {
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
             if (receiveMessage->ParseFromString(packet)) {

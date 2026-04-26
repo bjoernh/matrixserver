@@ -2,11 +2,15 @@
 
 #include <boost/log/trivial.hpp>
 
-IpcConnection::IpcConnection(){
+IpcConnection::IpcConnection()
+    : receiveData(MAXIPCMESSAGESIZE)
+{
     receiveCallback = nullptr;
 }
 
-IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver){
+IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver)
+    : receiveData(MAXIPCMESSAGESIZE)
+{
     sendMQ = sender;
     receiveMQ = receiver;
     receiveCallback = nullptr;
@@ -31,10 +35,10 @@ void IpcConnection::readLoop() {
     BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] start read loop";
     while(!dead.load()){
         try {
-            this->receiveMQ->receive(&receiveData, MAXIPCMESSAGESIZE, recvd_size, priority);
+            this->receiveMQ->receive(receiveData.data(), receiveData.size(), recvd_size, priority);
             if (dead.load()) break;
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
-            if (receiveMessage->ParseFromString(std::string(receiveData, recvd_size))) {
+            if (receiveMessage->ParseFromString(std::string(reinterpret_cast<const char*>(receiveData.data()), recvd_size))) {
                 BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] Recieved full Protobuf MatrixServerMessage";
                 if (this->receiveCallback != nullptr) {
                     this->receiveCallback(shared_from_this(), receiveMessage);
@@ -112,12 +116,12 @@ bool IpcConnection::connectToServer(std::string serverAddress) {
         auto tempServer = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, serverAddress.data());
         this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.str().data(), 10, MAXIPCMESSAGESIZE, boost::interprocess::permissions(0666));
         tempServer->send(receiveMQname.str().data(), receiveMQname.str().size(), 0);
-        char tempData[MAXIPCMESSAGESIZE];
+        std::vector<uint8_t> tempData(MAXIPCMESSAGESIZE);
         boost::interprocess::message_queue::size_type recvd_size;
         unsigned int priority;
-        this->receiveMQ->receive(&tempData, MAXIPCMESSAGESIZE, recvd_size, priority); //blocking
+        this->receiveMQ->receive(tempData.data(), tempData.size(), recvd_size, priority); //blocking
         if(recvd_size == 20){
-            this->sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(tempData, recvd_size).data());
+            this->sendMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, std::string(reinterpret_cast<const char*>(tempData.data()), recvd_size).data());
             setDead(false);
         }else{
             setDead(true);

@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <atomic>
+#include <vector>
 #include "IpcConnection.h"
 
 class IpcServer {
@@ -20,7 +21,7 @@ private:
     std::function<void(std::shared_ptr<UniversalConnection>)> acceptCallback;
     std::unique_ptr<std::thread> acceptThread;
     std::atomic<bool> running_{false};
-    char receiveBuffer[SERVERMESSAGESIZE];
+    std::vector<uint8_t> receiveBuffer;
 };
 
 #endif //MATRIXSERVER_IPCSERVER_H
