@@ -15,6 +15,7 @@ ENDIF()
 
 set(SOURCE_FILES
         CubeApplication.cpp
+        Font6px.cpp
         Mpu6050.cpp
         AnimationParams.cpp
         ConnectionFactory.cpp
