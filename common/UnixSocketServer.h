@@ -6,7 +6,7 @@
 #include <SocketConnection.h>
 
 class UnixSocketServer {
-public:
+  public:
     UnixSocketServer(boost::asio::io_context &setIo, boost::asio::local::stream_protocol::endpoint setEndpoint);
 
     void handleAccept(const boost::system::error_code &error, std::shared_ptr<SocketConnection> connection);
@@ -15,7 +15,7 @@ public:
 
     void setAcceptCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback);
 
-private:
+  private:
     boost::asio::io_context &io;
     std::shared_ptr<SocketConnection> remote_con;
     boost::asio::local::stream_protocol::endpoint endpoint;
@@ -23,5 +23,4 @@ private:
     std::function<void(std::shared_ptr<SocketConnection>)> acceptCallback;
 };
 
-
-#endif //MATRIXSERVER_UNIXSOCKETSERVER_H
+#endif // MATRIXSERVER_UNIXSOCKETSERVER_H

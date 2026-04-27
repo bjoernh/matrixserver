@@ -20,9 +20,7 @@ namespace ServerBootstrap {
  * primary; a WebSocketSimulatorRenderer is added as a secondary with
  * streamPixels=false (parameter-only channel).
  */
-using HardwareRendererFactory =
-    std::function<std::shared_ptr<IRenderer>(
-        const std::vector<std::shared_ptr<Screen>> &)>;
+using HardwareRendererFactory = std::function<std::shared_ptr<IRenderer>(const std::vector<std::shared_ptr<Screen>> &)>;
 
 /**
  * Full server bootstrap: parse config, create screens and renderers,
@@ -37,9 +35,7 @@ using HardwareRendererFactory =
  *                      or nullptr for simulator-only mode.
  * @return              0 on clean shutdown, 1 on fatal error.
  */
-int runServer(int argc, char **argv,
-              ServerSetup::HardwareType hwType,
-              HardwareRendererFactory makeHardwareRenderer);
+int runServer(int argc, char **argv, ServerSetup::HardwareType hwType, HardwareRendererFactory makeHardwareRenderer);
 
 } // namespace ServerBootstrap
 

@@ -24,7 +24,6 @@ BraceWrapping:
   AfterEnum: false
   BeforeElse: false
   BeforeCatch: false
-  BeforeFinally: false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
@@ -40,7 +39,6 @@ ReferenceAlignment: Left
 
 # Constructor initializer lists
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorAlignAllInitializer: false
 
 # Continuation indent
 ContinuationIndentWidth: 4

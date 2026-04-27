@@ -21,9 +21,7 @@
 
 namespace ConnectionFactory {
 
-std::shared_ptr<UniversalConnection> connectFromUri(
-    boost::asio::io_context& ctx,
-    const std::string& uri);
+std::shared_ptr<UniversalConnection> connectFromUri(boost::asio::io_context& ctx, const std::string& uri);
 
 } // namespace ConnectionFactory
 

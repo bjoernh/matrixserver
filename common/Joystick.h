@@ -15,11 +15,11 @@
 inline constexpr int MAXBUTTONAXISCOUNT = 16;
 
 namespace matrixserver {
-    class JoystickData;
+class JoystickData;
 }
 
 class Joystick {
-public:
+  public:
     class Event;
 
     struct SimulatorState {
@@ -27,7 +27,7 @@ public:
         std::array<bool, MAXBUTTONAXISCOUNT> buttonPress_;
         std::array<float, MAXBUTTONAXISCOUNT> axis_;
         std::array<float, MAXBUTTONAXISCOUNT> axisPress_;
-        
+
         SimulatorState() {
             button_.fill(false);
             buttonPress_.fill(false);
@@ -40,7 +40,7 @@ public:
     /// simulator input has been received. Used by isFound() to prevent idle slots from appearing active.
     static constexpr int SIMULATOR_ACTIVITY_TIMEOUT_MS = 3000;
 
-    static void updateSimulatorState(const matrixserver::JoystickData& data);
+    static void updateSimulatorState(const matrixserver::JoystickData &data);
 
     ~Joystick();
 
@@ -51,7 +51,6 @@ public:
     Joystick(std::string devicePath);
 
     Joystick(Joystick const &) = delete;
-
 
     Joystick(std::string devicePath, bool blocking);
 
@@ -79,7 +78,7 @@ public:
 
     void clearAllButtonPresses();
 
-private:
+  private:
     void internalLoop();
 
     void openPath();
@@ -108,23 +107,17 @@ private:
 };
 
 class Joystick::Event {
-public:
+  public:
     unsigned int time;
     short value;
     unsigned char type;
     unsigned char number;
 
-    bool isButton() {
-        return (type & 0x01) != 0;
-    }
+    bool isButton() { return (type & 0x01) != 0; }
 
-    bool isAxis() {
-        return (type & 0x02) != 0;
-    }
+    bool isAxis() { return (type & 0x02) != 0; }
 
-    bool isInitialState() {
-        return (type & 0x80) != 0;
-    }
+    bool isInitialState() { return (type & 0x80) != 0; }
 
     friend std::ostream &operator<<(std::ostream &os, const Joystick::Event &e);
 };
@@ -132,7 +125,7 @@ public:
 std::ostream &operator<<(std::ostream &os, const Joystick::Event &e);
 
 class JoystickManager {
-public:
+  public:
     JoystickManager(unsigned int maxNum = 8);
     ~JoystickManager() = default; // unique_ptr handles cleanup
 
@@ -149,10 +142,8 @@ public:
 
     void clearAllButtonPresses();
 
-private:
+  private:
     std::vector<std::unique_ptr<Joystick>> joysticks;
-
 };
 
-
-#endif //MATRIXSERVER_JOYSTICK_H
+#endif // MATRIXSERVER_JOYSTICK_H

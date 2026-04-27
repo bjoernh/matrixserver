@@ -14,13 +14,13 @@ other stuff:
 */
 
 inline constexpr int CUBESIZE = 64;
-inline constexpr int CUBEMAXINDEX = 63;   // CUBESIZE - 1
-inline constexpr int CUBECENTER = 32;    // CUBESIZE / 2
+inline constexpr int CUBEMAXINDEX = 63; // CUBESIZE - 1
+inline constexpr int CUBECENTER = 32;   // CUBESIZE / 2
 
 inline constexpr int VIRTUALCUBESIZE = 66;
 inline constexpr int VIRTUALCUBEMININDEX = 1;
-inline constexpr int VIRTUALCUBEMAXINDEX = 65;  // VIRTUALCUBESIZE - 1
-inline constexpr int VIRTUALCUBECENTER = 33;    // VIRTUALCUBESIZE / 2
+inline constexpr int VIRTUALCUBEMAXINDEX = 65; // VIRTUALCUBESIZE - 1
+inline constexpr int VIRTUALCUBECENTER = 33;   // VIRTUALCUBESIZE / 2
 
 #ifdef MATRIXAPPLICATION_STANDALONE
 #include "MatrixApplicationStandalone.h"
@@ -52,19 +52,40 @@ To display the actual volumetric data, there shall be different modes:
 - More modes to come
 */
 enum ScreenNumber { front, right, back, left, top, bottom, anyScreen };
-enum EdgeNumber { frontRight, rightBack, backLeft, leftFront, topFront, topRight, topBack, topLeft, bottomFront, bottomRight, bottomBack, bottomLeft, anyEdge };
-enum CornerNumber { frontRightTop, rightBackTop, backLeftTop, leftFrontTop, frontRightBottom, rightBackBottom, backLeftBottom, leftFrontBottom, anyCorner };
+enum EdgeNumber {
+    frontRight,
+    rightBack,
+    backLeft,
+    leftFront,
+    topFront,
+    topRight,
+    topBack,
+    topLeft,
+    bottomFront,
+    bottomRight,
+    bottomBack,
+    bottomLeft,
+    anyEdge
+};
+enum CornerNumber {
+    frontRightTop,
+    rightBackTop,
+    backLeftTop,
+    leftFrontTop,
+    frontRightBottom,
+    rightBackBottom,
+    backLeftBottom,
+    leftFrontBottom,
+    anyCorner
+};
 
 #ifdef MATRIXAPPLICATION_STANDALONE
-class CubeApplication : public MatrixApplicationStandalone{
+class CubeApplication : public MatrixApplicationStandalone {
 #else
-class CubeApplication : public MatrixApplication{
+class CubeApplication : public MatrixApplication {
 #endif
-public:
-    CubeApplication(
-            int fps = DEFAULTFPS,
-            std::string serverUri = DEFAULTSERVERURI,
-            std::string appName = "CubeApp");
+  public:
+    CubeApplication(int fps = DEFAULTFPS, std::string serverUri = DEFAULTSERVERURI, std::string appName = "CubeApp");
     void setPixel3D(Vector3i pos, Color col, float intensity = 1.0f, bool add = false);
     void setPixel3D(int x, int y, int z, Color col, float intensity = 1.0f, bool add = false);
     void setPixelSmooth3D(Vector3f pos, Color color);
@@ -96,17 +117,13 @@ public:
     Vector3i getPointOnScreen(ScreenNumber screenNr, Vector2i point);
     Vector3f getPointOnScreen(ScreenNumber screenNr, Vector2f point);
     virtual bool loop() = 0;
-private:
+
+  private:
     const int virtualSize_;
     const int virtualSizeAll_;
 };
 
-//constrain class
-template<class T>
-const T& constrain(const T& Value, const T& Min, const T& Max)
-{
-    return (Value < Min)? Min : (Value > Max)? Max : Value;
-}
+// constrain class
+template <class T> const T& constrain(const T& Value, const T& Min, const T& Max) { return (Value < Min) ? Min : (Value > Max) ? Max : Value; }
 
-
-#endif //MATRIXSERVER_CUBEAPPLICATION_H
+#endif // MATRIXSERVER_CUBEAPPLICATION_H

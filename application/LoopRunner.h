@@ -25,39 +25,39 @@ enum class AppState { starting, running, paused, ended, killed, failure };
 // ---------------------------------------------------------------------------
 
 class LoopRunner {
-public:
-  using BodyCallback = std::function<bool()>;
-  using PostBodyCallback = std::function<void()>;
+  public:
+    using BodyCallback = std::function<bool()>;
+    using PostBodyCallback = std::function<void()>;
 
-  void start(BodyCallback body, PostBodyCallback postBody = nullptr);
-  void stop();
+    void start(BodyCallback body, PostBodyCallback postBody = nullptr);
+    void stop();
 
-  void setState(AppState state);
-  AppState getState() const;
+    void setState(AppState state);
+    AppState getState() const;
 
-  void setFps(int fps);
-  int getFps() const;
+    void setFps(int fps);
+    int getFps() const;
 
-  float getLoad() const;
+    float getLoad() const;
 
-  // Called by the message-dispatcher handler to signal that the server has
-  // acknowledged our frame, releasing the condvar wait in runLoop().
-  void signalScreenAccess();
+    // Called by the message-dispatcher handler to signal that the server has
+    // acknowledged our frame, releasing the condvar wait in runLoop().
+    void signalScreenAccess();
 
-private:
-  void runLoop(BodyCallback body, PostBodyCallback postBody);
-  long micros();
+  private:
+    void runLoop(BodyCallback body, PostBodyCallback postBody);
+    long micros();
 
-  std::unique_ptr<std::thread> thread_;
-  std::atomic<bool> running_{false};
+    std::unique_ptr<std::thread> thread_;
+    std::atomic<bool> running_{false};
 
-  std::mutex screenAccessMutex_;
-  std::condition_variable screenAccessCv_;
-  bool screenAccessGranted_ = false;
+    std::mutex screenAccessMutex_;
+    std::condition_variable screenAccessCv_;
+    bool screenAccessGranted_ = false;
 
-  int fps_ = 40;
-  float load_ = 0.0f;
-  AppState state_ = AppState::starting;
+    int fps_ = 40;
+    float load_ = 0.0f;
+    AppState state_ = AppState::starting;
 };
 
 #endif // MATRIXSERVER_LOOPRUNNER_H

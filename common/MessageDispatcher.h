@@ -20,10 +20,8 @@
 /// a trace log line is emitted.
 
 class MessageDispatcher {
-public:
-    using Handler = std::function<
-        void(std::shared_ptr<UniversalConnection>,
-             std::shared_ptr<matrixserver::MatrixServerMessage>)>;
+  public:
+    using Handler = std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)>;
 
     /// Register a handler for the given message type.
     /// A second registration for the same type overwrites the first.
@@ -31,10 +29,9 @@ public:
 
     /// Look up the handler for msg->messagetype() and invoke it.
     /// Unknown types are logged at trace level and dropped.
-    void dispatch(std::shared_ptr<UniversalConnection> conn,
-                  std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void dispatch(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
 
-private:
+  private:
     std::unordered_map<int, Handler> handlers_;
 };
 

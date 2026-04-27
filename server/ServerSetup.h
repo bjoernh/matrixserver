@@ -21,23 +21,19 @@ enum class HardwareType { Simulator, FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX };
  * @param argv Command line arguments
  * @param serverConfig The configuration object to populate
  */
-void handleServerConfig(int argc, char **argv,
-                        matrixserver::ServerConfig &serverConfig,
-                        HardwareType hwType = HardwareType::Simulator);
+void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serverConfig, HardwareType hwType = HardwareType::Simulator);
 
 /**
  * Creates the default cube configuration with hardware-specific screen
  * orientation defaults.
  */
-void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig,
-                             HardwareType hwType = HardwareType::Simulator);
+void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig, HardwareType hwType = HardwareType::Simulator);
 
 /**
  * Creates Screen objects from the server configuration, reading offsetX,
  * offsetY, and screenRotation from each ScreenInfo entry.
  */
-std::vector<std::shared_ptr<Screen>>
-createScreensFromConfig(const matrixserver::ServerConfig &serverConfig);
+std::vector<std::shared_ptr<Screen>> createScreensFromConfig(const matrixserver::ServerConfig &serverConfig);
 
 } // namespace ServerSetup
 

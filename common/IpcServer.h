@@ -7,7 +7,7 @@
 #include "IpcConnection.h"
 
 class IpcServer {
-public:
+  public:
     IpcServer(std::string serverAddress);
     ~IpcServer();
 
@@ -15,7 +15,7 @@ public:
 
     void setAcceptCallback(std::function<void(std::shared_ptr<UniversalConnection>)> callback);
 
-private:
+  private:
     void acceptLoop();
     std::shared_ptr<boost::interprocess::message_queue> serverMQ;
     std::function<void(std::shared_ptr<UniversalConnection>)> acceptCallback;
@@ -24,4 +24,4 @@ private:
     std::vector<uint8_t> receiveBuffer;
 };
 
-#endif //MATRIXSERVER_IPCSERVER_H
+#endif // MATRIXSERVER_IPCSERVER_H

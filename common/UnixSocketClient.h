@@ -4,9 +4,8 @@
 #include <SocketConnection.h>
 
 class UnixSocketClient {
-public:
+  public:
     static std::shared_ptr<SocketConnection> connect(boost::asio::io_context &io, std::string socketFile);
 };
 
-
-#endif //MATRIXSERVER_UNIXSOCKETCLIENT_H
+#endif // MATRIXSERVER_UNIXSOCKETCLIENT_H

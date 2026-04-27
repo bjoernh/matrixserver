@@ -9,14 +9,13 @@ using namespace Eigen;
 
 typedef std::vector<Vector2i> Bitmap1bpp;
 
-namespace CharacterBitmaps
-{
-  static const int fontWidth = 4;
-  static const int fontHeight = 6;
-  enum FontAlignment { left = 0, centered = -1, right = -2 };
+namespace CharacterBitmaps {
+static const int fontWidth = 4;
+static const int fontHeight = 6;
+enum FontAlignment { left = 0, centered = -1, right = -2 };
 
-  int getStringWidth(std::string str);
-  Bitmap1bpp getBitmapFromChar(char character);
+int getStringWidth(std::string str);
+Bitmap1bpp getBitmapFromChar(char character);
 
 } // namespace CharacterBitmaps
 

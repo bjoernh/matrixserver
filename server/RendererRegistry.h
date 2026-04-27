@@ -13,7 +13,7 @@ class MatrixServerMessage;
 }
 
 class RendererRegistry {
-public:
+  public:
     using MsgCallback = IBidirectionalRenderer::MsgCallback;
 
     void add(std::shared_ptr<IRenderer> r);
@@ -24,10 +24,10 @@ public:
     void setMessageCallback(MsgCallback cb);
     void forEachRenderer(std::function<void(std::shared_ptr<IRenderer>)> fn);
 
-private:
+  private:
     std::vector<std::shared_ptr<IRenderer>> renderers_;
     std::vector<std::shared_ptr<IBidirectionalRenderer>> biDirRenderers_;
     MsgCallback messageCallback_;
 };
 
-#endif //MATRIXSERVER_RENDERERREGISTRY_H
+#endif // MATRIXSERVER_RENDERERREGISTRY_H

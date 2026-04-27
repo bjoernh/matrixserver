@@ -26,110 +26,95 @@ inline constexpr const char* DEFAULTSERVERADRESS = "127.0.0.1";
 inline constexpr const char* DEFAULTSERVERPORT = "2017";
 
 class MatrixApplication {
-public:
-  MatrixApplication(int fps = DEFAULTFPS,
-                    std::string serverUri = DEFAULTSERVERURI,
-                    std::string appName = "MatrixApp");
+  public:
+    MatrixApplication(int fps = DEFAULTFPS, std::string serverUri = DEFAULTSERVERURI, std::string appName = "MatrixApp");
 
-  ~MatrixApplication();
+    ~MatrixApplication();
 
-  void renderToScreens();
+    void renderToScreens();
 
-  int getFps();
+    int getFps();
 
-  void setFps(int fps);
+    void setFps(int fps);
 
-  AppState getAppState();
+    AppState getAppState();
 
-  float getLoad();
+    float getLoad();
 
-  void start();
+    void start();
 
-  bool pause();
+    bool pause();
 
-  bool resume();
+    bool resume();
 
-  void stop();
+    void stop();
 
-  int getBrightness();
+    int getBrightness();
 
-  void setBrightness(int setBrightness);
+    void setBrightness(int setBrightness);
 
-  virtual bool loop() = 0;
+    virtual bool loop() = 0;
 
-protected:
-  std::vector<std::shared_ptr<Screen>> screens;
+  protected:
+    std::vector<std::shared_ptr<Screen>> screens;
 
-  long micros();
+    long micros();
 
-  matrixserver::AnimationParams params;
-  std::string appName;
+    matrixserver::AnimationParams params;
+    std::string appName;
 
-private:
-  bool connect(const std::string &server_uri);
+  private:
+    bool connect(const std::string& server_uri);
 
-  void checkConnection();
+    void checkConnection();
 
-  void registerAtServer();
+    void registerAtServer();
 
-  void handleRequest(std::shared_ptr<UniversalConnection>,
-                     std::shared_ptr<matrixserver::MatrixServerMessage>);
+    void handleRequest(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>);
 
-  // Dispatcher setup — called once from the constructor.
-  void setupDispatcher();
+    // Dispatcher setup — called once from the constructor.
+    void setupDispatcher();
 
-  // Per-message-type handler methods registered with dispatcher_.
-  void handleRegisterApp(std::shared_ptr<UniversalConnection> conn,
-                         std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleGetServerInfo(std::shared_ptr<UniversalConnection> conn,
-                           std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleAppPause(std::shared_ptr<UniversalConnection> conn,
-                      std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleAppAlive(std::shared_ptr<UniversalConnection> conn,
-                      std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleAppResume(std::shared_ptr<UniversalConnection> conn,
-                       std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleAppKill(std::shared_ptr<UniversalConnection> conn,
-                     std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleScreenAccess(std::shared_ptr<UniversalConnection> conn,
-                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleJoystickData(std::shared_ptr<UniversalConnection> conn,
-                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleImuData(std::shared_ptr<UniversalConnection> conn,
-                     std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleAudioData(std::shared_ptr<UniversalConnection> conn,
-                       std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleSetAppParam(std::shared_ptr<UniversalConnection> conn,
-                         std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-  void handleGetAppParams(std::shared_ptr<UniversalConnection> conn,
-                          std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    // Per-message-type handler methods registered with dispatcher_.
+    void handleRegisterApp(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleGetServerInfo(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppPause(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppAlive(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppResume(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppKill(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleScreenAccess(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleJoystickData(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleImuData(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAudioData(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleSetAppParam(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleGetAppParams(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
 
-  MessageDispatcher dispatcher_;
-  InputState inputState_;
+    MessageDispatcher dispatcher_;
+    InputState inputState_;
 
-  int appId;
+    int appId;
 
-  int brightness;
-  std::string serverUri;
-  std::shared_ptr<UniversalConnection> connection;
-  std::unique_ptr<std::thread> ioThread;
-  boost::asio::io_context io_context;
-  matrixserver::ServerConfig serverConfig;
+    int brightness;
+    std::string serverUri;
+    std::shared_ptr<UniversalConnection> connection;
+    std::unique_ptr<std::thread> ioThread;
+    boost::asio::io_context io_context;
+    matrixserver::ServerConfig serverConfig;
 
-  LoopRunner runner_;
+    LoopRunner runner_;
 
-public:
-  static float latestSimulatorImuX;
-  static float latestSimulatorImuY;
-  static float latestSimulatorImuZ;
-  static float latestSimulatorGyroX;
-  static float latestSimulatorGyroY;
-  static float latestSimulatorGyroZ;
-  static std::mutex simulatorImuMutex;
+  public:
+    static float latestSimulatorImuX;
+    static float latestSimulatorImuY;
+    static float latestSimulatorImuZ;
+    static float latestSimulatorGyroX;
+    static float latestSimulatorGyroY;
+    static float latestSimulatorGyroZ;
+    static std::mutex simulatorImuMutex;
 
-  static uint8_t latestAudioVolume;
-  static std::vector<uint8_t> latestAudioFrequencies;
-  static std::mutex audioDataMutex;
+    static uint8_t latestAudioVolume;
+    static std::vector<uint8_t> latestAudioFrequencies;
+    static std::mutex audioDataMutex;
 };
 
 #endif // MATRIXSERVER_MATRIXAPPLICATION_H

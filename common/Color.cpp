@@ -1,13 +1,9 @@
 #include <cmath>
 #include "Color.h"
 
-Color::Color() {
-    Color(0);
-}
+Color::Color() { Color(0); }
 
-Color::Color(uint8_t brightness) {
-    Color(brightness, brightness, brightness);
-}
+Color::Color(uint8_t brightness) { Color(brightness, brightness, brightness); }
 
 Color::Color(uint8_t red, uint8_t green, uint8_t blue) {
     r_ = red;
@@ -15,41 +11,23 @@ Color::Color(uint8_t red, uint8_t green, uint8_t blue) {
     b_ = blue;
 }
 
-void Color::r(unsigned int red) {
-    r_ = (red <= UINT8_MAX) ? red : UINT8_MAX;
-}
+void Color::r(unsigned int red) { r_ = (red <= UINT8_MAX) ? red : UINT8_MAX; }
 
-void Color::g(unsigned int green) {
-    g_ = (green <= UINT8_MAX) ? green : UINT8_MAX;
-}
+void Color::g(unsigned int green) { g_ = (green <= UINT8_MAX) ? green : UINT8_MAX; }
 
-void Color::b(unsigned int blue) {
-    b_ = (blue <= UINT8_MAX) ? blue : UINT8_MAX;
-}
+void Color::b(unsigned int blue) { b_ = (blue <= UINT8_MAX) ? blue : UINT8_MAX; }
 
-void Color::r(uint8_t red) {
-    r_ = red;
-}
+void Color::r(uint8_t red) { r_ = red; }
 
-void Color::g(uint8_t green) {
-    g_ = green;
-}
+void Color::g(uint8_t green) { g_ = green; }
 
-void Color::b(uint8_t blue) {
-    b_ = blue;
-}
+void Color::b(uint8_t blue) { b_ = blue; }
 
-uint8_t Color::r() const {
-    return r_;
-}
+uint8_t Color::r() const { return r_; }
 
-uint8_t Color::g() const {
-    return g_;
-}
+uint8_t Color::g() const { return g_; }
 
-uint8_t Color::b() const {
-    return b_;
-}
+uint8_t Color::b() const { return b_; }
 
 void Color::fromHSV(float h, float s, float v) {
     int i;
@@ -59,43 +37,43 @@ void Color::fromHSV(float h, float s, float v) {
         r_ = g_ = b_ = v * UINT8_MAX;
         return;
     }
-    h /= 60;            // sector 0 to 5
+    h /= 60; // sector 0 to 5
     i = floor(h);
-    f = h - i;            // factorial part of h
+    f = h - i; // factorial part of h
     p = v * (1 - s);
     q = v * (1 - s * f);
     t = v * (1 - s * (1 - f));
     switch (i) {
-        case 0:
-            r_ = v * UINT8_MAX;
-            g_ = t * UINT8_MAX;
-            b_ = p * UINT8_MAX;
-            break;
-        case 1:
-            r_ = q * UINT8_MAX;
-            g_ = v * UINT8_MAX;
-            b_ = p * UINT8_MAX;
-            break;
-        case 2:
-            r_ = p * UINT8_MAX;
-            g_ = v * UINT8_MAX;
-            b_ = t * UINT8_MAX;
-            break;
-        case 3:
-            r_ = p * UINT8_MAX;
-            g_ = q * UINT8_MAX;
-            b_ = v * UINT8_MAX;
-            break;
-        case 4:
-            r_ = t * UINT8_MAX;
-            g_ = p * UINT8_MAX;
-            b_ = v * UINT8_MAX;
-            break;
-        default:        // case 5:
-            r_ = v * UINT8_MAX;
-            g_ = p * UINT8_MAX;
-            b_ = q * UINT8_MAX;
-            break;
+    case 0:
+        r_ = v * UINT8_MAX;
+        g_ = t * UINT8_MAX;
+        b_ = p * UINT8_MAX;
+        break;
+    case 1:
+        r_ = q * UINT8_MAX;
+        g_ = v * UINT8_MAX;
+        b_ = p * UINT8_MAX;
+        break;
+    case 2:
+        r_ = p * UINT8_MAX;
+        g_ = v * UINT8_MAX;
+        b_ = t * UINT8_MAX;
+        break;
+    case 3:
+        r_ = p * UINT8_MAX;
+        g_ = q * UINT8_MAX;
+        b_ = v * UINT8_MAX;
+        break;
+    case 4:
+        r_ = t * UINT8_MAX;
+        g_ = p * UINT8_MAX;
+        b_ = v * UINT8_MAX;
+        break;
+    default: // case 5:
+        r_ = v * UINT8_MAX;
+        g_ = p * UINT8_MAX;
+        b_ = q * UINT8_MAX;
+        break;
     }
 }
 
@@ -138,14 +116,8 @@ Color operator*(Color lhs, const float &rhs) {
     return lhs;
 }
 
-bool operator==(const Color &lhs, const Color &rhs) {
-    return lhs.r() == rhs.r() && lhs.g() == rhs.g() && lhs.b() == rhs.b();
-}
+bool operator==(const Color &lhs, const Color &rhs) { return lhs.r() == rhs.r() && lhs.g() == rhs.g() && lhs.b() == rhs.b(); }
 
-bool operator!=(const Color &lhs, const Color &rhs) {
-    return !(lhs == rhs);
-}
+bool operator!=(const Color &lhs, const Color &rhs) { return !(lhs == rhs); }
 
-std::ostream &operator<<(std::ostream &out, const Color &o) {
-    return out << "RGB(" << (int) o.r() << "," << (int) o.g() << "," << (int) o.b() << ")";
-}
+std::ostream &operator<<(std::ostream &out, const Color &o) { return out << "RGB(" << (int)o.r() << "," << (int)o.g() << "," << (int)o.b() << ")"; }

@@ -26,15 +26,11 @@
 #define DEFAULTSERVERADRESS "127.0.0.1"
 #define DEFAULTSERVERPORT "2017"
 
-enum class AppState {
-    starting, running, paused, ended, killed, failure
-};
+enum class AppState { starting, running, paused, ended, killed, failure };
 
 class MatrixApplicationStandalone {
-public:
-    MatrixApplicationStandalone(
-            int fps = DEFAULTFPS,
-            std::string serverUri = DEFAULTSERVERURI);
+  public:
+    MatrixApplicationStandalone(int fps = DEFAULTFPS, std::string serverUri = DEFAULTSERVERURI);
 
     ~MatrixApplicationStandalone();
 
@@ -58,12 +54,12 @@ public:
 
     virtual bool loop() = 0;
 
-protected:
+  protected:
     std::vector<std::shared_ptr<Screen>> screens;
     std::vector<std::shared_ptr<Screen>> renderscreens;
     long micros();
 
-private:
+  private:
     void internalLoop();
     void renderLoop();
 
@@ -86,5 +82,4 @@ private:
     std::shared_ptr<IRenderer> renderer;
 };
 
-
-#endif //MATRIXSERVER_MATRIXAPPLICATIONSTANDALONE_H
+#endif // MATRIXSERVER_MATRIXAPPLICATIONSTANDALONE_H
