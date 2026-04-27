@@ -29,19 +29,15 @@ void RendererRegistry::setBrightness(int b) {
     }
 }
 
-void RendererRegistry::broadcastMessage(
-    std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+void RendererRegistry::broadcastMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
     for (const auto& biDir : biDirRenderers_) {
         biDir->sendMessage(msg);
     }
 }
 
-void RendererRegistry::setMessageCallback(MsgCallback cb) {
-    messageCallback_ = std::move(cb);
-}
+void RendererRegistry::setMessageCallback(MsgCallback cb) { messageCallback_ = std::move(cb); }
 
-void RendererRegistry::forEachRenderer(
-    std::function<void(std::shared_ptr<IRenderer>)> fn) {
+void RendererRegistry::forEachRenderer(std::function<void(std::shared_ptr<IRenderer>)> fn) {
     for (const auto& renderer : renderers_) {
         fn(renderer);
     }

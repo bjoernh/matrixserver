@@ -9,14 +9,15 @@
 #include <memory>
 
 class Mpu6050 {
-public:
+  public:
     Mpu6050();
     ~Mpu6050();
     void init();
     Eigen::Vector3i getCubeAccIntersect();
     Eigen::Vector3f getAcceleration();
     Eigen::Vector3f getGyroscope();
-private:
+
+  private:
     void startRefreshThread();
     void internalLoop();
     Eigen::Vector3f applyOrientation(float x, float y, float z) const;
@@ -33,5 +34,4 @@ private:
     Eigen::Vector3f gyroscope{0, 0, 0};
 };
 
-
-#endif //MATRIXSERVER_MPU6050_H
+#endif // MATRIXSERVER_MPU6050_H

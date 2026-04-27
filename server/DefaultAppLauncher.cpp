@@ -13,8 +13,7 @@
 
 static std::string resolveBinaryPath() {
     const char *envVal = std::getenv("MATRIXSERVER_DEFAULT_APP");
-    std::string cmd = envVal ? std::string(envVal)
-                             : std::string("/usr/local/bin/MainMenu");
+    std::string cmd = envVal ? std::string(envVal) : std::string("/usr/local/bin/MainMenu");
     // Trim to first token in case the env var still contains shell arguments.
     auto pos = cmd.find_first_of(" \t");
     return (pos != std::string::npos) ? cmd.substr(0, pos) : cmd;
@@ -24,8 +23,7 @@ static std::string resolveBinaryPath() {
 // DefaultAppLauncher
 // ---------------------------------------------------------------------------
 
-DefaultAppLauncher::DefaultAppLauncher()
-    : binaryPath_(resolveBinaryPath()) {}
+DefaultAppLauncher::DefaultAppLauncher() : binaryPath_(resolveBinaryPath()) {}
 
 void DefaultAppLauncher::launchIfNotRunning() {
     if (launched_) {
@@ -63,8 +61,7 @@ void DefaultAppLauncher::markAppsPresent() {
 
 void DefaultAppLauncher::stop() {
     if (childPid_ > 0) {
-        BOOST_LOG_TRIVIAL(info) << "[Server] Stopping default app (PID "
-                                << childPid_ << ")";
+        BOOST_LOG_TRIVIAL(info) << "[Server] Stopping default app (PID " << childPid_ << ")";
         kill(childPid_, SIGTERM);
         // Wait up to 3 s for graceful exit, then force-kill.
         for (int i = 0; i < 30; ++i) {
@@ -74,8 +71,7 @@ void DefaultAppLauncher::stop() {
                 return;
             }
         }
-        BOOST_LOG_TRIVIAL(warning)
-            << "[Server] Default app did not exit, sending SIGKILL";
+        BOOST_LOG_TRIVIAL(warning) << "[Server] Default app did not exit, sending SIGKILL";
         kill(childPid_, SIGKILL);
         waitpid(childPid_, nullptr, 0);
         childPid_ = -1;

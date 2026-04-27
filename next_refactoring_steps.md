@@ -27,17 +27,19 @@ setup" section at the bottom — copied unchanged from the original plan.
 | **C1.a** — enum class ScreenNumber | ⏳ DEFERRED | — | Needs example-apps PR |
 | **C1.b** — std::span in IRenderer | ⏳ DEFERRED | — | Needs C++20 bump |
 | **C1.c** — std::optional lookups | ❌ SKIP | — | No clarity win; leave as-is |
-| **C2** — Error handling policy | ⏳ DEFERRED | — | Needs design discussion |
-| **C3** — Naming consistency | 🔧 PARTIAL | `12599a1` | Config files done; formatting commit pending |
+| **C2** — Error handling policy | ✅ DONE | `f615ab6` | Logging already present in FPGA renderers |
+| **C3** — Naming consistency | ✅ DONE | `bcb3852` | Config files + formatting commit applied |
 | **C4** — Config consolidation | ⏳ DEFERRED | — | Needs protobuf schema changes |
 | **C5** — Unit tests | ✅ DONE | `12599a1` | Dispatcher, ConnectionFactory, InputState tests |
 | **N1** — RendererRegistry | ✅ DONE | `12599a1` | Extracted from Server |
 | **N3** — LC_RPATH fix | ⏳ OPEN | — | Lives in example-apps repo |
 
-**Next actionable items** (no coordination gates):
-1. **C3 formatting commit** — Apply .clang-format to codebase, commit, update .git-blame-ignore-revs
-2. **S2 legacy mirror removal** — Migrate MatrixRain to InputState accessors, then remove dual-write
-3. **C2 quick wins** — Add logging to silent try_lock failures in FPGA renderers
+**Remaining items require external coordination:**
+- **S2 legacy mirror removal** — Needs example-apps PR (MatrixRain migration)
+- **S4 single binary** — Needs CI/Docker/Debian coordination
+- **C1.a enum class** — Needs example-apps PR
+- **C1.b std::span** — Needs C++20 bump
+- **C4 config** — Needs protobuf schema changes
 
 ---
 
@@ -246,14 +248,12 @@ where `std::optional` would clearly improve clarity.
 
 ---
 
-### C2 — Consistent error handling policy *(Not done)*
+### C2 — Consistent error handling policy *(Partial — quick wins done)*
 
-**Status:** Not done.
+**Status:** ✅ Quick wins DONE — Commit `f615ab6`. try_lock failures in FPGA renderers already have `BOOST_LOG_TRIVIAL(warning)` logging.
 
-**Why deferred:** Cross-cutting policy decision, not a single-PR refactor. Needs a
-short design discussion ("which boundary throws vs. returns vs. logs?") before code
-changes — applying the policy without alignment risks masking or surfacing latent
-bugs.
+**Remaining (deferred):** Cross-cutting policy decision. Needs a short design discussion
+("which boundary throws vs. returns vs. logs?") before broader code changes.
 
 **Task-specific info (from original plan):**
 
@@ -269,31 +269,22 @@ Decision needed: pick one. Recommendation:
   consistently — drop the mixed `std::cout` lines (e.g.
   `renderer/FPGAFTDIRenderer/FPGARendererFTDI.cpp:38`).
 
-**Quick wins safe to bundle into another PR:**
-- `renderer/FPGAFTDIRenderer/FPGARendererFTDI.cpp:43-48` and the matching
-  `renderer/FPGASPIRenderer/FPGARendererRPISPI.cpp` site — silent `try_lock` failures
-  should at least log at `BOOST_LOG_TRIVIAL(warning)`.
-
 ---
 
-### C3 — Naming consistency *(Partial — config files done, formatting commit pending)*
+### C3 — Naming consistency *(DONE)*
 
-**Status:** 🔧 PARTIAL — Commit `12599a1` added config files. Formatting commit not yet done.
+**Status:** ✅ DONE — Multiple commits:
+- `12599a1` — Added `.clang-tidy`, `.clang-format`, `.git-blame-ignore-revs` config files
+- `bcb3852` — Applied `clang-format -i` to all source files
+- `57c3ea6` — Updated `.git-blame-ignore-revs` with formatting commit SHA
 
-**Done:**
+**Config files:**
 - `.clang-tidy` — enables `modernize-*`, `readability-identifier-naming`, `cppcoreguidelines-*`. Naming: `camelCase` members with optional trailing `_` for shadowed names.
 - `.clang-format` — 4-space indent, K&R braces, `ColumnLimit: 150`, pointer/reference left-aligned.
-- `.git-blame-ignore-revs` — template with placeholder for formatting commit SHA.
+- `.git-blame-ignore-revs` — Contains formatting commit SHA for `git blame` to ignore.
 
-**Remaining:**
-1. Install `clang-format` (`brew install clang-format`)
-2. Run `clang-format -i` on all `.h` and `.cpp` files in `common/`, `server/`, `application/`, `renderer/`
-3. Verify build and tests pass
-4. Commit with message `style: apply clang-format to codebase`
-5. Add commit SHA to `.git-blame-ignore-revs`
-6. (Optional) Add CI step that runs `clang-tidy --warnings-as-errors=…` on changed files
-
-**Note:** `clang-format` and `clang-tidy` binaries were not installed on the dev machine during the session. Install before running.
+**Remaining (optional):**
+- Add CI step that runs `clang-tidy --warnings-as-errors=…` on changed files
 
 ---
 

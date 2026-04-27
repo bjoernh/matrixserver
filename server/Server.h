@@ -22,16 +22,14 @@
 #include "RendererRegistry.h"
 
 class Server {
-public:
-
+  public:
     ~Server();
 
     Server(std::shared_ptr<IRenderer>, matrixserver::ServerConfig &);
 
     bool tick();
 
-    void handleRequest(std::shared_ptr<UniversalConnection> connection,
-                       std::shared_ptr<matrixserver::MatrixServerMessage> message);
+    void handleRequest(std::shared_ptr<UniversalConnection> connection, std::shared_ptr<matrixserver::MatrixServerMessage> message);
 
     void newConnectionCallback(std::shared_ptr<UniversalConnection>);
 
@@ -41,34 +39,27 @@ public:
 
     void stopDefaultApp();
 
-private:
+  private:
     // Dispatcher setup — called once from the constructor.
     void setupDispatcher();
 
     // Per-message-type handler methods registered with dispatcher_.
-    void handleRegisterApp(std::shared_ptr<UniversalConnection> conn,
-                           std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleGetServerInfo(std::shared_ptr<UniversalConnection> conn,
-                             std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleRequestScreenAccess(std::shared_ptr<UniversalConnection> conn,
-                                   std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn,
-                              std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleAppLifecycle(std::shared_ptr<UniversalConnection> conn,
-                            std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleAppParamSchema(std::shared_ptr<UniversalConnection> conn,
-                              std::shared_ptr<matrixserver::MatrixServerMessage> msg);
-    void handleAppParamValues(std::shared_ptr<UniversalConnection> conn,
-                              std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleRegisterApp(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleGetServerInfo(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleRequestScreenAccess(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppLifecycle(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppParamSchema(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
+    void handleAppParamValues(std::shared_ptr<UniversalConnection> conn, std::shared_ptr<matrixserver::MatrixServerMessage> msg);
 
     std::mutex appsMutex;
     std::vector<std::shared_ptr<App>> apps;
     RendererRegistry registry_;
     boost::asio::io_context ioContext;
     std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioWork;
-    matrixserver::ServerConfig & serverConfig;
+    matrixserver::ServerConfig &serverConfig;
     TcpServer tcpServer;
-//    UnixSocketServer unixServer;
+    //    UnixSocketServer unixServer;
     IpcServer ipcServer;
     std::unique_ptr<std::thread> ioThread;
     std::vector<std::shared_ptr<UniversalConnection>> connections;
@@ -77,5 +68,4 @@ private:
     DefaultAppLauncher defaultAppLauncher_;
 };
 
-
-#endif //MATRIXSERVER_SERVER_H
+#endif // MATRIXSERVER_SERVER_H

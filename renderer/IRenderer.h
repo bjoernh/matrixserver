@@ -7,20 +7,20 @@
 #include <vector>
 
 class IRenderer {
-public:
-  virtual void setScreenData(int, Color *) = 0;
+  public:
+    virtual void setScreenData(int, Color *) = 0;
 
-  virtual void render() = 0;
+    virtual void render() = 0;
 
-  virtual void setGlobalBrightness(int) = 0;
+    virtual void setGlobalBrightness(int) = 0;
 
-  virtual int getGlobalBrightness() = 0;
+    virtual int getGlobalBrightness() = 0;
 
-  virtual ~IRenderer() = default;
+    virtual ~IRenderer() = default;
 
-protected:
-  std::vector<std::shared_ptr<Screen>> screens;
-  int globalBrightness = 100;
+  protected:
+    std::vector<std::shared_ptr<Screen>> screens;
+    int globalBrightness = 100;
 };
 
 #endif // MATRIXSERVER_IRENDERER_H

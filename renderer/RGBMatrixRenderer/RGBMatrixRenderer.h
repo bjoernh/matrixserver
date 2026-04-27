@@ -6,9 +6,8 @@
 #include "Screen.h"
 
 class RGBMatrixRenderer : public IRenderer {
-public:
+  public:
     RGBMatrixRenderer();
-
 
     RGBMatrixRenderer(std::vector<std::shared_ptr<Screen>>);
 
@@ -22,10 +21,9 @@ public:
 
     int getGlobalBrightness() override;
 
-private:
+  private:
     std::vector<std::shared_ptr<Screen>> screens;
     std::mutex renderMutex;
 };
 
-
-#endif //MATRIXSERVER_RGBMATRIXRENDERER_H
+#endif // MATRIXSERVER_RGBMATRIXRENDERER_H

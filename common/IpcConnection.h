@@ -14,8 +14,8 @@
 inline constexpr int SERVERMESSAGESIZE = 1000000;
 inline constexpr int MAXIPCMESSAGESIZE = 1000000;
 
-class IpcConnection :  public std::enable_shared_from_this<IpcConnection>, public UniversalConnection {
-public:
+class IpcConnection : public std::enable_shared_from_this<IpcConnection>, public UniversalConnection {
+  public:
     IpcConnection();
 
     IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver);
@@ -26,16 +26,16 @@ public:
 
     void startReceiving() override;
 
-    void
-    setReceiveCallback(std::function<void(std::shared_ptr<UniversalConnection>,
-                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
+    void setReceiveCallback(
+        std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
 
     void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) override;
 
     bool isDead() override;
 
     void setDead(bool sDead) override;
-private:
+
+  private:
     void doRead();
 
     void readLoop();
@@ -47,12 +47,10 @@ private:
 
     std::mutex sendMutex;
     std::string message_buffer;
-    std::function<void(std::shared_ptr<UniversalConnection>,
-                       std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
+    std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
     std::atomic<bool> dead{false};
 
     std::vector<uint8_t> receiveData;
 };
 
-
-#endif //MATRIXSERVER_IPCCONNECTION_H
+#endif // MATRIXSERVER_IPCCONNECTION_H

@@ -1,7 +1,7 @@
 #include "TcpClient.h"
 #include <boost/log/trivial.hpp>
 //
-//TcpClient::TcpClient(boost::asio::io_context &setIo, std::string serverAddress, std::string serverPort) :
+// TcpClient::TcpClient(boost::asio::io_context &setIo, std::string serverAddress, std::string serverPort) :
 //        io(setIo),
 //        endpoint_iterator(boost::asio::ip::tcp::resolver(io).resolve(boost::asio::ip::tcp::resolver::query(serverAddress, serverPort))) {
 //    this->endpoint = *endpoint_iterator;
@@ -9,7 +9,7 @@
 //}
 //
 //
-//void TcpClient::doAsyncConnect() {
+// void TcpClient::doAsyncConnect() {
 //    BOOST_LOG_TRIVIAL(debug) << "[TcpClient] connecting to address: " << this->endpoint.address().to_string()
 //                             << " and port: " << this->endpoint.port();
 //    this->current_connection = std::make_shared<SocketConnection>(io);
@@ -24,7 +24,7 @@
 ////                               });
 //}
 //
-//void TcpClient::handleConnect(const boost::system::error_code &error) {
+// void TcpClient::handleConnect(const boost::system::error_code &error) {
 //    if (!error) {
 //        BOOST_LOG_TRIVIAL(debug) << "[TcpClient] Connect Successfull to address: "
 //                                 << this->endpoint.address().to_string()
@@ -44,21 +44,19 @@
 //}
 //
 //
-//void TcpClient::setConnectCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback) {
+// void TcpClient::setConnectCallback(std::function<void(std::shared_ptr<SocketConnection>)> callback) {
 //    connectCallback = callback;
 //    this->doAsyncConnect();
 //}
 
-std::shared_ptr<SocketConnection>
-TcpClient::connect(boost::asio::io_context &io, std::string serverAddress, std::string serverPort) {
+std::shared_ptr<SocketConnection> TcpClient::connect(boost::asio::io_context &io, std::string serverAddress, std::string serverPort) {
     auto sockConnection = std::make_shared<SocketConnection>(io);
     try {
         auto endpoints = boost::asio::ip::tcp::resolver(io).resolve(serverAddress, serverPort);
         boost::asio::ip::tcp::endpoint endpoint = endpoints.begin()->endpoint();
         sockConnection->getSocket().connect(endpoint);
         if (sockConnection->getSocket().is_open()) {
-            BOOST_LOG_TRIVIAL(debug) << "[TcpClient] Connect Successful to address: "
-                                     << endpoint.address().to_string()
+            BOOST_LOG_TRIVIAL(debug) << "[TcpClient] Connect Successful to address: " << endpoint.address().to_string()
                                      << " and port: " << endpoint.port();
             sockConnection->startReceiving();
         }

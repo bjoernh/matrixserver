@@ -35,7 +35,7 @@ struct ImuSample {
 class MatrixApplication; // forward declaration for the dual-write helpers
 
 class InputState {
-public:
+  public:
     // setImu — called by the message-dispatcher handler.
     // Writes the internal snapshot AND the legacy MatrixApplication static
     // fields under MatrixApplication::simulatorImuMutex.
@@ -52,7 +52,7 @@ public:
     uint8_t getAudioVolume() const;
     std::vector<uint8_t> getAudioFrequencies() const;
 
-private:
+  private:
     // Internal mirror (separate from the legacy statics so that InputState
     // can be used independently in tests or non-MatrixApplication contexts).
     mutable std::mutex imuMutex_;

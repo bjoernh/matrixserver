@@ -17,19 +17,16 @@ void signalHandler(int) { g_shutdown = true; }
 
 namespace ServerBootstrap {
 
-int runServer(int argc, char **argv,
-              ServerSetup::HardwareType hwType,
-              HardwareRendererFactory makeHardwareRenderer) {
+int runServer(int argc, char **argv, ServerSetup::HardwareType hwType, HardwareRendererFactory makeHardwareRenderer) {
     g_shutdown = false;
     std::signal(SIGTERM, signalHandler);
-    std::signal(SIGINT,  signalHandler);
+    std::signal(SIGINT, signalHandler);
 
     try {
         matrixserver::ServerConfig serverConfig;
         ServerSetup::handleServerConfig(argc, argv, serverConfig, hwType);
 
-        BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl
-                                << serverConfig.DebugString() << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl << serverConfig.DebugString() << std::endl;
 
         auto screens = ServerSetup::createScreensFromConfig(serverConfig);
 
@@ -50,12 +47,12 @@ int runServer(int argc, char **argv,
 
             Server server(primaryRenderer, serverConfig);
 
-            auto wsRenderer = std::make_shared<WebSocketSimulatorRenderer>(
-                screens, simPort, false);
+            auto wsRenderer = std::make_shared<WebSocketSimulatorRenderer>(screens, simPort, false);
             server.addRenderer(wsRenderer);
 
             int tickMs = serverConfig.tickintervalms();
-            if (tickMs <= 0) tickMs = 1000;
+            if (tickMs <= 0)
+                tickMs = 1000;
 
             while (!g_shutdown && server.tick())
                 usleep(tickMs * 1000);
@@ -63,13 +60,13 @@ int runServer(int argc, char **argv,
             server.stopDefaultApp();
         } else {
             // Simulator mode: single WebSocket renderer with pixel streaming on.
-            auto wsRenderer =
-                std::make_shared<WebSocketSimulatorRenderer>(screens, simPort);
+            auto wsRenderer = std::make_shared<WebSocketSimulatorRenderer>(screens, simPort);
 
             Server server(wsRenderer, serverConfig);
 
             int tickMs = serverConfig.tickintervalms();
-            if (tickMs <= 0) tickMs = 1000;
+            if (tickMs <= 0)
+                tickMs = 1000;
 
             while (!g_shutdown && server.tick())
                 usleep(tickMs * 1000);

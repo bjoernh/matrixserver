@@ -6,7 +6,7 @@
 #include "Screen.h"
 
 class FPGARendererRPISPI : public IRenderer {
-public:
+  public:
     FPGARendererRPISPI();
 
     FPGARendererRPISPI(std::vector<std::shared_ptr<Screen>>);
@@ -21,12 +21,11 @@ public:
 
     int getGlobalBrightness() override;
 
-private:
+  private:
     std::vector<std::shared_ptr<Screen>> screens;
     std::mutex screenDataMutex;
 
     bool initSpi() const;
 };
 
-
-#endif //MATRIXSERVER_FPGARENDERERRPISPI_H
+#endif // MATRIXSERVER_FPGARENDERERRPISPI_H

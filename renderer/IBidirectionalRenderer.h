@@ -18,22 +18,20 @@ class MatrixServerMessage;
  * have no back-channel to clients.
  */
 class IBidirectionalRenderer : public IRenderer {
-public:
-  using MsgCallback =
-      std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>;
+  public:
+    using MsgCallback = std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>;
 
-  /**
-   * Register a callback that the renderer invokes when a message arrives
-   * from the connected client (e.g. browser → server).
-   */
-  virtual void setClientMessageCallback(MsgCallback cb) = 0;
+    /**
+     * Register a callback that the renderer invokes when a message arrives
+     * from the connected client (e.g. browser → server).
+     */
+    virtual void setClientMessageCallback(MsgCallback cb) = 0;
 
-  /**
-   * Send a message to the connected client.
-   * No-op if no client is currently connected.
-   */
-  virtual void
-  sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) = 0;
+    /**
+     * Send a message to the connected client.
+     * No-op if no client is currently connected.
+     */
+    virtual void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) = 0;
 };
 
 #endif // MATRIXSERVER_IBIDIRECTIONALRENDERER_H

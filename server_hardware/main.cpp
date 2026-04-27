@@ -17,8 +17,7 @@ constexpr auto kHwType = ServerSetup::HardwareType::RGB_MATRIX;
 #endif
 
 int main(int argc, char **argv) {
-    auto factory = [](const std::vector<std::shared_ptr<Screen>> &screens)
-        -> std::shared_ptr<IRenderer> {
+    auto factory = [](const std::vector<std::shared_ptr<Screen>> &screens) -> std::shared_ptr<IRenderer> {
         return std::make_shared<HWRenderer>(screens);
     };
     return ServerBootstrap::runServer(argc, argv, kHwType, factory);

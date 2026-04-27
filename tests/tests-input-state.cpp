@@ -10,9 +10,7 @@
 // Helper: approximate float comparison (within 1 ULP)
 // ---------------------------------------------------------------------------
 
-static bool floatsEqual(float a, float b) {
-    return std::fabs(a - b) < 1e-6f;
-}
+static bool floatsEqual(float a, float b) { return std::fabs(a - b) < 1e-6f; }
 
 // ---------------------------------------------------------------------------
 // 1. Default InputState — IMU snapshot is all zeros.

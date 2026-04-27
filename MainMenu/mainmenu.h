@@ -13,12 +13,12 @@
 namespace fs = std::filesystem;
 
 class MainMenu : public CubeApplication {
-public:
+  public:
     MainMenu();
 
     bool loop();
 
-private:
+  private:
     class AppListItem;
 
     JoystickManager joystickmngr;
@@ -31,7 +31,7 @@ private:
 };
 
 class MainMenu::AppListItem {
-public:
+  public:
     AppListItem(std::string setName, std::string setExecPath, bool setInternal = false, Color setColor = Color::white());
 
     std::string name;
@@ -40,4 +40,4 @@ public:
     Color color = Color::white();
 };
 
-#endif //SNAKE_PIXELFLOW_H
+#endif // SNAKE_PIXELFLOW_H

@@ -17,7 +17,7 @@
 ///     vacancy triggers a fresh launch.
 ///   - Call stop() on server shutdown to SIGTERM → SIGKILL the child.
 class DefaultAppLauncher {
-public:
+  public:
     DefaultAppLauncher();
 
     /// Launch the default app (fork/exec) if it has not been launched since
@@ -38,7 +38,7 @@ public:
     /// The resolved binary path (for logging).
     const std::string& binaryPath() const { return binaryPath_; }
 
-private:
+  private:
     std::string binaryPath_;
     pid_t childPid_ = -1;
     bool launched_ = false;

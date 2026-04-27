@@ -2,33 +2,24 @@
 
 #include <boost/log/trivial.hpp>
 
-SocketConnection::SocketConnection(boost::asio::io_context &io_context) :
-        io(io_context), socket(io), recv_buffer(RECEIVE_BUFFER_SIZE), cobsDecoder(RECEIVE_BUFFER_SIZE) {
+SocketConnection::SocketConnection(boost::asio::io_context &io_context)
+    : io(io_context), socket(io), recv_buffer(RECEIVE_BUFFER_SIZE), cobsDecoder(RECEIVE_BUFFER_SIZE) {
     receiveCallback = nullptr;
 }
 
-boost::asio::generic::stream_protocol::socket &SocketConnection::getSocket() {
-    return socket;
-}
+boost::asio::generic::stream_protocol::socket &SocketConnection::getSocket() { return socket; }
 
-
-void SocketConnection::startReceiving() {
-    this->doRead();
-}
+void SocketConnection::startReceiving() { this->doRead(); }
 
 void SocketConnection::setReceiveCallback(
-        std::function<void(std::shared_ptr<UniversalConnection>,
-                           std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) {
+    std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) {
     receiveCallback = callback;
 }
 
 void SocketConnection::doRead() {
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Starting Read";
-    socket.async_read_some(
-            boost::asio::buffer(this->recv_buffer),
-            [this](boost::system::error_code error, size_t bytes_transferred) {
-                this->handleRead(error, bytes_transferred);
-            });
+    socket.async_read_some(boost::asio::buffer(this->recv_buffer),
+                           [this](boost::system::error_code error, size_t bytes_transferred) { this->handleRead(error, bytes_transferred); });
 }
 
 void SocketConnection::handleRead(const boost::system::error_code &error, size_t bytes_transferred) {
@@ -36,7 +27,7 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
     if (!error) {
         BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Received: " << bytes_transferred << " bytes";
         auto packets = cobsDecoder.insertBytesAndReturnDecodedPackets(this->recv_buffer.data(), bytes_transferred);
-        for (const auto& packet : packets) {
+        for (const auto &packet : packets) {
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
             if (receiveMessage->ParseFromString(packet)) {
                 BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Recieved full Protobuf MatrixServerMessage";
@@ -56,11 +47,10 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
     }
 }
 
-
 void SocketConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) {
     auto sendBuffer = Cobs::encode(message->SerializeAsString());
 
-    boost::asio::post(io, [this, self=shared_from_this(), sendBuffer=std::move(sendBuffer)]() mutable {
+    boost::asio::post(io, [this, self = shared_from_this(), sendBuffer = std::move(sendBuffer)]() mutable {
         if (write_queue.size() > 5) {
             BOOST_LOG_TRIVIAL(warning) << "[SOCK CON] Write queue full, dropping message";
             return;
@@ -75,9 +65,8 @@ void SocketConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMes
 
 void SocketConnection::doWrite() {
     is_writing = true;
-    boost::asio::async_write(socket,
-                             boost::asio::buffer(write_queue.front().data(), write_queue.front().size()),
-                             [this, self=shared_from_this()](boost::system::error_code error, size_t bytes_transferred) {
+    boost::asio::async_write(socket, boost::asio::buffer(write_queue.front().data(), write_queue.front().size()),
+                             [this, self = shared_from_this()](boost::system::error_code error, size_t bytes_transferred) {
                                  this->handleWrite(error, bytes_transferred);
                              });
 }
@@ -90,7 +79,7 @@ void SocketConnection::handleWrite(const boost::system::error_code &error, size_
         BOOST_LOG_TRIVIAL(debug) << "[SOCK CON] Write Error: " << error.message();
         dead = true;
     }
-    
+
     write_queue.pop();
     if (!write_queue.empty()) {
         doWrite();
@@ -99,15 +88,11 @@ void SocketConnection::handleWrite(const boost::system::error_code &error, size_
     }
 }
 
-bool SocketConnection::isDead() {
-    return dead;
-}
+bool SocketConnection::isDead() { return dead; }
 
 SocketConnection::~SocketConnection() {
     boost::system::error_code ec;
     socket.close(ec);
 }
 
-void SocketConnection::setDead(bool sDead) {
-    dead = sDead;
-}
+void SocketConnection::setDead(bool sDead) { dead = sDead; }

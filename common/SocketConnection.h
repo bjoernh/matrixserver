@@ -13,8 +13,8 @@
 
 inline constexpr int RECEIVE_BUFFER_SIZE = 200000;
 
-class SocketConnection :  public std::enable_shared_from_this<SocketConnection>, public UniversalConnection {
-public:
+class SocketConnection : public std::enable_shared_from_this<SocketConnection>, public UniversalConnection {
+  public:
     SocketConnection(boost::asio::io_context &io_context);
 
     ~SocketConnection();
@@ -23,9 +23,8 @@ public:
 
     void startReceiving() override;
 
-    void
-    setReceiveCallback(std::function<void(std::shared_ptr<UniversalConnection>,
-                                          std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
+    void setReceiveCallback(
+        std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)> callback) override;
 
     void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) override;
 
@@ -33,7 +32,7 @@ public:
 
     void setDead(bool sDead) override;
 
-private:
+  private:
     void doRead();
 
     void doWrite();
@@ -49,10 +48,8 @@ private:
     std::queue<std::string> write_queue;
     bool is_writing = false;
     Cobs cobsDecoder;
-    std::function<void(std::shared_ptr<UniversalConnection>,
-                       std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
+    std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)> receiveCallback;
     bool dead = false;
 };
 
-
-#endif //MATRIXSERVER_SOCKETCONNECTION_H
+#endif // MATRIXSERVER_SOCKETCONNECTION_H

@@ -4,16 +4,10 @@
 #include <matrixserver.pb.h>
 #include <SocketConnection.h>
 
-enum class AppState : unsigned int {
-    running,
-    paused,
-    ended,
-    killed,
-    unkown
-};
+enum class AppState : unsigned int { running, paused, ended, killed, unkown };
 
 class App {
-public:
+  public:
     App(std::shared_ptr<UniversalConnection>);
     ~App() = default;
 
@@ -33,7 +27,7 @@ public:
 
     int generateAppId();
 
-private:
+  private:
     int appId;
     AppState appState;
     std::shared_ptr<UniversalConnection> connection;
@@ -41,5 +35,4 @@ private:
     bool hasSchema;
 };
 
-
-#endif //MATRIXSERVER_APP_H
+#endif // MATRIXSERVER_APP_H

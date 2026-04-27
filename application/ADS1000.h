@@ -7,12 +7,13 @@
 #include <memory>
 
 class ADS1000 {
-public:
+  public:
     ADS1000();
     ~ADS1000();
     void init();
     float getVoltage();
-private:
+
+  private:
     void startRefreshThread();
     void internalLoop();
     int read_word_2c(int fd, char reg);
@@ -24,5 +25,4 @@ private:
     float voltage;
 };
 
-
-#endif //MATRIXSERVER_ADS1000_H
+#endif // MATRIXSERVER_ADS1000_H
