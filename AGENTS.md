@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-C++17 LED matrix screen server for the LEDCube project. Modular architecture with
+C++20 LED matrix screen server for the LEDCube project. Modular architecture with
 abstract renderer backends (Simulator, FPGA FTDI/SPI, RGB Matrix) and protobuf-based
 client-server communication over TCP/Unix sockets/IPC.
 
@@ -101,7 +101,7 @@ docker build -f Dockerfile.arm64 --build-arg HARDWARE_BACKEND=FPGA_RPISPI -t mat
 
 ### Language Standard
 
-C++17.
+C++20.
 
 ### File Organization
 
