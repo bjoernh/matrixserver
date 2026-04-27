@@ -12,12 +12,9 @@
 // ---------------------------------------------------------------------------
 
 class MockConnection : public UniversalConnection {
-public:
+  public:
     void startReceiving() override {}
-    void setReceiveCallback(
-        std::function<void(std::shared_ptr<UniversalConnection>,
-                           std::shared_ptr<matrixserver::MatrixServerMessage>)>
-        ) override {}
+    void setReceiveCallback(std::function<void(std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>)>) override {}
     void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage>) override {}
     bool isDead() override { return false; }
     void setDead(bool) override {}
@@ -31,11 +28,9 @@ TEST_CASE("MessageDispatcher dispatches registered handler for type A", "[dispat
     MessageDispatcher dispatcher;
     std::atomic<bool> handlerCalled{false};
 
-    dispatcher.registerHandler(matrixserver::registerApp,
-        [&handlerCalled](std::shared_ptr<UniversalConnection>,
-                         std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            handlerCalled.store(true);
-        });
+    dispatcher.registerHandler(
+        matrixserver::registerApp,
+        [&handlerCalled](std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>) { handlerCalled.store(true); });
 
     auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
     msg->set_messagetype(matrixserver::registerApp);
@@ -55,17 +50,11 @@ TEST_CASE("MessageDispatcher dispatches correct handler among multiple types", "
     std::atomic<int> typeA{0};
     std::atomic<int> typeB{0};
 
-    dispatcher.registerHandler(matrixserver::registerApp,
-        [&typeA](std::shared_ptr<UniversalConnection>,
-                 std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            typeA.fetch_add(1);
-        });
+    dispatcher.registerHandler(matrixserver::registerApp, [&typeA](std::shared_ptr<UniversalConnection>,
+                                                                   std::shared_ptr<matrixserver::MatrixServerMessage>) { typeA.fetch_add(1); });
 
-    dispatcher.registerHandler(matrixserver::setScreenFrame,
-        [&typeB](std::shared_ptr<UniversalConnection>,
-                 std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            typeB.fetch_add(1);
-        });
+    dispatcher.registerHandler(matrixserver::setScreenFrame, [&typeB](std::shared_ptr<UniversalConnection>,
+                                                                      std::shared_ptr<matrixserver::MatrixServerMessage>) { typeB.fetch_add(1); });
 
     auto conn = std::make_shared<MockConnection>();
 
@@ -93,10 +82,9 @@ TEST_CASE("MessageDispatcher drops unknown message type silently", "[dispatcher]
 
     // Register a handler for a *different* type so the dispatcher is non-empty.
     dispatcher.registerHandler(matrixserver::registerApp,
-        [&anyHandlerCalled](std::shared_ptr<UniversalConnection>,
-                            std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            anyHandlerCalled.store(true);
-        });
+                               [&anyHandlerCalled](std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>) {
+                                   anyHandlerCalled.store(true);
+                               });
 
     // Dispatch an unregistered type (imuData = 9).
     auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
@@ -121,18 +109,14 @@ TEST_CASE("MessageDispatcher re-registering replaces old handler", "[dispatcher]
     std::atomic<int> newHandler{0};
 
     // First registration
-    dispatcher.registerHandler(matrixserver::appAlive,
-        [&oldHandler](std::shared_ptr<UniversalConnection>,
-                      std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            oldHandler.fetch_add(1);
-        });
+    dispatcher.registerHandler(
+        matrixserver::appAlive,
+        [&oldHandler](std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>) { oldHandler.fetch_add(1); });
 
     // Re-registration — should overwrite
-    dispatcher.registerHandler(matrixserver::appAlive,
-        [&newHandler](std::shared_ptr<UniversalConnection>,
-                      std::shared_ptr<matrixserver::MatrixServerMessage>) {
-            newHandler.fetch_add(1);
-        });
+    dispatcher.registerHandler(
+        matrixserver::appAlive,
+        [&newHandler](std::shared_ptr<UniversalConnection>, std::shared_ptr<matrixserver::MatrixServerMessage>) { newHandler.fetch_add(1); });
 
     auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
     msg->set_messagetype(matrixserver::appAlive);
@@ -153,12 +137,11 @@ TEST_CASE("MessageDispatcher handler receives correct message and connection", "
     matrixserver::MessageType receivedType;
     int32_t receivedAppId = -1;
 
-    dispatcher.registerHandler(matrixserver::getServerInfo,
-        [&receivedType, &receivedAppId](std::shared_ptr<UniversalConnection>,
-                                       std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-            receivedType = msg->messagetype();
-            receivedAppId = msg->appid();
-        });
+    dispatcher.registerHandler(matrixserver::getServerInfo, [&receivedType, &receivedAppId](std::shared_ptr<UniversalConnection>,
+                                                                                            std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        receivedType = msg->messagetype();
+        receivedAppId = msg->appid();
+    });
 
     auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
     msg->set_messagetype(matrixserver::getServerInfo);

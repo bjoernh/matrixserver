@@ -40,8 +40,8 @@ TEST_CASE("ConnectionFactory TCP to unreachable host returns dead connection", "
     boost::asio::io_context ctx;
     // Port 65535 on localhost is very unlikely to be in use.
     auto result = ConnectionFactory::connectFromUri(ctx, "tcp://127.0.0.1:65535");
-    REQUIRE(result);                // factory returns the SocketConnection object
-    REQUIRE(result->isDead());      // but the connection failed
+    REQUIRE(result);           // factory returns the SocketConnection object
+    REQUIRE(result->isDead()); // but the connection failed
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +61,6 @@ TEST_CASE("ConnectionFactory TCP URI without port returns nullptr", "[connection
 TEST_CASE("ConnectionFactory IPC to nonexistent queue returns dead connection", "[connection-factory]") {
     boost::asio::io_context ctx;
     auto result = ConnectionFactory::connectFromUri(ctx, "ipc://nonexistent-queue-test-12345");
-    REQUIRE(result);                      // factory always returns the IpcConnection object
-    REQUIRE(result->isDead());            // but connectToServer failed internally
+    REQUIRE(result);           // factory always returns the IpcConnection object
+    REQUIRE(result->isDead()); // but connectToServer failed internally
 }

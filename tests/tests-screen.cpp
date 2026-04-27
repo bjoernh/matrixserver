@@ -61,10 +61,10 @@ TEST_CASE("Screen setPixel RGB overload", "[screen]") {
 TEST_CASE("Screen out-of-bounds setPixel", "[screen]") {
     Screen screen(16, 16, 0);
     // These must not crash and must not modify any in-bounds pixel
-    screen.setPixel(-1, 0,  Color::red());
-    screen.setPixel(0,  -1, Color::red());
-    screen.setPixel(16, 0,  Color::red());
-    screen.setPixel(0,  16, Color::red());
+    screen.setPixel(-1, 0, Color::red());
+    screen.setPixel(0, -1, Color::red());
+    screen.setPixel(16, 0, Color::red());
+    screen.setPixel(0, 16, Color::red());
     screen.setPixel(16, 16, Color::red());
     screen.setPixel(-5, -5, Color::red());
 
@@ -74,12 +74,12 @@ TEST_CASE("Screen out-of-bounds setPixel", "[screen]") {
 
 TEST_CASE("Screen out-of-bounds getPixel", "[screen]") {
     Screen screen(16, 16, 0);
-    screen.fill(Color::red());  // Make all in-bounds pixels non-black
+    screen.fill(Color::red()); // Make all in-bounds pixels non-black
 
-    CHECK(screen.getPixel(-1, 0)  == Color(0, 0, 0));
-    CHECK(screen.getPixel(0,  -1) == Color(0, 0, 0));
-    CHECK(screen.getPixel(16, 0)  == Color(0, 0, 0));
-    CHECK(screen.getPixel(0,  16) == Color(0, 0, 0));
+    CHECK(screen.getPixel(-1, 0) == Color(0, 0, 0));
+    CHECK(screen.getPixel(0, -1) == Color(0, 0, 0));
+    CHECK(screen.getPixel(16, 0) == Color(0, 0, 0));
+    CHECK(screen.getPixel(0, 16) == Color(0, 0, 0));
 }
 
 TEST_CASE("Screen corner pixels", "[screen]") {
@@ -87,14 +87,14 @@ TEST_CASE("Screen corner pixels", "[screen]") {
     int w = screen.getWidth();
     int h = screen.getHeight();
 
-    screen.setPixel(0,     0,     Color(1, 2, 3));
-    screen.setPixel(w - 1, 0,     Color(4, 5, 6));
-    screen.setPixel(0,     h - 1, Color(7, 8, 9));
+    screen.setPixel(0, 0, Color(1, 2, 3));
+    screen.setPixel(w - 1, 0, Color(4, 5, 6));
+    screen.setPixel(0, h - 1, Color(7, 8, 9));
     screen.setPixel(w - 1, h - 1, Color(10, 11, 12));
 
-    CHECK(screen.getPixel(0,     0)     == Color(1, 2, 3));
-    CHECK(screen.getPixel(w - 1, 0)     == Color(4, 5, 6));
-    CHECK(screen.getPixel(0,     h - 1) == Color(7, 8, 9));
+    CHECK(screen.getPixel(0, 0) == Color(1, 2, 3));
+    CHECK(screen.getPixel(w - 1, 0) == Color(4, 5, 6));
+    CHECK(screen.getPixel(0, h - 1) == Color(7, 8, 9));
     CHECK(screen.getPixel(w - 1, h - 1) == Color(10, 11, 12));
 }
 
@@ -123,10 +123,10 @@ TEST_CASE("Screen array index is column-major", "[screen]") {
     Screen screen(16, 16, 0);
     int h = screen.getHeight();
 
-    CHECK(screen.getArrayIndex(0, 0)  == 0);
-    CHECK(screen.getArrayIndex(1, 0)  == h);        // next column
-    CHECK(screen.getArrayIndex(0, 1)  == 1);        // next row in same column
-    CHECK(screen.getArrayIndex(2, 3)  == 3 + 2 * h);
+    CHECK(screen.getArrayIndex(0, 0) == 0);
+    CHECK(screen.getArrayIndex(1, 0) == h); // next column
+    CHECK(screen.getArrayIndex(0, 1) == 1); // next row in same column
+    CHECK(screen.getArrayIndex(2, 3) == 3 + 2 * h);
 }
 
 TEST_CASE("Screen clear", "[screen]") {
