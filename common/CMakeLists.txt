@@ -8,7 +8,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS protobuf/matrixserver.proto)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS log)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(CMAKE_CXX_FLAGS "-fPIC")

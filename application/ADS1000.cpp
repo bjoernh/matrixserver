@@ -33,6 +33,13 @@ ADS1000::ADS1000(){
     init();
 }
 
+ADS1000::~ADS1000(){
+    running_.store(false);
+    if (thread_ && thread_->joinable()) {
+        thread_->join();
+    }
+}
+
 void ADS1000::init()
 {
     struct stat buffer;
@@ -53,12 +60,13 @@ void ADS1000::init()
 
 void ADS1000::startRefreshThread()
 {
-    thread_ = new boost::thread(&ADS1000::internalLoop, this);
+    running_.store(true);
+    thread_ = std::make_unique<std::thread>(&ADS1000::internalLoop, this);
 }
 
 void ADS1000::internalLoop(){
     int loopcount = 0;
-    while(1){
+    while(running_.load()){
         int readval = read_word_2c(fd, 0x00);
         voltage = (0.0106f * readval) - 0.0055f;
         usleep(100000); //10fps

@@ -8,7 +8,8 @@ set(SOURCE_FILES
         ServerSetup.cpp
         App.cpp
         DefaultAppLauncher.cpp
-        ServerBootstrap.cpp)
+        ServerBootstrap.cpp
+        RendererRegistry.cpp)
 
 add_library(server STATIC ${SOURCE_FILES})
 target_link_libraries(server common renderer wsSimulatorRenderer)

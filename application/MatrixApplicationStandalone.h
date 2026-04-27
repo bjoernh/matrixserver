@@ -1,7 +1,8 @@
 #ifndef MATRIXSERVER_MATRIXAPPLICATIONSTANDALONE_H
 #define MATRIXSERVER_MATRIXAPPLICATIONSTANDALONE_H
 
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <memory>
 
 #include <Screen.h>
 #include <TcpClient.h>
@@ -35,7 +36,7 @@ public:
             int fps = DEFAULTFPS,
             std::string serverUri = DEFAULTSERVERURI);
 
-    ~MatrixApplicationStandalone() = default;
+    ~MatrixApplicationStandalone();
 
     void renderToScreens();
 
@@ -69,9 +70,12 @@ private:
     int appId;
     int fps;
     float load;
-    boost::thread *mainThread;
-    boost::thread *renderThread;
+    std::unique_ptr<std::thread> mainThread;
+    std::unique_ptr<std::thread> renderThread;
     AppState appState;
+
+    std::atomic<bool> mainRunning{false};
+    std::atomic<bool> renderRunning{false};
 
     std::mutex renderSyncMutex;
 

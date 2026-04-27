@@ -29,7 +29,7 @@ MatrixApplication::MatrixApplication(int fps, std::string serverUri, std::string
   srand(rd());
   setFps(fps);
   appId = 0;
-  appState = AppState::starting;
+  runner_.setState(AppState::starting);
   setupDispatcher();
   while (!connect(serverUri)) {
     sleep(1);
@@ -95,52 +95,11 @@ void MatrixApplication::renderToScreens() {
   //    std::endl;
 }
 
-// ---------------------------------------------------------------------------
-// Internal loop
-// ---------------------------------------------------------------------------
 
-void MatrixApplication::internalLoop() {
-  loopRunning_.store(true);
-  bool running = true;
-  while (running) {
-    try {
-      auto startTime = micros();
-      if (appState == AppState::running) {
-        // Submit the frame and wait for the server to acknowledge it via
-        // requestScreenAccess / setScreenFrame response. This uses a condition
-        // variable so that the wait is exception-safe and can be interrupted on
-        // shutdown without stranding a lock.
-        {
-          std::unique_lock<std::mutex> lock(screenAccessMutex_);
-          screenAccessGranted_ = false;
-          running = loop();
-          renderToScreens();
-          // Wait for the server to send back setScreenFrame / requestScreenAccess
-          screenAccessCv_.wait(lock, [this] {
-            return screenAccessGranted_ || !loopRunning_.load();
-          });
-          screenAccessGranted_ = false;
-        }
-      }
-      if (appState == AppState::killed) {
-        running = false;
-      }
-      checkConnection();
-      auto sleepTime = (1000000 / fps) - (micros() - startTime);
-      if (sleepTime > 0) {
-        usleep(sleepTime);
-      }
-      load = 1.0f - ((float)sleepTime / (1000000.0f / (float)fps));
-    } catch (const std::exception &e) {
-      BOOST_LOG_TRIVIAL(error) << "[Application] Loop error: " << e.what();
-    }
-  }
-  loopRunning_.store(false);
-}
 
 void MatrixApplication::checkConnection() {
   if (connection->isDead()) {
-    appState = AppState::failure;
+    runner_.setState(AppState::failure);
     if (connect(serverUri))
       registerAtServer();
   }
@@ -244,7 +203,7 @@ void MatrixApplication::handleGetServerInfo(
     screens.push_back(std::make_shared<Screen>(
         screenInfo.width(), screenInfo.height(), screenInfo.screenid()));
   }
-  appState = AppState::running;
+  runner_.setState(AppState::running);
 }
 
 void MatrixApplication::handleAppPause(
@@ -268,7 +227,8 @@ void MatrixApplication::handleAppAlive(
   auto response = std::make_shared<matrixserver::MatrixServerMessage>();
   response->set_messagetype(matrixserver::appAlive);
   response->set_appid(appId);
-  if (appState == AppState::running || appState == AppState::paused)
+  auto state = runner_.getState();
+  if (state == AppState::running || state == AppState::paused)
     response->set_status(matrixserver::success);
   else
     response->set_status(matrixserver::error);
@@ -304,10 +264,8 @@ void MatrixApplication::handleScreenAccess(
     std::shared_ptr<UniversalConnection> /*conn*/,
     std::shared_ptr<matrixserver::MatrixServerMessage> /*msg*/) {
   // Both requestScreenAccess and setScreenFrame use this handler.
-  // Signal the internalLoop condvar that the server has acknowledged our frame.
-  std::lock_guard<std::mutex> lock(screenAccessMutex_);
-  screenAccessGranted_ = true;
-  screenAccessCv_.notify_one();
+  // Signal the LoopRunner condvar that the server has acknowledged our frame.
+  runner_.signalScreenAccess();
 }
 
 void MatrixApplication::handleJoystickData(
@@ -374,56 +332,49 @@ void MatrixApplication::handleGetAppParams(
 // Accessors / lifecycle
 // ---------------------------------------------------------------------------
 
-int MatrixApplication::getFps() { return fps; }
+int MatrixApplication::getFps() { return runner_.getFps(); }
 
 void MatrixApplication::setFps(int setFps) {
   if (setFps <= MAXFPS && setFps >= MINFPS) {
-    fps = setFps;
+    runner_.setFps(setFps);
   } else if (setFps == 0) {
-    fps = DEFAULTFPS;
+    runner_.setFps(DEFAULTFPS);
   }
 }
 
-AppState MatrixApplication::getAppState() { return appState; }
+AppState MatrixApplication::getAppState() { return runner_.getState(); }
 
-float MatrixApplication::getLoad() { return load; }
+float MatrixApplication::getLoad() { return runner_.getLoad(); }
 
 void MatrixApplication::start() {
   // Register at the server here (not in the constructor) so that derived-class
   // constructors have already run and any params.register*() calls are done
   // before we send the schema to the server.
   registerAtServer();
-  mainThread = std::make_unique<std::thread>(&MatrixApplication::internalLoop, this);
+  runner_.start(
+    [this]() { return loop(); },
+    [this]() { renderToScreens(); checkConnection(); }
+  );
 }
 
 bool MatrixApplication::pause() {
-  if (appState == AppState::running) {
-    appState = AppState::paused;
+  if (runner_.getState() == AppState::running) {
+    runner_.setState(AppState::paused);
     return true;
   }
   return false;
 }
 
 bool MatrixApplication::resume() {
-  if (appState == AppState::paused) {
-    appState = AppState::running;
+  if (runner_.getState() == AppState::paused) {
+    runner_.setState(AppState::running);
     return true;
   }
   return false;
 }
 
 void MatrixApplication::stop() {
-  appState = AppState::killed;
-  // Wake the internalLoop if it is waiting on the condvar so it can exit.
-  {
-    std::lock_guard<std::mutex> lock(screenAccessMutex_);
-    loopRunning_.store(false);
-    screenAccessCv_.notify_all();
-  }
-  if (mainThread && mainThread->joinable()) {
-    mainThread->join();
-  }
-  mainThread.reset();
+  runner_.stop();
   // Stop io_context so ioThread can exit cleanly.
   // Guard against self-join: stop() may be called from within the IO thread
   // (e.g. via handleRequest appKill). In that case we detach rather than join

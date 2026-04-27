@@ -61,6 +61,13 @@ int read_word_2c(int fd, char reg) {
 
 Mpu6050::Mpu6050() { init(); }
 
+Mpu6050::~Mpu6050() {
+  running_.store(false);
+  if (thread_ && thread_->joinable()) {
+    thread_->join();
+  }
+}
+
 Vector3i Mpu6050::getCubeAccIntersect() {
   int maxC;
   auto scaler = acceleration.cwiseAbs().maxCoeff(&maxC);
@@ -118,14 +125,15 @@ void Mpu6050::init() {
 }
 
 void Mpu6050::startRefreshThread() {
-  thread_ = new boost::thread(&Mpu6050::internalLoop, this);
+  running_.store(true);
+  thread_ = std::make_unique<std::thread>(&Mpu6050::internalLoop, this);
 }
 
 void Mpu6050::internalLoop() {
   if (fd == -1)
     return;
   int loopcount = 0;
-  while (1) {
+  while (running_.load()) {
     float gx, gy, gz, ax, ay, az;
 
     gx = read_word_2c(fd, MPU6050_GYRO_XOUT_H) / 131.0f;

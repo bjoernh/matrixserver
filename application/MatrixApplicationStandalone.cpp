@@ -28,8 +28,7 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
 }
 
 
-MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string serverUri) :
-        mainThread(), renderThread() {
+MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string serverUri) {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     newFrame = false;
 
@@ -128,11 +127,14 @@ void MatrixApplicationStandalone::renderToScreens() {
 }
 
 void MatrixApplicationStandalone::renderLoop() {
-    bool running = true;
-    while (running) {
+    while (renderRunning.load()) {
         renderSyncMutex.lock();
-        while(newFrame == false)
+        while(newFrame == false && renderRunning.load())
             usleep(100);
+        if (!renderRunning.load()) {
+            renderSyncMutex.unlock();
+            break;
+        }
         for (auto screen : screens) {
             renderer->setScreenData(screen->getScreenId(), screen->getScreenDataRaw());
         }
@@ -145,13 +147,14 @@ void MatrixApplicationStandalone::renderLoop() {
 }
 
 void MatrixApplicationStandalone::internalLoop() {
-    bool running = true;
-    while (running) {
+    while (mainRunning.load()) {
         auto startTime = micros();
         if (appState == AppState::running) {
-            while(newFrame == true)
+            while(newFrame == true && mainRunning.load())
                 usleep(100);
-            running = loop();
+            if (!loop()) {
+                mainRunning.store(false);
+            }
             newFrame = true;
         }
         BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " << micros()-startTime << " us";
@@ -180,8 +183,10 @@ float MatrixApplicationStandalone::getLoad() {
 }
 
 void MatrixApplicationStandalone::start() {
-    mainThread = new boost::thread(&MatrixApplicationStandalone::internalLoop, this);
-    renderThread = new boost::thread(&MatrixApplicationStandalone::renderLoop, this);
+    mainRunning.store(true);
+    renderRunning.store(true);
+    mainThread = std::make_unique<std::thread>(&MatrixApplicationStandalone::internalLoop, this);
+    renderThread = std::make_unique<std::thread>(&MatrixApplicationStandalone::renderLoop, this);
     appState = AppState::running;
 }
 
@@ -202,12 +207,21 @@ bool MatrixApplicationStandalone::resume() {
 }
 
 void MatrixApplicationStandalone::stop() {
-    if (mainThread != nullptr) {
-        mainThread->interrupt();
+    mainRunning.store(false);
+    if (mainThread && mainThread->joinable()) {
         mainThread->join();
-        mainThread = nullptr;
     }
+    mainThread.reset();
     appState = AppState::killed;
+}
+
+MatrixApplicationStandalone::~MatrixApplicationStandalone() {
+    stop();
+    renderRunning.store(false);
+    if (renderThread && renderThread->joinable()) {
+        renderThread->join();
+    }
+    renderThread.reset();
 }
 
 long MatrixApplicationStandalone::micros() {

@@ -6,10 +6,11 @@
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
-#include <boost/thread/thread.hpp>
+#include <thread>
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 namespace beast = boost::beast;
 namespace websocket = beast::websocket;
@@ -62,8 +63,8 @@ private:
   std::shared_ptr<class WsSession> activeSession;
   std::mutex sessionMutex;
 
-  boost::thread ioThread;
-  bool running = true;
+  std::unique_ptr<std::thread> ioThread;
+  std::atomic<bool> running{true};
 
   MsgCallback clientMessageCb;
 

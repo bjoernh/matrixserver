@@ -1,0 +1,20 @@
+# git-blame-ignore-revs
+#
+# Add commit hashes here for commits that should be ignored by `git blame`.
+# Typical use: bulk reformatting commits (e.g. clang-format run).
+#
+# To enable, run:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Or add to ~/.gitconfig:
+#   [blame]
+#     ignoreRevsFile = /path/to/matrixserver/.git-blame-ignore-revs
+#
+# Format: one full 40-char SHA per line, optionally preceded by whitespace.
+# Lines starting with '#' are comments.
+#
+# --- clang-format bulk reformatting ---
+# (add the SHA of the formatting commit here after it is made)
+#
+# Example:
+# abc123def456789...  clang-format: apply .clang-format repo-wide

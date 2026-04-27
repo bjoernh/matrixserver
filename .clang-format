@@ -1,0 +1,60 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Column width — generous to match existing code (lines commonly reach 120-150)
+ColumnLimit: 150
+
+# Brace style: K&R (opening brace on same line)
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterExternBlock: false
+  AfterObjCDeclaration: false
+  AfterUnion: false
+  AfterEnum: false
+  BeforeElse: false
+  BeforeCatch: false
+  BeforeFinally: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Accessor alignment
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: true
+
+# Pointer/reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Constructor initializer lists
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorAlignAllInitializer: false
+
+# Continuation indent
+ContinuationIndentWidth: 4
+
+# Namespace
+CompactNamespaces: false
+
+# Sort includes
+SortIncludes: false
+
+# Derive pointer alignment from existing code
+DerivePointerAlignment: true
+
+# Standard
+Cpp11BracedListStyle: true
+
+...

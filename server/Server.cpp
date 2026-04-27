@@ -57,55 +57,52 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
     boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                         boost::log::trivial::debug);
 
-    if (auto biDir = std::dynamic_pointer_cast<IBidirectionalRenderer>(setRenderer)) {
-        biDirRenderers_.push_back(biDir);
-        biDir->setClientMessageCallback(
-            [this, biDir](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-                if (msg->messagetype() == matrixserver::getServerInfo) {
-                    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-                    response->set_messagetype(matrixserver::getServerInfo);
-                    auto *tempConfig = new matrixserver::ServerConfig();
-                    tempConfig->CopyFrom(serverConfig);
-                    response->set_allocated_serverconfig(tempConfig);
-                    biDir->sendMessage(response);
+    registry_.setMessageCallback(
+        [this](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+            if (msg->messagetype() == matrixserver::getServerInfo) {
+                auto response = std::make_shared<matrixserver::MatrixServerMessage>();
+                response->set_messagetype(matrixserver::getServerInfo);
+                auto *tempConfig = new matrixserver::ServerConfig();
+                tempConfig->CopyFrom(serverConfig);
+                response->set_allocated_serverconfig(tempConfig);
+                registry_.broadcastMessage(response);
 
-                    std::lock_guard<std::mutex> lock(appsMutex);
-                    if (!apps.empty()) {
-                        auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
-                        schemaMsg->set_appid(apps.back()->getAppId());
-                        schemaMsg->set_messagetype(matrixserver::appParamSchema);
-                        auto schema = apps.back()->getParamSchema();
-                        schemaMsg->mutable_appparamschema()->CopyFrom(schema);
-                        biDir->sendMessage(schemaMsg);
-                    }
-                } else if (msg->messagetype() == matrixserver::imuData ||
-                           msg->messagetype() == matrixserver::audioDataMessage ||
-                           msg->messagetype() == matrixserver::joystickData ||
-                           msg->messagetype() == matrixserver::setAppParam ||
-                           msg->messagetype() == matrixserver::getAppParams) {
-                    std::lock_guard<std::mutex> lock(appsMutex);
-                    if (msg->messagetype() == matrixserver::setAppParam ||
-                        msg->messagetype() == matrixserver::getAppParams) {
-                        if (msg->appid() != 0) {
-                            for (auto &app : apps) {
-                                if (app->getAppId() == msg->appid()) {
-                                    app->getConnection()->sendMessage(msg);
-                                    break;
-                                }
-                            }
-                        } else if (!apps.empty()) {
-                            apps.back()->getConnection()->sendMessage(msg);
-                        }
-                    } else {
+                std::lock_guard<std::mutex> lock(appsMutex);
+                if (!apps.empty()) {
+                    auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
+                    schemaMsg->set_appid(apps.back()->getAppId());
+                    schemaMsg->set_messagetype(matrixserver::appParamSchema);
+                    auto schema = apps.back()->getParamSchema();
+                    schemaMsg->mutable_appparamschema()->CopyFrom(schema);
+                    registry_.broadcastMessage(schemaMsg);
+                }
+            } else if (msg->messagetype() == matrixserver::imuData ||
+                       msg->messagetype() == matrixserver::audioDataMessage ||
+                       msg->messagetype() == matrixserver::joystickData ||
+                       msg->messagetype() == matrixserver::setAppParam ||
+                       msg->messagetype() == matrixserver::getAppParams) {
+                std::lock_guard<std::mutex> lock(appsMutex);
+                if (msg->messagetype() == matrixserver::setAppParam ||
+                    msg->messagetype() == matrixserver::getAppParams) {
+                    if (msg->appid() != 0) {
                         for (auto &app : apps) {
-                            app->getConnection()->sendMessage(msg);
+                            if (app->getAppId() == msg->appid()) {
+                                app->getConnection()->sendMessage(msg);
+                                break;
+                            }
                         }
+                    } else if (!apps.empty()) {
+                        apps.back()->getConnection()->sendMessage(msg);
+                    }
+                } else {
+                    for (auto &app : apps) {
+                        app->getConnection()->sendMessage(msg);
                     }
                 }
-            });
-    }
+            }
+        });
 
-    renderers.push_back(setRenderer);
+    registry_.add(setRenderer);
     tcpServer.setAcceptCallback(
         std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
     ipcServer.setAcceptCallback(
@@ -231,7 +228,7 @@ void Server::handleSetScreenFrame(
         }
     }
     if (isTopApp) {
-        for (const auto& renderer : renderers) {
+        registry_.forEachRenderer([this, msg, conn](std::shared_ptr<IRenderer> renderer) {
             for (const auto& screenInfo : msg->screendata()) {
                 int sid = screenInfo.screenid();
                 if (sid < 0 || sid >= static_cast<int>(serverConfig.screeninfo_size())) {
@@ -257,7 +254,7 @@ void Server::handleSetScreenFrame(
                 renderer->setGlobalBrightness(
                     msg->serverconfig().globalscreenbrightness());
             }
-        }
+        });
     } else {
         // Send app to pause (not top app).
         BOOST_LOG_TRIVIAL(debug)
@@ -301,18 +298,14 @@ void Server::handleAppParamSchema(
         }
     }
     // Forward to all bidirectional renderers (messaging-capable only).
-    for (const auto& biDir : biDirRenderers_) {
-        biDir->sendMessage(msg);
-    }
+    registry_.broadcastMessage(msg);
 }
 
 void Server::handleAppParamValues(
     std::shared_ptr<UniversalConnection> /*conn*/,
     std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
     // Forward current values to all bidirectional renderers.
-    for (const auto& biDir : biDirRenderers_) {
-        biDir->sendMessage(msg);
-    }
+    registry_.broadcastMessage(msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -380,51 +373,5 @@ void Server::stopDefaultApp() {
 // ---------------------------------------------------------------------------
 
 void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
-    if (auto biDir = std::dynamic_pointer_cast<IBidirectionalRenderer>(newRenderer)) {
-        biDirRenderers_.push_back(biDir);
-        biDir->setClientMessageCallback(
-            [this, biDir](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-                if (msg->messagetype() == matrixserver::getServerInfo) {
-                    auto response = std::make_shared<matrixserver::MatrixServerMessage>();
-                    response->set_messagetype(matrixserver::getServerInfo);
-                    auto *cfg = new matrixserver::ServerConfig();
-                    cfg->CopyFrom(serverConfig);
-                    response->set_allocated_serverconfig(cfg);
-                    biDir->sendMessage(response);
-
-                    std::lock_guard<std::mutex> lock(appsMutex);
-                    if (!apps.empty()) {
-                        auto schemaMsg = std::make_shared<matrixserver::MatrixServerMessage>();
-                        schemaMsg->set_appid(apps.back()->getAppId());
-                        schemaMsg->set_messagetype(matrixserver::appParamSchema);
-                        schemaMsg->mutable_appparamschema()->CopyFrom(apps.back()->getParamSchema());
-                        biDir->sendMessage(schemaMsg);
-                    }
-                } else if (msg->messagetype() == matrixserver::imuData ||
-                           msg->messagetype() == matrixserver::audioDataMessage ||
-                           msg->messagetype() == matrixserver::joystickData ||
-                           msg->messagetype() == matrixserver::setAppParam ||
-                           msg->messagetype() == matrixserver::getAppParams) {
-                    std::lock_guard<std::mutex> lock(appsMutex);
-                    if (msg->messagetype() == matrixserver::setAppParam ||
-                        msg->messagetype() == matrixserver::getAppParams) {
-                        if (msg->appid() != 0) {
-                            for (auto &app : apps) {
-                                if (app->getAppId() == msg->appid()) {
-                                    app->getConnection()->sendMessage(msg);
-                                    break;
-                                }
-                            }
-                        } else if (!apps.empty()) {
-                            apps.back()->getConnection()->sendMessage(msg);
-                        }
-                    } else {
-                        for (auto &app : apps) {
-                            app->getConnection()->sendMessage(msg);
-                        }
-                    }
-                }
-            });
-    }
-    renderers.push_back(newRenderer);
+    registry_.add(newRenderer);
 }

@@ -19,6 +19,7 @@
 #include <MessageDispatcher.h>
 
 #include "DefaultAppLauncher.h"
+#include "RendererRegistry.h"
 
 class Server {
 public:
@@ -62,9 +63,7 @@ private:
 
     std::mutex appsMutex;
     std::vector<std::shared_ptr<App>> apps;
-    std::vector<std::shared_ptr<IRenderer>> renderers;
-    // Subset of renderers that implement IBidirectionalRenderer (messaging).
-    std::vector<std::shared_ptr<IBidirectionalRenderer>> biDirRenderers_;
+    RendererRegistry registry_;
     boost::asio::io_context ioContext;
     std::unique_ptr<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> ioWork;
     matrixserver::ServerConfig & serverConfig;

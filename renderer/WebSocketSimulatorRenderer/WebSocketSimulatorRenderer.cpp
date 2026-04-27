@@ -31,14 +31,14 @@ WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
   // Start async accept
   do_accept();
   // Accept loop runs in a dedicated thread
-  ioThread = boost::thread([this] { this->ioContext.run(); });
+  ioThread = std::make_unique<std::thread>([this] { this->ioContext.run(); });
 }
 
 WebSocketSimulatorRenderer::~WebSocketSimulatorRenderer() {
   running = false;
   ioContext.stop();
-  if (ioThread.joinable()) {
-    ioThread.join();
+  if (ioThread && ioThread->joinable()) {
+    ioThread->join();
   }
 }
 
