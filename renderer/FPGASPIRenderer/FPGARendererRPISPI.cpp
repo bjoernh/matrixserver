@@ -213,8 +213,10 @@ void FPGARendererRPISPI::render() {
         //        printf("%d\n", cmd_buf[0] | cmd_buf[1]);
     } while (((cmd_buf[0] | cmd_buf[1]) & 0x02) != 0x02);
 
-    if (!screenDataMutex.try_lock())
+    if (!screenDataMutex.try_lock()) {
+        BOOST_LOG_TRIVIAL(warning) << "[FPGARendererRPISPI] render: could not acquire screen data mutex, skipping frame";
         return;
+    }
 
     auto usStart = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 

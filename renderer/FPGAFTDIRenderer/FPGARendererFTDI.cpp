@@ -1,5 +1,6 @@
 #include "FPGARendererFTDI.h"
 
+#include <boost/log/trivial.hpp>
 #include <cstring>
 #include <cstdlib>
 
@@ -48,8 +49,10 @@ void FPGARendererFTDI::init(std::vector<std::shared_ptr<Screen>> initScreens) {
 }
 
 void FPGARendererFTDI::setScreenData(int screenId, Color *screenData) {
-    if (!renderMutex.try_lock())
+    if (!renderMutex.try_lock()) {
+        BOOST_LOG_TRIVIAL(warning) << "[FPGARendererFTDI] setScreenData: could not acquire render mutex, dropping update for screen " << screenId;
         return;
+    }
     if (screenId < screens.size()) {
         screens.at(screenId)->setScreenData(screenData);
     }
@@ -57,8 +60,10 @@ void FPGARendererFTDI::setScreenData(int screenId, Color *screenData) {
 }
 
 void FPGARendererFTDI::render() {
-    if (!renderMutex.try_lock())
+    if (!renderMutex.try_lock()) {
+        BOOST_LOG_TRIVIAL(warning) << "[FPGARendererFTDI] render: could not acquire render mutex, skipping frame";
         return;
+    }
     //    auto usStart = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 
     const int screenWidth = screens[0]->getWidth();
