@@ -18,3 +18,4 @@
 #
 # Example:
 # abc123def456789...  clang-format: apply .clang-format repo-wide
+5b293c3  style: apply clang-format to codebase
