@@ -6,6 +6,7 @@
 #include <random>
 #include <sys/wait.h>
 #include <vector>
+#include <format>
 
 #include "Server.h"
 
@@ -100,7 +101,7 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer, matrixserver::ServerConfi
         try {
             this->ioContext.run();
         } catch (const std::exception &e) {
-            BOOST_LOG_TRIVIAL(fatal) << "[Server] io_service exception: " << e.what();
+            BOOST_LOG_TRIVIAL(fatal) << std::format("[Server] io_service exception: {}", e.what());
         }
     });
     std::random_device rd;
@@ -193,7 +194,7 @@ void Server::handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn, std
             for (const auto &screenInfo : msg->screendata()) {
                 int sid = screenInfo.screenid();
                 if (sid < 0 || sid >= static_cast<int>(serverConfig.screeninfo_size())) {
-                    BOOST_LOG_TRIVIAL(warning) << "[Server] Invalid screen ID: " << sid;
+                    BOOST_LOG_TRIVIAL(warning) << std::format("[Server] Invalid screen ID: {}", sid);
                     continue;
                 }
                 renderer->setScreenData(sid, (Color *)screenInfo.framedata().data());
@@ -212,7 +213,7 @@ void Server::handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn, std
         });
     } else {
         // Send app to pause (not top app).
-        BOOST_LOG_TRIVIAL(debug) << "[Server] send app " << msg->appid() << " to pause";
+        BOOST_LOG_TRIVIAL(debug) << std::format("[Server] send app {} to pause", msg->appid());
         auto killMsg = std::make_shared<matrixserver::MatrixServerMessage>();
         killMsg->set_messagetype(matrixserver::appKill);
         conn->sendMessage(killMsg);
@@ -220,12 +221,12 @@ void Server::handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn, std
 }
 
 void Server::handleAppLifecycle(std::shared_ptr<UniversalConnection> /*conn*/, std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
-    BOOST_LOG_TRIVIAL(debug) << "[Server] appkill " << msg->appid() << " successfull";
+    BOOST_LOG_TRIVIAL(debug) << std::format("[Server] appkill {} successfull", msg->appid());
     std::lock_guard<std::mutex> lock(appsMutex);
     apps.erase(std::remove_if(apps.begin(), apps.end(),
                               [&msg](const std::shared_ptr<App> &a) {
                                   if (a->getAppId() == msg->appid()) {
-                                      BOOST_LOG_TRIVIAL(debug) << "[Server] App " << msg->appid() << " deleted";
+                                      BOOST_LOG_TRIVIAL(debug) << std::format("[Server] App {} deleted", msg->appid());
                                       return true;
                                   }
                                   return false;
@@ -261,7 +262,7 @@ bool Server::tick() {
     if (joystickmngr.getButtonPress(7)) {
         std::lock_guard<std::mutex> lock(appsMutex);
         if (!apps.empty()) {
-            BOOST_LOG_TRIVIAL(debug) << "kill current app" << std::endl;
+            BOOST_LOG_TRIVIAL(debug) << "kill current app";
             auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
             msg->set_messagetype(matrixserver::appKill);
             apps.back()->sendMsg(msg);
@@ -282,7 +283,7 @@ bool Server::tick() {
                                   [](const std::shared_ptr<App> &a) {
                                       bool dead = a->getConnection()->isDead();
                                       if (dead) {
-                                          BOOST_LOG_TRIVIAL(debug) << "[matrixserver] App " << a->getAppId() << " deleted";
+                                          BOOST_LOG_TRIVIAL(debug) << std::format("[matrixserver] App {} deleted", a->getAppId());
                                       }
                                       return dead;
                                   }),

@@ -1,5 +1,6 @@
 #include "Cobs.h"
 
+#include <format>
 #include <boost/log/trivial.hpp>
 
 ///* Stuffs "length" bytes of data at the location pointed to by
@@ -89,13 +90,13 @@ std::vector<std::string> Cobs::insertBytesAndReturnDecodedPackets(const uint8_t 
             internalStreamBuffer.push_back(0);
             if (internalStreamBuffer.size() > 2) {
                 result.push_back(decode(internalStreamBuffer));
-                BOOST_LOG_TRIVIAL(trace) << "[Cobs] Received 0 packet delimiter & bufferlen > 2 : " << internalStreamBuffer.size();
+                BOOST_LOG_TRIVIAL(trace) << std::format("[Cobs] Received 0 packet delimiter & bufferlen > 2 : {}", internalStreamBuffer.size());
             }
 
             internalStreamBuffer.clear();
         }
     }
-    BOOST_LOG_TRIVIAL(trace) << "[Cobs] Received a total of " << zeroCounter << " zero-packet delimiters";
+    BOOST_LOG_TRIVIAL(trace) << std::format("[Cobs] Received a total of {} zero-packet delimiters", zeroCounter);
     return result;
 }
 

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <boost/log/trivial.hpp>
+#include <format>
 #include <boost/program_options.hpp>
 #include <exception>
 #include <fstream>
@@ -158,11 +159,7 @@ static void warnIfConfigSuspicious(const matrixserver::ServerConfig &serverConfi
             bool orientationImpliesNonZeroLayout =
                 si.screenorientation() != defaultOrientation && si.screenorientation() != matrixserver::ScreenInfo::front;
             if (layoutIsAllZero && orientationImpliesNonZeroLayout) {
-                BOOST_LOG_TRIVIAL(warning) << "[ServerSetup] Screen " << si.screenid()
-                                           << " (orientation=" << matrixserver::ScreenInfo::ScreenOrientation_Name(si.screenorientation())
-                                           << ") has offsetX=0, offsetY=0, screenRotation=rot0 — layout "
-                                              "fields may be missing from the config file. Delete the config "
-                                              "file and restart to regenerate it with correct layout values.";
+                BOOST_LOG_TRIVIAL(warning) << std::format("[ServerSetup] Screen {} (orientation={}) has offsetX=0, offsetY=0, screenRotation=rot0 — layout fields may be missing from the config file. Delete the config file and restart to regenerate it with correct layout values.", si.screenid(), matrixserver::ScreenInfo::ScreenOrientation_Name(si.screenorientation()));
             }
         }
     }
@@ -172,10 +169,8 @@ static void warnIfConfigSuspicious(const matrixserver::ServerConfig &serverConfi
         if (ids.size() > 1) {
             std::string idList;
             for (int id : ids)
-                idList += std::to_string(id) + " ";
-            BOOST_LOG_TRIVIAL(warning) << "[ServerSetup] Screens " << idList << "share the same offset (" << offset.first << "," << offset.second
-                                       << "). This is almost certainly wrong — layout fields (offsetX, "
-                                          "offsetY, screenRotation) may be missing from the config file.";
+                idList += std::format("{} ", id);
+            BOOST_LOG_TRIVIAL(warning) << std::format("[ServerSetup] Screens {}share the same offset ({} {}). This is almost certainly wrong — layout fields (offsetX, offsetY, screenRotation) may be missing from the config file.", idList, offset.first, offset.second);
         }
     }
 }
@@ -235,7 +230,7 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
             exit(0);
         }
     } catch (std::exception &e) {
-        BOOST_LOG_TRIVIAL(error) << "[ServerSetup] Error parsing command line arguments: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << std::format("[ServerSetup] Error parsing command line arguments: {}", e.what());
     }
 
     if (configPath.empty()) {
@@ -252,21 +247,20 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
             fullPath = std::string(resolved_path);
         }
 
-        BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Trying to read config from: " << fullPath;
+        BOOST_LOG_TRIVIAL(info) << std::format("[ServerSetup] Trying to read config from: {}", fullPath);
         std::ifstream configFileReadStream(configPath);
-        std::stringstream buffer;
-        buffer << configFileReadStream.rdbuf();
-        if (google::protobuf::util::JsonStringToMessage(buffer.str(), &serverConfig).ok()) {
-            BOOST_LOG_TRIVIAL(info) << "[ServerSetup] ServerConfig successfully loaded from: " << fullPath;
+        std::string buffer(std::istreambuf_iterator<char>(configFileReadStream), {});
+        if (google::protobuf::util::JsonStringToMessage(buffer, &serverConfig).ok()) {
+            BOOST_LOG_TRIVIAL(info) << std::format("[ServerSetup] ServerConfig successfully loaded from: {}", fullPath);
         } else {
-            BOOST_LOG_TRIVIAL(warning) << "[ServerSetup] ServerConfig read failed from: " << fullPath;
+            BOOST_LOG_TRIVIAL(warning) << std::format("[ServerSetup] ServerConfig read failed from: {}", fullPath);
         }
     } else {
         std::string configFileName = "matrixServerConfig.json";
         std::string fullPath = configFileName;
         char resolved_path[PATH_MAX];
         if (realpath(".", resolved_path) != nullptr) {
-            fullPath = std::string(resolved_path) + "/" + configFileName;
+            fullPath = std::format("{}/{}", resolved_path, configFileName);
         }
 
         std::cout << "\nNo configuration file specified or found.\n"
@@ -284,7 +278,7 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
                 std::ofstream configFileWriteStream(configFileName, std::ios_base::trunc);
                 configFileWriteStream << configString;
                 configFileWriteStream.close();
-                BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Successfully wrote default config to " << fullPath;
+                BOOST_LOG_TRIVIAL(info) << std::format("[ServerSetup] Successfully wrote default config to {}", fullPath);
             }
         } else {
             BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Starting with default in-memory config.";
@@ -297,7 +291,7 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
             serverConfig.set_allocated_serverconnection(new matrixserver::Connection());
         }
         serverConfig.mutable_serverconnection()->set_serveraddress(serverAddressOverride);
-        BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Server address overridden to: " << serverAddressOverride;
+        BOOST_LOG_TRIVIAL(info) << std::format("[ServerSetup] Server address overridden to: {}", serverAddressOverride);
     }
 }
 

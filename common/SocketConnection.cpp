@@ -1,5 +1,6 @@
 #include "SocketConnection.h"
 
+#include <format>
 #include <boost/log/trivial.hpp>
 
 SocketConnection::SocketConnection(boost::asio::io_context &io_context)
@@ -25,7 +26,7 @@ void SocketConnection::doRead() {
 void SocketConnection::handleRead(const boost::system::error_code &error, size_t bytes_transferred) {
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Handling Read";
     if (!error) {
-        BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Received: " << bytes_transferred << " bytes";
+        BOOST_LOG_TRIVIAL(trace) << std::format("[SOCK CON] Received: {} bytes", bytes_transferred);
         auto packets = cobsDecoder.insertBytesAndReturnDecodedPackets(this->recv_buffer.data(), bytes_transferred);
         for (const auto &packet : packets) {
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
@@ -42,7 +43,7 @@ void SocketConnection::handleRead(const boost::system::error_code &error, size_t
         }
         this->doRead();
     } else {
-        BOOST_LOG_TRIVIAL(debug) << "[SOCK CON] Read Error: " << error.message();
+        BOOST_LOG_TRIVIAL(debug) << std::format("[SOCK CON] Read Error: {}", error.message());
         dead = true;
     }
 }
@@ -74,9 +75,9 @@ void SocketConnection::doWrite() {
 void SocketConnection::handleWrite(const boost::system::error_code &error, size_t bytes_transferred) {
     BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Handling Write";
     if (!error) {
-        BOOST_LOG_TRIVIAL(trace) << "[SOCK CON] Written: " << bytes_transferred << " bytes";
+        BOOST_LOG_TRIVIAL(trace) << std::format("[SOCK CON] Written: {} bytes", bytes_transferred);
     } else {
-        BOOST_LOG_TRIVIAL(debug) << "[SOCK CON] Write Error: " << error.message();
+        BOOST_LOG_TRIVIAL(debug) << std::format("[SOCK CON] Write Error: {}", error.message());
         dead = true;
     }
 

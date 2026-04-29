@@ -1,6 +1,6 @@
 #include "CubeApplication.h"
 #include <boost/log/trivial.hpp>
-#include <iomanip>
+#include <format>
 #include <iostream>
 #include <random>
 
@@ -96,9 +96,7 @@ Color CubeApplication::getPixel3D(int x, int y, int z) {
     else if (z == VIRTUALCUBEMAXINDEX)
         return screens[5]->getPixel(x - 1, y - 1); // Screen 5: 3d_x = x; 3d_y = y; 3d_z = 63;
 
-    BOOST_LOG_TRIVIAL(warning) << "Warning: getPixel3D called for coordinates (" << x << ", " << y << ", " << z
-                               << ") which are not on the 3D cube surface. The framework currently only "
-                                  "supports LEDs on its surfaces.";
+    BOOST_LOG_TRIVIAL(warning) << std::format("Warning: getPixel3D called for coordinates ({}, {}, {}) which are not on the 3D cube surface. The framework currently only supports LEDs on its surfaces.", x, y, z);
     return Color::black();
 }
 

@@ -1,10 +1,6 @@
 #include "mainmenu.h"
 
-#include <stdio.h>
-#include <algorithm>
-#include <iterator>
-#include <cmath>
-#include <cstdio>
+#include <format>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -27,7 +23,7 @@ MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
         searchDirectory = std::string(appPath);
     } else {
         const char *homeDir = std::getenv("HOME");
-        searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
+        searchDirectory = std::format("{}/APPS", homeDir ? homeDir : "/home/pi");
     }
     if (std::filesystem::is_directory(searchDirectory)) {
         for (const auto &p : std::filesystem::directory_iterator(searchDirectory)) {
@@ -36,11 +32,11 @@ MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
             //}
         }
     } else {
-        BOOST_LOG_TRIVIAL(warning) << "[MainMenu] Apps directory not found: " << searchDirectory;
+        BOOST_LOG_TRIVIAL(warning) << std::format("[MainMenu] Apps directory not found: {}", searchDirectory);
     }
 
     appList.push_back(AppListItem("settings", "settings", true, Color::blue()));
-    settingsList.push_back(AppListItem("brightness: " + std::to_string(getBrightness()), "brightness", true));
+    settingsList.push_back(AppListItem(std::format("brightness: {}", getBrightness()), "brightness", true));
     settingsList.push_back(AppListItem("update", "update", true));
     settingsList.push_back(AppListItem("shutdown", "shutdown", true));
     settingsList.push_back(AppListItem("return", "return", true, Color::blue()));
@@ -85,8 +81,7 @@ bool MainMenu::loop() {
                 menuState = settings;
             } else {
                 std::string temp = appList.at(selectedExec).execPath;
-                temp += std::string(" 1>/dev/null 2>/dev/null &");
-                temp = std::string("nohup ") + temp;
+                temp = std::format("nohup {} 1>/dev/null 2>/dev/null &", temp);
                 std::cout << "start: " << temp << std::endl;
                 (void)system(temp.data());
             }
@@ -135,15 +130,13 @@ bool MainMenu::loop() {
                 (void)system(temp.data());
             } else if (settingsList.at(selectedExec).execPath == "update") {
                 menuState = settingsUpdate;
-                auto temp = std::string("/usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &");
-                temp = std::string("nohup ") + temp;
-                (void)system(temp.data());
+                (void)system(std::format("nohup /usr/local/sbin/Update.sh 1>/dev/null 2>/dev/null &").data());
             }
         }
 
         if (menuState == settings && settingsList.at(selectedExec).execPath == "brightness") {
             setBrightness(constrain(getBrightness() + (int)(joystickmngr.getAxisPress(0) * 10), 0, 100));
-            settingsList.at(selectedExec).name = "brightness: " + std::to_string(getBrightness());
+            settingsList.at(selectedExec).name = std::format("brightness: {}", getBrightness());
         }
 
         for (uint i = 0; i < settingsList.size(); i++) {
@@ -172,7 +165,7 @@ bool MainMenu::loop() {
         drawRect2D((ScreenNumber)screenCounter, 0, CUBEMAXINDEX - 6, CUBEMAXINDEX, CUBEMAXINDEX, Color::black(), true, Color::black());
 #ifdef BUILD_RASPBERRYPI
         auto battValue = adcBattery.getVoltage();
-        drawText((ScreenNumber)screenCounter, Vector2i(CharacterBitmaps::right, 58), colVoltageText, std::to_string(battValue).substr(0, 5) + " V");
+        drawText((ScreenNumber)screenCounter, Vector2i(CharacterBitmaps::right, 58), colVoltageText, std::format("{:.4f} V", battValue));
 #endif
         drawText((ScreenNumber)screenCounter, Vector2i(CharacterBitmaps::left, 1), colVoltageText, hostname);
     }

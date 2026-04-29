@@ -3,8 +3,8 @@
 #include <Screen.h>
 #include <matrixserver.pb.h>
 
+#include <format>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <chrono>
 
@@ -93,11 +93,11 @@ const std::string test7((const char *)test_string_7, sizeof(test_string_7));
 const std::string test7_result((const char *)test_string_7_result, sizeof(test_string_7_result));
 
 std::string getHexArrayString(const uint8_t *data, size_t length) {
-    std::stringstream result;
+    std::string result;
     for (int i = 0; i < length; i++) {
-        result << "0x" << std::hex << (int)data[i] << ", ";
+        result += std::format("0x{:02x}, ", (int)data[i]);
     }
-    return result.str();
+    return result;
 }
 
 std::string getHexArrayString(std::string input) { return getHexArrayString((const uint8_t *)input.data(), input.size()); }

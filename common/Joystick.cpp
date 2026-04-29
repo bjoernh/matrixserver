@@ -7,8 +7,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <string>
-#include <sstream>
-#include "unistd.h"
+#include <format>
 
 std::map<int, Joystick::SimulatorState> Joystick::simulatorStates_;
 std::map<int, std::chrono::steady_clock::time_point> Joystick::simulatorLastUpdate_;
@@ -17,9 +16,7 @@ std::mutex Joystick::simulatorMutex_;
 Joystick::Joystick() { init("/dev/input/js0", false); }
 
 Joystick::Joystick(int joystickNumber) {
-    std::stringstream sstm;
-    sstm << "/dev/input/js" << joystickNumber;
-    init(sstm.str(), false);
+    init(std::format("/dev/input/js{}", joystickNumber), false);
 }
 
 Joystick::Joystick(std::string devicePath) { init(devicePath, false); }
@@ -53,7 +50,7 @@ void Joystick::init(std::string devicePath, bool blocking) {
     struct stat buffer;
     if (stat(devicePath_.c_str(), &buffer) != 0) {
         useSimulatorFallback_ = true;
-        BOOST_LOG_TRIVIAL(debug) << "Joystick " << joystickNumber_ << " not found (" << devicePath << "). Falling back to simulator mode.";
+        BOOST_LOG_TRIVIAL(debug) << std::format("Joystick {} not found ({}). Falling back to simulator mode.", joystickNumber_, devicePath);
         startRefreshThread();
     } else {
         openPath();
@@ -76,7 +73,7 @@ void Joystick::recheckFilePath() {
     if (useSimulatorFallback_) {
         // Late-pairing: if a physical device has appeared while we were in fallback, transition out.
         if (fileExists) {
-            BOOST_LOG_TRIVIAL(info) << "Joystick " << joystickNumber_ << " device appeared, switching out of simulator fallback.";
+            BOOST_LOG_TRIVIAL(info) << std::format("Joystick {} device appeared, switching out of simulator fallback.", joystickNumber_);
             resetVariables();
             openPath();
             useSimulatorFallback_ = false;

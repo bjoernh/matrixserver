@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
+#include <format>
 #include <boost/log/expressions.hpp>
 #include <thread>
 #include <unistd.h>
@@ -32,7 +33,7 @@ MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string se
 
     createDefaultCubeConfig(serverConfig);
 
-    BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl << serverConfig.DebugString() << std::endl;
+    BOOST_LOG_TRIVIAL(info) << std::format("ServerConfig:\n{}\n", serverConfig.DebugString());
 
     for (auto screenInfo : serverConfig.screeninfo()) {
         auto screen = std::make_shared<Screen>(screenInfo.width(), screenInfo.height(), screenInfo.screenid());
@@ -155,7 +156,7 @@ void MatrixApplicationStandalone::internalLoop() {
             }
             newFrame = true;
         }
-        BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " << micros() - startTime << " us";
+        BOOST_LOG_TRIVIAL(warning) << std::format("[Application] rendertime: {} us", micros() - startTime);
     }
 }
 

@@ -1,5 +1,6 @@
 #include "IpcConnection.h"
 
+#include <format>
 #include <boost/log/trivial.hpp>
 
 IpcConnection::IpcConnection() : receiveData(MAXIPCMESSAGESIZE) { receiveCallback = nullptr; }
@@ -23,7 +24,7 @@ void IpcConnection::setReceiveCallback(
 void IpcConnection::readLoop() {
     boost::interprocess::message_queue::size_type recvd_size;
     unsigned int priority;
-    BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] start read loop";
+    BOOST_LOG_TRIVIAL(trace) << std::format("[IpcConnection] start read loop");
     while (!dead.load()) {
         try {
             this->receiveMQ->receive(receiveData.data(), receiveData.size(), recvd_size, priority);
@@ -31,15 +32,15 @@ void IpcConnection::readLoop() {
                 break;
             auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
             if (receiveMessage->ParseFromString(std::string(reinterpret_cast<const char*>(receiveData.data()), recvd_size))) {
-                BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] Recieved full Protobuf MatrixServerMessage";
+                BOOST_LOG_TRIVIAL(trace) << std::format("[IpcConnection] Recieved full Protobuf MatrixServerMessage");
                 if (this->receiveCallback != nullptr) {
                     this->receiveCallback(shared_from_this(), receiveMessage);
                 } else {
-                    BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] NO CALLBACK!";
+                    BOOST_LOG_TRIVIAL(trace) << std::format("[IpcConnection] NO CALLBACK!");
                 }
             }
         } catch (const boost::interprocess::interprocess_exception& e) {
-            BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Receive error: " << e.what();
+            BOOST_LOG_TRIVIAL(error) << std::format("[IpcConnection] Receive error: {}", e.what());
             setDead(true);
             break;
         }
@@ -67,13 +68,13 @@ void IpcConnection::doRead() {
 void IpcConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> message) {
     auto sendBuffer = message->SerializeAsString();
     if (sendBuffer.size() > MAXIPCMESSAGESIZE) {
-        BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Message too large: " << sendBuffer.size() << " > " << MAXIPCMESSAGESIZE;
+        BOOST_LOG_TRIVIAL(error) << std::format("[IpcConnection] Message too large: {} > {}", sendBuffer.size(), MAXIPCMESSAGESIZE);
         return;
     }
     try {
         sendMQ->send(sendBuffer.data(), sendBuffer.size(), 0);
     } catch (const boost::interprocess::interprocess_exception& e) {
-        BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Send failed: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << std::format("[IpcConnection] Send failed: {}", e.what());
         setDead(true);
     }
 }
@@ -98,14 +99,14 @@ void IpcConnection::setDead(bool sDead) { dead.store(sDead); }
 
 bool IpcConnection::connectToServer(std::string serverAddress) {
     try {
-        std::stringstream receiveMQname;
+        std::string receiveMQname(20, ' ');
         for (int i = 0; i < 20; i++)
-            receiveMQname << (char)(rand() % 26 + 'a'); // add random character [a...z]
+            receiveMQname[i] = (char)(rand() % 26 + 'a');
 
         auto tempServer = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, serverAddress.data());
-        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.str().data(), 10,
+        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.data(), 10,
                                                                                MAXIPCMESSAGESIZE, boost::interprocess::permissions(0666));
-        tempServer->send(receiveMQname.str().data(), receiveMQname.str().size(), 0);
+        tempServer->send(receiveMQname.data(), receiveMQname.size(), 0);
         std::vector<uint8_t> tempData(MAXIPCMESSAGESIZE);
         boost::interprocess::message_queue::size_type recvd_size;
         unsigned int priority;
@@ -118,7 +119,7 @@ bool IpcConnection::connectToServer(std::string serverAddress) {
             setDead(true);
         }
     } catch (boost::interprocess::interprocess_exception e) {
-        BOOST_LOG_TRIVIAL(debug) << "[IpcConnection] " << e.what();
+        BOOST_LOG_TRIVIAL(debug) << std::format("[IpcConnection] {}", e.what());
         setDead(true);
         return false;
     }

@@ -5,6 +5,7 @@
 #include <UnixSocketClient.h>
 
 #include <boost/log/trivial.hpp>
+#include <format>
 
 namespace ConnectionFactory {
 
@@ -12,7 +13,7 @@ std::shared_ptr<UniversalConnection> connectFromUri(boost::asio::io_context& ctx
     // Parse URI scheme: everything before "://"
     const auto schemeEnd = uri.find("://");
     if (schemeEnd == std::string::npos) {
-        BOOST_LOG_TRIVIAL(error) << "[ConnectionFactory] Invalid URI format (no '://'): " << uri;
+        BOOST_LOG_TRIVIAL(error) << std::format("[ConnectionFactory] Invalid URI format (no '://'): {}", uri);
         return nullptr;
     }
 
@@ -29,7 +30,7 @@ std::shared_ptr<UniversalConnection> connectFromUri(boost::asio::io_context& ctx
         // tcp://<host>:<port>
         const auto colonPos = rest.rfind(':');
         if (colonPos == std::string::npos) {
-            BOOST_LOG_TRIVIAL(error) << "[ConnectionFactory] Invalid TCP URI, expected tcp://<host>:<port>: " << uri;
+            BOOST_LOG_TRIVIAL(error) << std::format("[ConnectionFactory] Invalid TCP URI, expected tcp://<host>:<port>: {}", uri);
             return nullptr;
         }
         const std::string host = rest.substr(0, colonPos);
@@ -41,7 +42,7 @@ std::shared_ptr<UniversalConnection> connectFromUri(boost::asio::io_context& ctx
         return UnixSocketClient::connect(ctx, rest);
 
     } else {
-        BOOST_LOG_TRIVIAL(error) << "[ConnectionFactory] Unknown URI scheme '" << scheme << "' in: " << uri;
+        BOOST_LOG_TRIVIAL(error) << std::format("[ConnectionFactory] Unknown URI scheme '{}' in: {}", scheme, uri);
         return nullptr;
     }
 }

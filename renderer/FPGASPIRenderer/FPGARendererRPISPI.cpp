@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <cstring>
 #include <thread>
+#include <format>
 #include <unistd.h>
 #include <boost/log/trivial.hpp>
 #include <stdexcept>
@@ -93,7 +94,7 @@ void SpiWriteQueueTrigger() {
     std::thread([&]() {
         int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
         if (ret < 0) {
-            BOOST_LOG_TRIVIAL(error) << "[SPI] ioctl write failed: " << strerror(errno);
+            BOOST_LOG_TRIVIAL(error) << std::format("[SPI] ioctl write failed: {}", strerror(errno));
         }
     }).detach();
 }
@@ -149,47 +150,46 @@ bool FPGARendererRPISPI::initSpi() const {
     BOOST_LOG_TRIVIAL(info) << "[SPI] Initializing SPI driver";
 
     if ((spiDevFilehandle = open(spiDevice, O_RDWR)) < 0) {
-        throw std::runtime_error("[SPI] Failed to open device " + std::string(spiDevice) + ": " + strerror(errno));
+        throw std::runtime_error(std::format("[SPI] Failed to open device {}: {}", spiDevice, strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_MODE, &spiMode);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to set SPI mode: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to set SPI mode: {}", strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_MODE, &spiMode);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to get SPI mode: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to get SPI mode: {}", strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_BITS_PER_WORD, &spiBits);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to set bits per word: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to set bits per word: {}", strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_BITS_PER_WORD, &spiBits);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to get bits per word: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to get bits per word: {}", strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeed);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to set speed: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to set speed: {}", strerror(errno)));
     }
 
     ret = ioctl(spiDevFilehandle, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeed);
     if (ret < 0) {
         close(spiDevFilehandle);
-        throw std::runtime_error("[SPI] Failed to get speed: " + std::string(strerror(errno)));
+        throw std::runtime_error(std::format("[SPI] Failed to get speed: {}", strerror(errno)));
     }
 
-    BOOST_LOG_TRIVIAL(info) << "[SPI] Device: " << spiDevice << " Mode: " << (int)spiMode << " Bits: " << (int)spiBits << " Speed: " << spiSpeed
-                            << " Hz (" << spiSpeed / 1000000 << " MHz)";
+    BOOST_LOG_TRIVIAL(info) << std::format("[SPI] Device: {} Mode: {} Bits: {} Speed: {} Hz ({} MHz)", spiDevice, (int)spiMode, (int)spiBits, spiSpeed, spiSpeed / 1000000);
     return true;
 }
 

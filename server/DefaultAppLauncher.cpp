@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <format>
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -29,7 +30,7 @@ void DefaultAppLauncher::launchIfNotRunning() {
     if (launched_) {
         return;
     }
-    BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << binaryPath_;
+    BOOST_LOG_TRIVIAL(info) << std::format("[Server] Starting default app: {}", binaryPath_);
     pid_t pid = fork();
     if (pid == 0) {
         // Child: redirect stdout/stderr to /dev/null and exec the app.
@@ -44,7 +45,7 @@ void DefaultAppLauncher::launchIfNotRunning() {
         _exit(1); // execl failed
     } else if (pid > 0) {
         childPid_ = pid;
-        BOOST_LOG_TRIVIAL(debug) << "[Server] Default app PID: " << pid;
+        BOOST_LOG_TRIVIAL(debug) << std::format("[Server] Default app PID: {}", pid);
     } else {
         BOOST_LOG_TRIVIAL(warning) << "[Server] fork() failed for default app";
     }
@@ -61,7 +62,7 @@ void DefaultAppLauncher::markAppsPresent() {
 
 void DefaultAppLauncher::stop() {
     if (childPid_ > 0) {
-        BOOST_LOG_TRIVIAL(info) << "[Server] Stopping default app (PID " << childPid_ << ")";
+        BOOST_LOG_TRIVIAL(info) << std::format("[Server] Stopping default app (PID {})", childPid_);
         kill(childPid_, SIGTERM);
         // Wait up to 3 s for graceful exit, then force-kill.
         for (int i = 0; i < 30; ++i) {
