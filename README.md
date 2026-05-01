@@ -160,6 +160,31 @@ make -j$(nproc)
 make install
 ```
 
+#### LC_RPATH gotcha when running example apps against a local install
+
+The `exampleApplications` repo's CMake bakes only `LC_RPATH = /usr/local/lib` into each
+binary. So when you `make install` matrixserver into a *local* `matrixserver/install/`
+prefix and then rebuild the example apps, the *build* picks up the new library at link
+time (API is verified), but at *runtime* the dynamic loader falls back to
+`/usr/local/lib/libmatrixapplication.*` — the previously installed system copy. The
+binary will silently run against the old library.
+
+To actually run example apps against the freshly built matrixserver, point the loader
+at the install tree:
+
+```bash
+# macOS
+export DYLD_LIBRARY_PATH=/path/to/matrixserver/install/lib
+# Linux
+export LD_LIBRARY_PATH=/path/to/matrixserver/install/lib
+
+./bin/Snake
+```
+
+Alternatives: `sudo make install` matrixserver to `/usr/local` so the existing rpath
+matches (replaces the system copy), or `install_name_tool -add_rpath
+/path/to/matrixserver/install/lib bin/<App>` post-build on macOS.
+
 ### Tests
 
 The `testAll` target is excluded from the default build (`EXCLUDE_FROM_ALL`). Build and run it explicitly:
