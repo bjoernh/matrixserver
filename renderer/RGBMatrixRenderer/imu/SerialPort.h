@@ -4,16 +4,16 @@
 #include <sstream>
 #include <boost/asio.hpp>
 
-class SerialPort
-{
-public:
-  SerialPort(std::string port, unsigned int baud_rate);
-  void writeString(std::string s);
-  std::string readLine();
-private:
-  void internalLoop();
-  boost::asio::io_context io;
-  boost::asio::serial_port serial;
+class SerialPort {
+  public:
+    SerialPort(std::string port, unsigned int baud_rate);
+    void writeString(std::string s);
+    std::string readLine();
+
+  private:
+    void internalLoop();
+    boost::asio::io_context io;
+    boost::asio::serial_port serial;
 };
 
 #endif

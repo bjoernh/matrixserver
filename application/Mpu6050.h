@@ -3,22 +3,27 @@
 
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <memory>
 
 class Mpu6050 {
-public:
+  public:
     Mpu6050();
+    ~Mpu6050();
     void init();
     Eigen::Vector3i getCubeAccIntersect();
     Eigen::Vector3f getAcceleration();
     Eigen::Vector3f getGyroscope();
-private:
+
+  private:
     void startRefreshThread();
     void internalLoop();
     Eigen::Vector3f applyOrientation(float x, float y, float z) const;
-    boost::thread * thread_;
-    boost::mutex threadLock_;
+    std::unique_ptr<std::thread> thread_;
+    std::mutex threadLock_;
+    std::atomic<bool> running_{false};
     int fd;
 
     float xyRotDeg_{0.0f};
@@ -29,5 +34,4 @@ private:
     Eigen::Vector3f gyroscope{0, 0, 0};
 };
 
-
-#endif //MATRIXSERVER_MPU6050_H
+#endif // MATRIXSERVER_MPU6050_H

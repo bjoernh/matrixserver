@@ -6,8 +6,8 @@ echo "Starting Nginx (HTTPS) on port 5173..."
 nginx -g "daemon on;"
 
 if [ $# -eq 0 ]; then
-  echo "Starting MatrixServer Simulator (fallback)..."
-  exec matrix_server_simulator
+  echo "Starting MatrixServer (simulator backend, fallback)..."
+  exec matrix_server --backend=simulator
 else
   echo "Starting command: $@"
   exec "$@"

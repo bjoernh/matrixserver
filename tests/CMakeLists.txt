@@ -10,7 +10,10 @@ add_executable(testAll EXCLUDE_FROM_ALL
     tests-tcp.cpp
     tests-joystick.cpp
     test-unixSocket.cpp
+    tests-message-dispatcher.cpp
+    tests-connection-factory.cpp
+    tests-input-state.cpp
     ${CMAKE_SOURCE_DIR}/application/AnimationParams.cpp
 )
-target_link_libraries(testAll common)
+target_link_libraries(testAll matrixapplication)
 target_include_directories(testAll PRIVATE ${CMAKE_SOURCE_DIR}/application)

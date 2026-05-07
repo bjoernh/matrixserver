@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-C++17 LED matrix screen server for the LEDCube project. Modular architecture with
+C++20 LED matrix screen server for the LEDCube project. Modular architecture with
 abstract renderer backends (Simulator, FPGA FTDI/SPI, RGB Matrix) and protobuf-based
 client-server communication over TCP/Unix sockets/IPC.
 
@@ -19,23 +19,23 @@ On Raspberry Pi additionally: `wiringpi`
 ### Build Commands
 
 ```bash
-# Simulator only (default, non-Raspberry Pi)
+# Simulator-only build (default, non-Raspberry Pi)
 mkdir -p build && cd build && cmake .. && make
 
 # Debug build
 mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
-# Hardware build — select one backend:
+# Compile in one or more hardware backends (HARDWARE_BACKEND is a list):
 mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
 mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
 mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
+mkdir -p build && cd build && cmake -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" .. && make
 
 # Rebuild after changes (from build/)
 make
 
 # Build specific targets
-make matrix_server_simulator
-make matrix_server          # requires HARDWARE_BACKEND to be set
+make matrix_server          # the only server executable; backend selected at runtime
 make testAll
 make common
 make server
@@ -46,16 +46,23 @@ make matrixapplication
 
 | Target | Binary | Description |
 |--------|--------|-------------|
-| `matrix_server_simulator` | `server_simulator/matrix_server_simulator` | Always built; uses WebSocketSimulatorRenderer |
-| `matrix_server` | `server_hardware/matrix_server` | Built when `HARDWARE_BACKEND` is set |
+| `matrix_server` | `server/matrix_server` | The only server executable. Always built. Backend is selected at runtime via `--backend=<name>`. The `simulator` backend is always available; hardware backends are present only if compiled in via `HARDWARE_BACKEND`. |
 
 ### HARDWARE_BACKEND Values
 
-| Value | Renderer | Interface |
-|-------|----------|-----------|
-| `FPGA_FTDI` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
-| `FPGA_RPISPI` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
-| `RGB_MATRIX` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
+`HARDWARE_BACKEND` is a CMake list (semicolon-separated). Each entry must be
+one of the values below; multiple may be enabled simultaneously, in which case
+all of them are linked into the single `matrix_server` binary and selectable
+via `--backend=`. Each renderer's CMake target sets a corresponding
+`HAVE_FPGA_FTDI` / `HAVE_FPGA_RPISPI` / `HAVE_RGB_MATRIX` macro that
+`server/RendererFactory.cpp` uses to gate construction.
+
+| Value | CLI string | Renderer | Interface |
+|-------|------------|----------|-----------|
+| (none) | `simulator` | `WebSocketSimulatorRenderer` | Default; web-based simulator |
+| `FPGA_FTDI` | `fpga-ftdi` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
+| `FPGA_RPISPI` | `fpga-rpispi` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
+| `RGB_MATRIX` | `rgb-matrix` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
 
 ### Tests (Catch v1, single-header)
 
@@ -87,28 +94,30 @@ Test files use Catch v1 macros: `TEST_CASE`, `SECTION`, `REQUIRE` (fatal),
 ### Docker
 
 ```bash
-docker build -t matrixserver .                              # amd64 simulator
-docker build -f Dockerfile.arm64 --build-arg HARDWARE_BACKEND=FPGA_RPISPI -t matrixserver-rpi .
+docker build -t matrixserver .                                                           # amd64 simulator
+docker build -f Dockerfile.arm64 -t matrixserver-pi .                                    # arm64 Pi (all hw backends; default ARG)
+docker build -f Dockerfile.arm64 --build-arg HARDWARE_BACKEND=FPGA_RPISPI -t mx-pi .     # arm64 Pi, single backend (override)
 ```
 
 ### CI
 
-- GitHub Actions (`.github/workflows/docker-build-push.yml`): Builds simulator (AMD64) on tag push
-- GitHub Actions (`.github/workflows/docker-build-push-rpi.yml`): Builds hardware target (ARM64) with `HARDWARE_BACKEND=FPGA_RPISPI` on tag push
-- GitHub Actions (`.github/workflows/docker-build-push-simulator-arm64.yml`): Builds simulator (ARM64) on tag push
+- `.github/workflows/docker-build-push.yml` — simulator (AMD64) on tag push
+- `.github/workflows/docker-build-push-simulator-arm64.yml` — simulator (ARM64) on tag push
+- `.github/workflows/docker-build-push-pi.yml` — Pi (ARM64) with all three hardware backends compiled in (`HARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX"`) on tag push, producing `matrixserver-pi_*.deb`
+- `.github/workflows/create-release.yml` — gathers the three artifacts above into a GitHub release
 
 ## Code Style Guidelines
 
 ### Language Standard
 
-C++17.
+C++20.
 
 ### File Organization
 
 - One class per file pair: `ClassName.h` + `ClassName.cpp` (PascalCase filenames)
 - Directories are modules, each with its own `CMakeLists.txt`
-- Module structure: `common/` (shared), `server/`, `application/`, `renderer/`,
-  `server_simulator/`, `server_hardware/` (executables), `tests/`
+- Module structure: `common/` (shared), `server/` (library + the single
+  `matrix_server` executable), `application/`, `renderer/`, `tests/`
 
 ### Header Guards
 
@@ -224,7 +233,7 @@ try {
 - **Observer/Callback:** `std::function` callbacks for connection events
 - **Bridge:** `UniversalConnection` abstracts TCP/IPC transports
 - **enable_shared_from_this:** Used by `SocketConnection`, `IpcConnection`
-- **Compile-time renderer selection:** `server_hardware/main.cpp` uses `#ifdef BACKEND_*` defines set by CMake to select the renderer type at compile time
+- **Runtime renderer selection (OCP):** `server/main.cpp` reads `--backend=<name>` and asks `server/RendererFactory.cpp` for a `HardwareRendererFactory`; that factory is then handed to `ServerBootstrap::runServer`. Each backend case is gated by a `HAVE_*` macro that the corresponding renderer's CMake target propagates via `target_compile_definitions(... INTERFACE)`. To add a backend: implement the renderer, add it to `renderer/CMakeLists.txt`, expose its `HAVE_*` macro, and add a case in `RendererFactory.cpp` plus a CLI string mapping. No preprocessor switches in `main.cpp`.
 
 ### Writing Tests
 
@@ -251,5 +260,5 @@ TEST_CASE("descriptive name", "[module-tag]") {
 - Do NOT use `NULL` (use `nullptr`)
 - Do NOT add `using namespace std;` in headers
 - Do NOT use raw `new` without wrapping in a smart pointer
-- Do NOT add new server_* executable directories — use `server_simulator/` or `server_hardware/`
+- Do NOT add new server_* executable directories — there is exactly one server executable target, owned by `server/`. Add new backends via `RendererFactory.cpp`, not via new entry-point directories.
 - Do NOT hard-code screen orientations/offsets in main.cpp — put them in `createDefaultCubeConfig()`

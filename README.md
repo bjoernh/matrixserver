@@ -1,5 +1,5 @@
 [![Build Matrixserver Simulator (AMD64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml)
-[![Build Matrixserver RPi (ARM64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml)
+[![Build Matrixserver Pi (ARM64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-pi.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-pi.yml)
 
 # LEDCube matrixserver
 
@@ -11,7 +11,7 @@ planar screen orientations, as well as other complex screen orientations.
 
 The easiest way to get started is using the **self-contained simulator Docker image**, which bundles:
 
-- The `matrix_server_simulator` binary
+- The `matrix_server` binary (running with `--backend=simulator`)
 - The **CubeWebapp** web frontend (built into the image)
 - An **Nginx HTTPS reverse proxy** that serves the webapp UI and proxies the WebSocket connection
 
@@ -91,7 +91,7 @@ Browser (https://localhost:5173)
   Static UI    ws://localhost:1337
                       │
                       ▼
-          matrix_server_simulator
+          matrix_server --backend=simulator
                       │
                       ▼  (port 2017, TCP)
               Matrix Applications
@@ -99,7 +99,7 @@ Browser (https://localhost:5173)
 
 The container runs two processes:
 1. **Nginx** on HTTPS port `5173`: serves the CubeWebapp static web app and proxies WebSocket connections from `/matrix-ws` to the internal raw WebSocket on port `1337`.
-2. **matrix_server_simulator**: the matrix server, listening on TCP `2017` for Matrix Application clients and on WebSocket `1337` for simulator renderer connections.
+2. **matrix_server** (started with `--backend=simulator`): listens on TCP `2017` for Matrix Application clients and on WebSocket `1337` for simulator renderer connections.
 
 ## Simulator Configuration
 
@@ -110,7 +110,7 @@ docker run -it --rm \
   -p 2017:2017 -p 1337:1337 -p 5173:5173 \
   -v $(pwd)/simulator_config.json:/app/matrixServerConfig.json \
   ghcr.io/bjoernh/matrixserver-simulator:latest \
-  matrix_server_simulator --config /app/matrixServerConfig.json
+  matrix_server --backend=simulator --config /app/matrixServerConfig.json
 ```
 
 ---
@@ -127,30 +127,42 @@ Tested on Ubuntu, Raspbian & macOS.
 
 The `CubeWebapp` is included as a git submodule under `CubeWebapp/`. It is built as part of the simulator and RPi Docker images.
 
-By default, on macOS and standard Ubuntu setups, only the simulator target is built.
+There is exactly **one server executable**, `matrix_server`, in every build. The
+runtime backend is selected via the `--backend=` flag; which backends are
+available in a given binary is decided at compile time.
 
-To build the project for a standard development environment (simulator only):
+To build the project for a standard development environment (only the
+simulator backend compiled in):
 ```bash
 mkdir build && cd build && cmake .. && make
+./server/matrix_server                       # equivalent to --backend=simulator
 ```
 
-To build for a specific hardware backend, set `-DHARDWARE_BACKEND`:
+To build with one or more hardware backends compiled in, pass
+`-DHARDWARE_BACKEND` as a semicolon-separated list of any of
+`FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`:
+
 ```bash
 # FPGA via FTDI USB (IceBreaker board)
 mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
+./server/matrix_server --backend=fpga-ftdi
 
 # FPGA via Raspberry Pi SPI
 mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
+./server/matrix_server --backend=fpga-rpispi
 
 # RGB Matrix panels via Raspberry Pi GPIO
 mkdir build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
+./server/matrix_server --backend=rgb-matrix
+
+# All hardware backends in a single binary (matches the matrixserver-pi deb)
+mkdir build && cd build && cmake -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" .. && make
+./server/matrix_server --backend=fpga-rpispi   # pick at runtime
 ```
 
-Valid values for `HARDWARE_BACKEND`: `FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`
-
-When `HARDWARE_BACKEND` is set, two targets are built:
-- `matrix_server_simulator` — always built for development/testing
-- `matrix_server` — hardware server with the selected renderer
+The `simulator` backend is always available; hardware backends are only
+selectable at runtime if they were compiled in. `matrix_server --help` lists
+the backends present in the current binary.
 
 To build and install the project to a local directory (e.g., `./install`):
 ```bash
@@ -159,6 +171,31 @@ cmake -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
 make -j$(nproc)
 make install
 ```
+
+#### LC_RPATH gotcha when running example apps against a local install
+
+The `exampleApplications` repo's CMake bakes only `LC_RPATH = /usr/local/lib` into each
+binary. So when you `make install` matrixserver into a *local* `matrixserver/install/`
+prefix and then rebuild the example apps, the *build* picks up the new library at link
+time (API is verified), but at *runtime* the dynamic loader falls back to
+`/usr/local/lib/libmatrixapplication.*` — the previously installed system copy. The
+binary will silently run against the old library.
+
+To actually run example apps against the freshly built matrixserver, point the loader
+at the install tree:
+
+```bash
+# macOS
+export DYLD_LIBRARY_PATH=/path/to/matrixserver/install/lib
+# Linux
+export LD_LIBRARY_PATH=/path/to/matrixserver/install/lib
+
+./bin/Snake
+```
+
+Alternatives: `sudo make install` matrixserver to `/usr/local` so the existing rpath
+matches (replaces the system copy), or `install_name_tool -add_rpath
+/path/to/matrixserver/install/lib bin/<App>` post-build on macOS.
 
 ### Tests
 
@@ -187,18 +224,24 @@ docker pull ghcr.io/bjoernh/matrixserver-simulator:latest
 See the [Quick Start](#quick-start-all-in-one-simulator-container) section above for usage.
 
 **Raspberry Pi (ARM64)**
+
+The `matrixserver-pi` image bundles **all three hardware backends** plus the
+simulator; pick one at runtime with `--backend=`.
+
 ```bash
-docker pull ghcr.io/bjoernh/matrixserver-rpi:latest
+docker pull ghcr.io/bjoernh/matrixserver-pi:latest
 # Hardware access usually requires privileges or mapping specific /dev devices
-docker run -it --rm --privileged -v /dev:/dev ghcr.io/bjoernh/matrixserver-rpi:latest matrix_server
+docker run -it --rm --privileged -v /dev:/dev ghcr.io/bjoernh/matrixserver-pi:latest \
+  matrix_server --backend=fpga-rpispi
 ```
-*(Note: You can pass any of the standard server parameters, such as `--config`, at the end of the `docker run` command).*
+*(Pass any of the standard server parameters, such as `--config`, after the `--backend=` flag.)*
 
 # Server Configuration
 
-Both server targets share a unified command-line interface:
+The unified `matrix_server` binary accepts:
 
-*   **`-h, --help`**: Display available command-line options.
+*   **`-h, --help`**: Display available command-line options (including the list of backends compiled into this binary).
+*   **`--backend <name>`**: Select the renderer at runtime. One of `simulator`, `fpga-ftdi`, `fpga-rpispi`, `rgb-matrix`. Default: `simulator`. Backends not compiled in cause an error listing what *is* available.
 *   **`--config <path>`**: Path to the `matrixServerConfig.json` configuration file. If not provided, the server checks the current directory or prompts you to generate a default one.
 *   **`--address <ip>`**: Override the server address specified in the configuration file.
 
@@ -253,7 +296,7 @@ You can find example applications to run in the `exampleApplications` repository
 If you have an IceBreaker board with HUB75 PMOD:  
 * at first load the FPGA with the `rgb_panel` project example (https://github.com/squarewavedot/ice40-playground/tree/master/projects/rgb_panel)   
 * hook up the IceBreaker to the Raspberry Pi via USB
-* build and start the hardware server: `cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make && ./server_hardware/matrix_server`
+* build and start the server: `cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make && ./server/matrix_server --backend=fpga-ftdi`
 * In another terminal compile and start the `cubetestapp` or `PixelFlow` or any other target from the exampleApplications repository.
 
 
@@ -276,14 +319,11 @@ The project is divided into logical directories that separate the server daemon,
 *   **`server`**
     *   The core daemon logic containing the `Server` class that accepts connections, validates configuration parameters, and routes incoming application frames to the active renderers.
     *   Includes a unified `ServerSetup` utility to handle configuration parsing, screen orientation defaults, and hardware-specific config generation.
+    *   Owns the single `matrix_server` executable target. The `--backend=` flag is dispatched here via `RendererFactory`, which constructs the matching renderer at runtime (gated by per-backend `HAVE_*` macros set by each renderer's CMake target). When a hardware backend is active, a `WebSocketSimulatorRenderer` with `streamPixels=false` is also registered so the CubeWebapp can connect on WebSocket port `1337` for runtime parameter control without any pixel streaming overhead.
 
 *   **`application`**
     *   A client-side C++ library containing base classes like `MatrixApplication` and `CubeApplication`. 
     *   These provide a high-level API with convenient drawing methods (e.g., `setPixel3D`, coordinate mapping) for writing custom programs that connect to the screen server.
-
-*   **`server_simulator/`** and **`server_hardware/`** (The Executables)
-    *   **`server_simulator`**: Always built. Produces `matrix_server_simulator`, which uses `WebSocketSimulatorRenderer` to interact with the web simulator.
-    *   **`server_hardware`**: Built when `-DHARDWARE_BACKEND=<value>` is set. Produces `matrix_server`, compiled with the selected hardware renderer. The renderer is selected at compile time via preprocessor defines. In addition to the hardware renderer, a `WebSocketSimulatorRenderer` (with `streamPixels=false`) is registered as a second renderer so the CubeWebapp can connect on WebSocket port `1337` for runtime parameter control — without any pixel streaming overhead.
 
 *   **`MainMenu`**
     *   A built-in example client application that provides a launch interface for the cube.

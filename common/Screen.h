@@ -1,16 +1,14 @@
 #ifndef MATRIXSERVER_SCREEN_H
 #define MATRIXSERVER_SCREEN_H
 
+#include <span>
 #include <vector>
 #include "Color.h"
 
-enum class Rotation {
-    rot0, rot90, rot180, rot270
-};
-
+enum class Rotation { rot0, rot90, rot180, rot270 };
 
 class Screen {
-public:
+  public:
     Screen(int setWidth, int setHeight, int setScreenId);
 
     ~Screen();
@@ -35,13 +33,13 @@ public:
 
     void fill(Color col);
 
-    std::vector<Color> & getScreenData();
+    std::vector<Color>& getScreenData();
 
-    Color * getScreenDataRaw();
+    Color* getScreenDataRaw();
 
-    void setScreenData(Color *data);
+    void setScreenData(std::span<const Color> data);
 
-    void setScreenData(std::vector<Color> &);
+    void setScreenData(std::vector<Color>&);
 
     int getScreenDataSize();
 
@@ -63,7 +61,7 @@ public:
 
     int getOffsetY();
 
-protected:
+  protected:
     std::vector<Color> screenData;
     int screenDataSize;
     int screenId;
@@ -74,5 +72,4 @@ protected:
     Rotation rotation;
 };
 
-
-#endif //MATRIXSERVER_SCREEN_H
+#endif // MATRIXSERVER_SCREEN_H

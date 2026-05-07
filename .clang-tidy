@@ -1,0 +1,90 @@
+---
+Checks: >
+  '-*',
+  '+modernize-*',
+  '+readability-identifier-naming',
+  '+cppcoreguidelines-*',
+  '-cppcoreguidelines-avoid-magic-numbers',
+  '-cppcoreguidelines-pro-bounds-array-to-pointer-decay',
+  '-cppcoreguidelines-pro-bounds-pointer-arithmetic',
+  '-cppcoreguidelines-pro-bounds-constant-conversion',
+  '-cppcoreguidelines-narrowing-conversions',
+  '-cppcoreguidelines-avoid-c-arrays',
+  '-cppcoreguidelines-owning-memory',
+  '-cppcoreguidelines-rvalue-reference-param-not-moved',
+  '-cppcoreguidelines-no-malloc',
+  '-cppcoreguidelines-non-private-member-variables-in-classes',
+  '-cppcoreguidelines-init-variables',
+  '-cppcoreguidelines-avoid-goto',
+  '-cppcoreguidelines-macro-usage',
+  '-cppcoreguidelines-interfaces-global-init',
+  '-cppcoreguidelines-pro-type-member-init',
+  '-modernize-use-trailing-return-type',
+  '-modernize-use-nodiscard',
+  '-modernize-use-nullptr',
+  '-modernize-use-default-member-init',
+  '-modernize-use-equals-default',
+  '-modernize-use-equals-delete',
+  '-modernize-use-noexcept',
+  '-modernize-use-override',
+  '-modernize-use-auto',
+  '-modernize-use-default-member-init',
+  '-modernize-use-transparent-functors',
+  '-modernize-use-simplify-subscript_expr'
+
+WarningsAsErrors: ''
+
+HeaderFilterRegex: ''
+
+CheckOptions:
+  # --- readability-identifier-naming ---
+  # Member variables: camelCase, optional trailing '_' only for shadowed names.
+  - key: readability-identifier-naming.MemberVarCase
+    value: camelCase
+
+  # Allow trailing underscore on member vars (used for shadowed names).
+  # The checker treats CamelBacked_ as a variant of camelCase when
+  # MemberVarCase is camelCase and the suffix is just '_'.
+
+  # Parameter names: camelCase
+  - key: readability-identifier-naming.ParameterCase
+    value: camelCase
+
+  # Private member functions: camelCase
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: camelCase
+
+  # Public/protected member functions: camelCase
+  - key: readability-identifier-naming.PublicMemberCase
+    value: camelCase
+
+  # Class/struct names: PascalCase
+  - key: readability-identifier-naming.ClassCase
+    value: PascalCase
+
+  # Enum names: PascalCase
+  - key: readability-identifier-naming.EnumCase
+    value: PascalCase
+
+  # Constant variables (static const, constexpr, etc.): PascalCase
+  - key: readability-identifier-naming.ConstantCase
+    value: PascalCase
+
+  # Static member variables: camelCase
+  - key: readability-identifier-naming.StaticMemberVarCase
+    value: camelCase
+
+  # Function-like macro names: PascalCase (screaming_snake is also common,
+  # but most macros here are PascalCase or SCREAMING_SNAKE for constants).
+  - key: readability-identifier-naming.FunctionLikeMacroCase
+    value: PascalCase
+
+  # Enumerators: camelCase
+  - key: readability-identifier-naming.EnumeratorCase
+    value: camelCase
+
+  # Non-variable template arguments: PascalCase
+  - key: readability-identifier-naming.NonVarTemplateArgCase
+    value: PascalCase
+
+...

@@ -2,6 +2,4 @@
 
 #include <UnixSocketServer.h>
 
-TEST_CASE("unix socket test #1", "[unixsocket]") {
-
-}
+TEST_CASE("unix socket test #1", "[unixsocket]") {}

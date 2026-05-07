@@ -5,7 +5,7 @@
 TEST_CASE("Joystick fallback logic and Simulator Data mapping", "[joystick]") {
     // /dev/input/js_not_exist does not exist, so it should trigger simulator fallback
     Joystick joystick("/dev/input/js_not_exist");
-    
+
     SECTION("Fallback to Simulator Mode when file doesn't exist") {
         // Without any simulator input, isFound() returns false (lazy activation).
         // A slot only becomes active once a simulator client sends data for it.
@@ -27,7 +27,7 @@ TEST_CASE("Joystick fallback logic and Simulator Data mapping", "[joystick]") {
         // Instantiate joystick 99 and force it into fallback mode
         Joystick joy99("/dev/input/js99");
         REQUIRE(joy99.isFound() == true);
-        
+
         // Button A maps to button 0
         REQUIRE(joy99.getButton(0) == true);
         // Button X maps to button 2
@@ -43,7 +43,7 @@ TEST_CASE("Joystick fallback logic and Simulator Data mapping", "[joystick]") {
         REQUIRE(joy99.getAxis(6) == Approx(-1.0f));
 
         // Test press functionality
-        REQUIRE(joy99.getButtonPress(0) == true); // Button A was just pressed
+        REQUIRE(joy99.getButtonPress(0) == true);  // Button A was just pressed
         REQUIRE(joy99.getButtonPress(0) == false); // Reset after read
     }
 
@@ -55,7 +55,7 @@ TEST_CASE("Joystick fallback logic and Simulator Data mapping", "[joystick]") {
 
         Joystick joy100("/dev/input/js100");
         REQUIRE(joy100.getButtonPress(0) == true);
-        
+
         // Push update again
         protoData.set_buttona(false);
         Joystick::updateSimulatorState(protoData);

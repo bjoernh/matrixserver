@@ -3,22 +3,23 @@
 
 #include <string>
 #include <iostream>
-#include <stdint.h>
 #include <map>
 #include <chrono>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <memory>
 #include <array>
 #include <vector>
 
-#define MAXBUTTONAXISCOUNT 16
+inline constexpr int MAXBUTTONAXISCOUNT = 16;
 
 namespace matrixserver {
-    class JoystickData;
+class JoystickData;
 }
 
 class Joystick {
-public:
+  public:
     class Event;
 
     struct SimulatorState {
@@ -26,7 +27,7 @@ public:
         std::array<bool, MAXBUTTONAXISCOUNT> buttonPress_;
         std::array<float, MAXBUTTONAXISCOUNT> axis_;
         std::array<float, MAXBUTTONAXISCOUNT> axisPress_;
-        
+
         SimulatorState() {
             button_.fill(false);
             buttonPress_.fill(false);
@@ -39,7 +40,7 @@ public:
     /// simulator input has been received. Used by isFound() to prevent idle slots from appearing active.
     static constexpr int SIMULATOR_ACTIVITY_TIMEOUT_MS = 3000;
 
-    static void updateSimulatorState(const matrixserver::JoystickData& data);
+    static void updateSimulatorState(const matrixserver::JoystickData &data);
 
     ~Joystick();
 
@@ -50,7 +51,6 @@ public:
     Joystick(std::string devicePath);
 
     Joystick(Joystick const &) = delete;
-
 
     Joystick(std::string devicePath, bool blocking);
 
@@ -78,7 +78,7 @@ public:
 
     void clearAllButtonPresses();
 
-private:
+  private:
     void internalLoop();
 
     void openPath();
@@ -88,8 +88,9 @@ private:
     void resetVariables();
 
     int _fd;
-    boost::thread *thread_;
-    boost::mutex threadLock_;
+    std::unique_ptr<std::thread> thread_;
+    std::mutex threadLock_;
+    std::atomic<bool> threadRunning_{false};
     std::string devicePath_;
     bool blocking_;
     std::array<bool, MAXBUTTONAXISCOUNT> button_;
@@ -102,27 +103,21 @@ private:
 
     static std::map<int, SimulatorState> simulatorStates_;
     static std::map<int, std::chrono::steady_clock::time_point> simulatorLastUpdate_;
-    static boost::mutex simulatorMutex_;
+    static std::mutex simulatorMutex_;
 };
 
 class Joystick::Event {
-public:
+  public:
     unsigned int time;
     short value;
     unsigned char type;
     unsigned char number;
 
-    bool isButton() {
-        return (type & 0x01) != 0;
-    }
+    bool isButton() { return (type & 0x01) != 0; }
 
-    bool isAxis() {
-        return (type & 0x02) != 0;
-    }
+    bool isAxis() { return (type & 0x02) != 0; }
 
-    bool isInitialState() {
-        return (type & 0x80) != 0;
-    }
+    bool isInitialState() { return (type & 0x80) != 0; }
 
     friend std::ostream &operator<<(std::ostream &os, const Joystick::Event &e);
 };
@@ -130,10 +125,14 @@ public:
 std::ostream &operator<<(std::ostream &os, const Joystick::Event &e);
 
 class JoystickManager {
-public:
+  public:
     JoystickManager(unsigned int maxNum = 8);
+    ~JoystickManager() = default; // unique_ptr handles cleanup
 
-    std::vector<Joystick *> &getJoysticks();
+    // Returns a snapshot vector of raw pointers for callers that iterate.
+    // Ownership remains with JoystickManager; pointers are valid as long as the
+    // JoystickManager is alive and no joysticks are added/removed.
+    std::vector<Joystick *> getJoysticks() const;
 
     bool getButtonPress(unsigned int num);
 
@@ -143,10 +142,8 @@ public:
 
     void clearAllButtonPresses();
 
-private:
-    std::vector<Joystick *> joysticks;
-
+  private:
+    std::vector<std::unique_ptr<Joystick>> joysticks;
 };
 
-
-#endif //MATRIXSERVER_JOYSTICK_H
+#endif // MATRIXSERVER_JOYSTICK_H

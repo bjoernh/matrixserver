@@ -1,6 +1,6 @@
 project(application)
 
-find_package(Boost 1.58.0 REQUIRED COMPONENTS thread log)
+find_package(Boost 1.58.0 REQUIRED COMPONENTS log)
 include_directories(${Boost_INCLUDE_DIRS})
 
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -15,8 +15,12 @@ ENDIF()
 
 set(SOURCE_FILES
         CubeApplication.cpp
+        Font6px.cpp
         Mpu6050.cpp
-        AnimationParams.cpp)
+        AnimationParams.cpp
+        ConnectionFactory.cpp
+        InputState.cpp
+        LoopRunner.cpp)
 
 if (BUILD_RASPBERRYPI)
 	set(SOURCE_FILES
@@ -38,19 +42,21 @@ if (BUILD_RASPBERRYPI)
     target_link_libraries(matrixapplication wiringPi)
 endif ()
 
-if (HARDWARE_BACKEND STREQUAL "FPGA_RPISPI")
-    target_link_libraries(matrixapplication FPGASPIRenderer)
-elseif (HARDWARE_BACKEND STREQUAL "RGB_MATRIX")
-    target_link_libraries(matrixapplication RGBMatrixRenderer)
-elseif (HARDWARE_BACKEND STREQUAL "FPGA_FTDI")
-    target_link_libraries(matrixapplication FPGAFTDIRenderer)
-endif ()
+foreach(BACKEND IN LISTS HARDWARE_BACKEND)
+    if (BACKEND STREQUAL "FPGA_RPISPI")
+        target_link_libraries(matrixapplication FPGASPIRenderer)
+    elseif (BACKEND STREQUAL "RGB_MATRIX")
+        target_link_libraries(matrixapplication RGBMatrixRenderer)
+    elseif (BACKEND STREQUAL "FPGA_FTDI")
+        target_link_libraries(matrixapplication FPGAFTDIRenderer)
+    endif()
+endforeach()
 
 target_include_directories(matrixapplication PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 
 
 target_compile_definitions(matrixapplication PUBLIC BOOST_LOG_DYN_LINK)
-set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h")
+set_target_properties(matrixapplication PROPERTIES PUBLIC_HEADER "CubeApplication.h;Font6px.h;Mpu6050.h;ADS1000.h;AnimationParams.h;MatrixApplication.h;ConnectionFactory.h;InputState.h;LoopRunner.h")
 
 install(TARGETS matrixapplication
         EXPORT matrixapplication-targets

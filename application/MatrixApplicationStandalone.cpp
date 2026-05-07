@@ -2,10 +2,10 @@
 #include <sys/time.h>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
+#include <format>
 #include <boost/log/expressions.hpp>
 #include <thread>
 #include <unistd.h>
-
 
 void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
     serverConfig.Clear();
@@ -23,94 +23,92 @@ void createDefaultCubeConfig(matrixserver::ServerConfig &serverConfig) {
         screenInfo->set_available(true);
         screenInfo->set_height(64);
         screenInfo->set_width(64);
-        screenInfo->set_screenorientation((matrixserver::ScreenInfo_ScreenOrientation) (i + 1));
+        screenInfo->set_screenorientation((matrixserver::ScreenInfo_ScreenOrientation)(i + 1));
     }
 }
 
-
-MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string serverUri) :
-        mainThread(), renderThread() {
+MatrixApplicationStandalone::MatrixApplicationStandalone(int fps, std::string serverUri) {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     newFrame = false;
 
     createDefaultCubeConfig(serverConfig);
 
-    BOOST_LOG_TRIVIAL(info) << "ServerConfig: " << std::endl << serverConfig.DebugString() << std::endl;
+    BOOST_LOG_TRIVIAL(info) << std::format("ServerConfig:\n{}\n", serverConfig.DebugString());
 
-    for (auto screenInfo : serverConfig.screeninfo()){
+    for (auto screenInfo : serverConfig.screeninfo()) {
         auto screen = std::make_shared<Screen>(screenInfo.width(), screenInfo.height(), screenInfo.screenid());
-        switch(screenInfo.screenorientation()){
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_front :
-                screen->setOffsetX(1);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_right :
-                screen->setOffsetX(0);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_back :
-                screen->setOffsetX(1);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot90);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_left :
-                screen->setOffsetX(2);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_top :
-                screen->setOffsetX(0);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot270);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_bottom :
-                screen->setOffsetX(2);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot270);
-                break;
-            default:
-                break;
+        switch (screenInfo.screenorientation()) {
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_front:
+            screen->setOffsetX(1);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_right:
+            screen->setOffsetX(0);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_back:
+            screen->setOffsetX(1);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot90);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_left:
+            screen->setOffsetX(2);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_top:
+            screen->setOffsetX(0);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot270);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_bottom:
+            screen->setOffsetX(2);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot270);
+            break;
+        default:
+            break;
         }
         renderscreens.push_back(screen);
     }
 
-    for (auto screenInfo : serverConfig.screeninfo()){
+    for (auto screenInfo : serverConfig.screeninfo()) {
         auto screen = std::make_shared<Screen>(screenInfo.width(), screenInfo.height(), screenInfo.screenid());
-        switch(screenInfo.screenorientation()){
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_front :
-                screen->setOffsetX(1);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_right :
-                screen->setOffsetX(0);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_back :
-                screen->setOffsetX(1);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot90);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_left :
-                screen->setOffsetX(2);
-                screen->setOffsetY(1);
-                screen->setRotation(Rotation::rot180);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_top :
-                screen->setOffsetX(0);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot270);
-                break;
-            case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_bottom :
-                screen->setOffsetX(2);
-                screen->setOffsetY(0);
-                screen->setRotation(Rotation::rot270);
-                break;
-            default:
-                break;
+        switch (screenInfo.screenorientation()) {
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_front:
+            screen->setOffsetX(1);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_right:
+            screen->setOffsetX(0);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_back:
+            screen->setOffsetX(1);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot90);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_left:
+            screen->setOffsetX(2);
+            screen->setOffsetY(1);
+            screen->setRotation(Rotation::rot180);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_top:
+            screen->setOffsetX(0);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot270);
+            break;
+        case matrixserver::ScreenInfo_ScreenOrientation::ScreenInfo_ScreenOrientation_bottom:
+            screen->setOffsetX(2);
+            screen->setOffsetY(0);
+            screen->setRotation(Rotation::rot270);
+            break;
+        default:
+            break;
         }
         screens.push_back(screen);
     }
@@ -124,44 +122,45 @@ void MatrixApplicationStandalone::renderToScreens() {
     renderSyncMutex.lock();
     renderSyncMutex.unlock();
     renderer->render();
-//    std::thread([this](){renderer->render();}).detach();
+    //    std::thread([this](){renderer->render();}).detach();
 }
 
 void MatrixApplicationStandalone::renderLoop() {
-    bool running = true;
-    while (running) {
+    while (renderRunning.load()) {
         renderSyncMutex.lock();
-        while(newFrame == false)
+        while (newFrame == false && renderRunning.load())
             usleep(100);
+        if (!renderRunning.load()) {
+            renderSyncMutex.unlock();
+            break;
+        }
         for (auto screen : screens) {
-            renderer->setScreenData(screen->getScreenId(), screen->getScreenDataRaw());
+            renderer->setScreenData(screen->getScreenId(), std::span<const Color>(screen->getScreenDataRaw(), screen->getScreenDataSize()));
         }
         newFrame = false;
         renderSyncMutex.unlock();
         auto startTime = micros();
         renderToScreens();
-//      BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " << micros()-startTime << " us";
+        //      BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " << micros()-startTime << " us";
     }
 }
 
 void MatrixApplicationStandalone::internalLoop() {
-    bool running = true;
-    while (running) {
+    while (mainRunning.load()) {
         auto startTime = micros();
         if (appState == AppState::running) {
-            while(newFrame == true)
+            while (newFrame == true && mainRunning.load())
                 usleep(100);
-            running = loop();
+            if (!loop()) {
+                mainRunning.store(false);
+            }
             newFrame = true;
         }
-        BOOST_LOG_TRIVIAL(warning) << "[Application] rendertime: " << micros()-startTime << " us";
+        BOOST_LOG_TRIVIAL(warning) << std::format("[Application] rendertime: {} us", micros() - startTime);
     }
 }
 
-
-int MatrixApplicationStandalone::getFps() {
-    return fps;
-}
+int MatrixApplicationStandalone::getFps() { return fps; }
 
 void MatrixApplicationStandalone::setFps(int setFps) {
     if (setFps <= MAXFPS && setFps >= MINFPS) {
@@ -171,17 +170,15 @@ void MatrixApplicationStandalone::setFps(int setFps) {
     }
 }
 
-AppState MatrixApplicationStandalone::getAppState() {
-    return appState;
-}
+AppState MatrixApplicationStandalone::getAppState() { return appState; }
 
-float MatrixApplicationStandalone::getLoad() {
-    return load;
-}
+float MatrixApplicationStandalone::getLoad() { return load; }
 
 void MatrixApplicationStandalone::start() {
-    mainThread = new boost::thread(&MatrixApplicationStandalone::internalLoop, this);
-    renderThread = new boost::thread(&MatrixApplicationStandalone::renderLoop, this);
+    mainRunning.store(true);
+    renderRunning.store(true);
+    mainThread = std::make_unique<std::thread>(&MatrixApplicationStandalone::internalLoop, this);
+    renderThread = std::make_unique<std::thread>(&MatrixApplicationStandalone::renderLoop, this);
     appState = AppState::running;
 }
 
@@ -202,12 +199,21 @@ bool MatrixApplicationStandalone::resume() {
 }
 
 void MatrixApplicationStandalone::stop() {
-    if (mainThread != NULL) {
-        mainThread->interrupt();
+    mainRunning.store(false);
+    if (mainThread && mainThread->joinable()) {
         mainThread->join();
-        mainThread = NULL;
     }
+    mainThread.reset();
     appState = AppState::killed;
+}
+
+MatrixApplicationStandalone::~MatrixApplicationStandalone() {
+    stop();
+    renderRunning.store(false);
+    if (renderThread && renderThread->joinable()) {
+        renderThread->join();
+    }
+    renderThread.reset();
 }
 
 long MatrixApplicationStandalone::micros() {

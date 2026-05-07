@@ -5,8 +5,7 @@ on:
     workflows:
       - "Build and Push Simulator (AMD64)"
       - "Build and Push Simulator (ARM64)"
-      - "Build and Push FPGA_RPISPI (ARM64)"
-      - "Build and Push RGB_MATRIX (ARM64)"
+      - "Build and Push Pi (ARM64)"
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -14,7 +13,7 @@ on:
         description: 'Release tag name (e.g. v0.4.5)'
         required: true
       sha:
-        description: 'Commit SHA that all 4 build workflows ran against'
+        description: 'Commit SHA that all 3 build workflows ran against'
         required: true
 
 jobs:
@@ -41,16 +40,14 @@ jobs:
           WORKFLOWS=(
             "Build and Push Simulator (AMD64)"
             "Build and Push Simulator (ARM64)"
-            "Build and Push FPGA_RPISPI (ARM64)"
-            "Build and Push RGB_MATRIX (ARM64)"
+            "Build and Push Pi (ARM64)"
           )
 
           # Map workflow name → artifact name
           declare -A WF_ARTIFACTS=(
             ["Build and Push Simulator (AMD64)"]="matrixserver-simulator"
             ["Build and Push Simulator (ARM64)"]="matrixserver-simulator-arm64"
-            ["Build and Push FPGA_RPISPI (ARM64)"]="matrixserver-fpga-rpispi-arm64"
-            ["Build and Push RGB_MATRIX (ARM64)"]="matrixserver-rgb-matrix-arm64"
+            ["Build and Push Pi (ARM64)"]="matrixserver-pi-arm64"
           )
 
           # Expand short SHA to full 40-char SHA (API requires full SHA)
@@ -64,8 +61,10 @@ jobs:
             WF_ID=$(gh api "repos/$REPO/actions/workflows" \
               --jq ".workflows[] | select(.name == \"$WF_NAME\") | .id")
 
-            RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=1" \
-              --jq '.workflow_runs[0]')
+            # Fetch runs for the commit SHA, but explicitly filter to match the exact TAG name
+            # This prevents matching old runs if multiple tags point to the same commit.
+            RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=100" \
+              --jq "[.workflow_runs[] | select(.head_branch == \"${{ env.TAG }}\")][0]")
 
             CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
             RUN_ID=$(echo "$RUN" | jq -r '.id')
@@ -105,8 +104,19 @@ jobs:
           TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           DEB_FILES=$(find debs/ -name "*.deb" | tr '\n' ' ')
+          
+          # Find the latest full release (ignoring pre-releases)
+          LATEST_RELEASE=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName 2>/dev/null || echo "")
+          
+          NOTES_FLAG=""
+          if [ -n "$LATEST_RELEASE" ]; then
+            NOTES_FLAG="--notes-start-tag $LATEST_RELEASE"
+          fi
+
           gh release create "$TAG" $DEB_FILES \
             --repo "${{ github.repository }}" \
             --prerelease \
             --generate-notes \
-            --title "Release $TAG"
+            $NOTES_FLAG \
+            --title "Release $TAG" || \
+          gh release upload "$TAG" $DEB_FILES --repo "${{ github.repository }}" --clobber

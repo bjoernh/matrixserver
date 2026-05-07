@@ -1,22 +1,24 @@
 #ifndef MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 #define MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 
-#include <IRenderer.h>
+#include <span>
+#include <IBidirectionalRenderer.h>
 #include <Screen.h>
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
-#include <boost/thread/thread.hpp>
+#include <thread>
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 namespace beast = boost::beast;
 namespace websocket = beast::websocket;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
-#define WS_SIMULATOR_DEFAULT_PORT "1337"
+inline constexpr const char* WS_SIMULATOR_DEFAULT_PORT = "1337";
 
 /**
  * WebSocketSimulatorRenderer
@@ -30,47 +32,42 @@ using tcp = net::ip::tcp;
  *     and sends it as a WebSocket binary message (no COBS framing needed).
  *   - Reconnects automatically if the browser disconnects.
  */
-class WebSocketSimulatorRenderer : public IRenderer {
-public:
-  explicit WebSocketSimulatorRenderer(
-      std::vector<std::shared_ptr<Screen>> screens,
-      std::string port = WS_SIMULATOR_DEFAULT_PORT,
-      bool streamPixels = true);
+class WebSocketSimulatorRenderer : public IBidirectionalRenderer {
+  public:
+    explicit WebSocketSimulatorRenderer(std::vector<std::shared_ptr<Screen>> screens, std::string port = WS_SIMULATOR_DEFAULT_PORT,
+                                        bool streamPixels = true);
 
-  ~WebSocketSimulatorRenderer();
+    ~WebSocketSimulatorRenderer();
 
-  void setScreenData(int screenId, Color *data) override;
+    void setScreenData(int screenId, std::span<const Color> data) override;
 
-  void render() override;
+    void render() override;
 
-  void setGlobalBrightness(int brightness) override;
+    void setGlobalBrightness(int brightness) override;
 
-  int getGlobalBrightness() override;
+    int getGlobalBrightness() override;
 
-  void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) override;
+    void sendMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg) override;
 
-  void setClientMessageCallback(
-      std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
-          cb) override;
+    void setClientMessageCallback(MsgCallback cb) override;
 
-private:
-  void do_accept();
+  private:
+    void do_accept();
 
-  std::string port;
-  net::io_context ioContext;
-  std::unique_ptr<tcp::acceptor> acceptor;
+    std::string port;
+    net::io_context ioContext;
+    std::unique_ptr<tcp::acceptor> acceptor;
 
-  // Active WebSocket session (nullable — no client connected yet)
-  std::shared_ptr<class WsSession> activeSession;
-  std::mutex sessionMutex;
+    // Active WebSocket session (nullable — no client connected yet)
+    std::shared_ptr<class WsSession> activeSession;
+    std::mutex sessionMutex;
 
-  boost::thread ioThread;
-  bool running = true;
+    std::unique_ptr<std::thread> ioThread;
+    std::atomic<bool> running{true};
 
-  std::function<void(std::shared_ptr<matrixserver::MatrixServerMessage>)>
-      clientMessageCb;
+    MsgCallback clientMessageCb;
 
-  bool streamPixels;
+    bool streamPixels;
 };
 
 #endif // MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H

@@ -16,10 +16,9 @@ TEST_CASE("COBS stream single complete packet", "[cobs-stream]") {
     Cobs cobs(4096);
 
     const std::string original = "hello world";
-    const std::string packet   = makePacket(original);
+    const std::string packet = makePacket(original);
 
-    auto results = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
+    auto results = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
 
     REQUIRE(results.size() == 1);
     CHECK(results[0] == original);
@@ -32,8 +31,7 @@ TEST_CASE("COBS stream two packets in one call", "[cobs-stream]") {
     const std::string msg2 = "second packet";
     const std::string combined = makePacket(msg1) + makePacket(msg2);
 
-    auto results = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(combined.data()), combined.size());
+    auto results = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(combined.data()), combined.size());
 
     REQUIRE(results.size() == 2);
     CHECK(results[0] == msg1);
@@ -44,17 +42,15 @@ TEST_CASE("COBS stream split across calls", "[cobs-stream]") {
     Cobs cobs(4096);
 
     const std::string original = "split me across two calls";
-    const std::string packet   = makePacket(original);
+    const std::string packet = makePacket(original);
 
     // Split somewhere in the middle (not at the 0x00 delimiter)
     size_t half = packet.size() / 2;
 
-    auto r1 = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(packet.data()), half);
+    auto r1 = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(packet.data()), half);
     REQUIRE(r1.empty()); // no complete packet yet
 
-    auto r2 = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(packet.data() + half), packet.size() - half);
+    auto r2 = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(packet.data() + half), packet.size() - half);
     REQUIRE(r2.size() == 1);
     CHECK(r2[0] == original);
 }
@@ -78,8 +74,7 @@ TEST_CASE("COBS stream protobuf roundtrip", "[cobs-stream]") {
     REQUIRE(msg.SerializeToString(&serialized));
 
     const std::string packet = makePacket(serialized);
-    auto results = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
+    auto results = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
 
     REQUIRE(results.size() == 1);
 
@@ -114,8 +109,7 @@ TEST_CASE("COBS stream large packet", "[cobs-stream]") {
     }
 
     const std::string packet = makePacket(large);
-    auto results = cobs.insertBytesAndReturnDecodedPackets(
-        reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
+    auto results = cobs.insertBytesAndReturnDecodedPackets(reinterpret_cast<const uint8_t*>(packet.data()), packet.size());
 
     REQUIRE(results.size() == 1);
     CHECK(results[0] == large);
@@ -124,9 +118,7 @@ TEST_CASE("COBS stream large packet", "[cobs-stream]") {
 TEST_CASE("COBS stream interleaved small packets", "[cobs-stream]") {
     Cobs cobs(4096);
 
-    const std::vector<std::string> messages = {
-        "alpha", "beta", "gamma", "delta", "epsilon"
-    };
+    const std::vector<std::string> messages = {"alpha", "beta", "gamma", "delta", "epsilon"};
 
     std::vector<std::string> received;
 

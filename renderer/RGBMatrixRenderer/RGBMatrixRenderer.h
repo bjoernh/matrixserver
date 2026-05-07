@@ -1,31 +1,30 @@
 #ifndef MATRIXSERVER_RGBMATRIXRENDERER_H
 #define MATRIXSERVER_RGBMATRIXRENDERER_H
 
+#include <span>
 #include <IRenderer.h>
 #include <mutex>
 #include "Screen.h"
 
 class RGBMatrixRenderer : public IRenderer {
-public:
+  public:
     RGBMatrixRenderer();
-
 
     RGBMatrixRenderer(std::vector<std::shared_ptr<Screen>>);
 
     void init(std::vector<std::shared_ptr<Screen>>);
 
-    void setScreenData(int, Color *);
+    void setScreenData(int screenId, std::span<const Color> screenData) override;
 
-    void render();
+    void render() override;
 
-    void setGlobalBrightness(int);
+    void setGlobalBrightness(int) override;
 
-    int getGlobalBrightness();
+    int getGlobalBrightness() override;
 
-private:
+  private:
     std::vector<std::shared_ptr<Screen>> screens;
     std::mutex renderMutex;
 };
 
-
-#endif //MATRIXSERVER_RGBMATRIXRENDERER_H
+#endif // MATRIXSERVER_RGBMATRIXRENDERER_H
