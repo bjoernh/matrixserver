@@ -193,7 +193,7 @@ bool FPGARendererRPISPI::initSpi() const {
     return true;
 }
 
-void FPGARendererRPISPI::setScreenData(int screenId, Color *screenData) {
+void FPGARendererRPISPI::setScreenData(int screenId, std::span<const Color> screenData) {
     //    if(!screenDataMutex.try_lock())
     //        return;
     if (screenId < screens.size()) {

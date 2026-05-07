@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_FPGARENDERERFTDI_H
 #define MATRIXSERVER_FPGARENDERERFTDI_H
 
+#include <span>
 #include <IRenderer.h>
 #include <mutex>
 #include <vector>
@@ -15,7 +16,7 @@ class FPGARendererFTDI : public IRenderer {
 
     void init(std::vector<std::shared_ptr<Screen>>);
 
-    void setScreenData(int, Color *) override;
+    void setScreenData(int screenId, std::span<const Color> screenData) override;
 
     void render() override;
 

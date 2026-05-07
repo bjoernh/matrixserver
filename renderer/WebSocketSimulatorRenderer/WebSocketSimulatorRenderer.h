@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 #define MATRIXSERVER_WEBSOCKETSIMULATORRENDERERER_H
 
+#include <span>
 #include <IBidirectionalRenderer.h>
 #include <Screen.h>
 #include <boost/asio.hpp>
@@ -38,7 +39,7 @@ class WebSocketSimulatorRenderer : public IBidirectionalRenderer {
 
     ~WebSocketSimulatorRenderer();
 
-    void setScreenData(int screenId, Color* data) override;
+    void setScreenData(int screenId, std::span<const Color> data) override;
 
     void render() override;
 

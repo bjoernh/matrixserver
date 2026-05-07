@@ -48,7 +48,7 @@ void FPGARendererFTDI::init(std::vector<std::shared_ptr<Screen>> initScreens) {
     }
 }
 
-void FPGARendererFTDI::setScreenData(int screenId, Color *screenData) {
+void FPGARendererFTDI::setScreenData(int screenId, std::span<const Color> screenData) {
     if (!renderMutex.try_lock()) {
         BOOST_LOG_TRIVIAL(warning) << "[FPGARendererFTDI] setScreenData: could not acquire render mutex, dropping update for screen " << screenId;
         return;

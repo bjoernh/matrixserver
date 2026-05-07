@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_RENDERERREGISTRY_H
 #define MATRIXSERVER_RENDERERREGISTRY_H
 
+#include <span>
 #include <IRenderer.h>
 #include <IBidirectionalRenderer.h>
 #include <Color.h>
@@ -18,7 +19,7 @@ class RendererRegistry {
 
     void add(std::shared_ptr<IRenderer> r);
     void renderAll();
-    void setScreenData(int sid, Color* data);
+    void setScreenData(int sid, std::span<const Color> data);
     void setBrightness(int b);
     void broadcastMessage(std::shared_ptr<matrixserver::MatrixServerMessage> msg);
     void setMessageCallback(MsgCallback cb);

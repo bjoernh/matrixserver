@@ -64,7 +64,7 @@ void WebSocketSimulatorRenderer::do_accept() {
 }
 
 // ── IRenderer interface ──────────────────────────────────────────────────────
-void WebSocketSimulatorRenderer::setScreenData(int screenId, Color *data) {
+void WebSocketSimulatorRenderer::setScreenData(int screenId, std::span<const Color> data) {
     if (!streamPixels)
         return;
     if (screenId < static_cast<int>(screens.size())) {

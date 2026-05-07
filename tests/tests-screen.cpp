@@ -240,7 +240,7 @@ TEST_CASE("Screen setScreenData pointer", "[screen]") {
 
     // Build a replacement buffer filled with a known color
     std::vector<Color> buf(size, Color(11, 22, 33));
-    screen.setScreenData(buf.data());
+    screen.setScreenData(std::span<const Color>(buf.data(), size));
 
     // Every pixel should now reflect the new data
     for (int x = 0; x < screen.getWidth(); ++x) {

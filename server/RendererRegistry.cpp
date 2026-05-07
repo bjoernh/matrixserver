@@ -17,7 +17,7 @@ void RendererRegistry::renderAll() {
     }
 }
 
-void RendererRegistry::setScreenData(int sid, Color* data) {
+void RendererRegistry::setScreenData(int sid, std::span<const Color> data) {
     for (const auto& renderer : renderers_) {
         renderer->setScreenData(sid, data);
     }

@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_FPGARENDERERRPISPI_H
 #define MATRIXSERVER_FPGARENDERERRPISPI_H
 
+#include <span>
 #include <IRenderer.h>
 #include <mutex>
 #include "Screen.h"
@@ -13,7 +14,7 @@ class FPGARendererRPISPI : public IRenderer {
 
     void init(std::vector<std::shared_ptr<Screen>>);
 
-    void setScreenData(int, Color *) override;
+    void setScreenData(int screenId, std::span<const Color> screenData) override;
 
     void render() override;
 

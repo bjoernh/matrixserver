@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_IRENDERER_H
 #define MATRIXSERVER_IRENDERER_H
 
+#include <span>
 #include <Color.h>
 #include <Screen.h>
 #include <memory>
@@ -8,7 +9,7 @@
 
 class IRenderer {
   public:
-    virtual void setScreenData(int, Color *) = 0;
+    virtual void setScreenData(int, std::span<const Color>) = 0;
 
     virtual void render() = 0;
 

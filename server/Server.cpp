@@ -5,6 +5,7 @@
 #include <iostream>
 #include <random>
 #include <sys/wait.h>
+#include <span>
 #include <vector>
 #include <format>
 
@@ -197,7 +198,7 @@ void Server::handleSetScreenFrame(std::shared_ptr<UniversalConnection> conn, std
                     BOOST_LOG_TRIVIAL(warning) << std::format("[Server] Invalid screen ID: {}", sid);
                     continue;
                 }
-                renderer->setScreenData(sid, (Color *)screenInfo.framedata().data());
+                renderer->setScreenData(sid, std::span<const Color>(reinterpret_cast<const Color*>(screenInfo.framedata().data()), screenInfo.framedata().size() / sizeof(Color)));
             }
             auto usStart = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
             renderer->render();

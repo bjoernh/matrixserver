@@ -3,8 +3,8 @@
 Trimmed copy of the original refactoring plan (`/Users/bjoern/.claude/plans/you-are-a-c-parallel-harp.md`)
 with all implemented items removed. What remains: items that were deferred, partially
 implemented, or explicitly skipped during the 10-commit refactor on `more-refactoring`
-(commits `83aa63c` … `7618c4e`). Plus a section at the end for items discovered while
-executing the plan.
+(commits `83aa63c` … `7618c4e`), plus follow-up work on `refactor_qwen3-6-27b`.
+Plus a section at the end for items discovered while executing the plan.
 
 Each open item carries:
 - **Status** — Deferred / Partial / Skipped, plus the specific reason.
@@ -13,10 +13,9 @@ Each open item carries:
 
 For build / verification flow and the LC_RPATH gotcha, see the "Build & verification
 setup" section at the bottom — copied unchanged from the original plan.
-
 ---
 
-## Progress Summary (updated 2026-04-27)
+## Progress Summary (updated 2026-05-07)
 
 | Item | Status | Commit | Notes |
 |------|--------|--------|-------|
@@ -25,23 +24,24 @@ setup" section at the bottom — copied unchanged from the original plan.
 | **S4** — Runtime renderer selection | ⏳ DEFERRED | — | Needs CI/Docker/Debian coordination |
 | **S7** — Connection abstraction | ⏳ PARTIAL | `7618c4e` | Buffers modernized; Unix socket audit open |
 | **C1.a** — enum class ScreenNumber | ⏳ DEFERRED | — | Needs example-apps PR |
-| **C1.b** — std::span in IRenderer | ⏳ DEFERRED | — | Needs C++20 bump |
+| **C1.b** — std::span in IRenderer | ⏳ UNBLOCKED | — | C++20 bump done (`f9b65b7`); ready to implement |
 | **C1.c** — std::optional lookups | ❌ SKIP | — | No clarity win; leave as-is |
+| **C1** — std::format | ✅ DONE | `4c07cdb` | Replaced stringstream/sprintf with std::format across codebase |
 | **C2** — Error handling policy | ✅ DONE | `f615ab6` | Logging already present in FPGA renderers |
 | **C3** — Naming consistency | ✅ DONE | `bcb3852` | Config files + formatting commit applied |
 | **C4** — Config consolidation | ⏳ DEFERRED | — | Needs protobuf schema changes |
 | **C5** — Unit tests | ✅ DONE | `12599a1` | Dispatcher, ConnectionFactory, InputState tests |
 | **N1** — RendererRegistry | ✅ DONE | `12599a1` | Extracted from Server |
 | **N3** — LC_RPATH fix | ⏳ OPEN | — | Lives in example-apps repo |
+| **C++20 bump** | ✅ DONE | `f9b65b7` | CMake upgraded from C++17 to C++20; AGENTS.md updated |
 
-**Remaining items require external coordination:**
+**Remaining items require external coordination (except C1.b, now unblocked):**
 - **S2 legacy mirror removal** — Needs example-apps PR (MatrixRain migration)
 - **S4 single binary** — Needs CI/Docker/Debian coordination
 - **C1.a enum class** — Needs example-apps PR
-- **C1.b std::span** — Needs C++20 bump
+- **C1.b std::span** — **NOW UNBLOCKED** (C++20 bump done in `f9b65b7`); can be implemented within this repo
 - **C4 config** — Needs protobuf schema changes
-
----
+- **N3 LC_RPATH** — Lives in example-apps repo
 
 ## Context
 
@@ -59,10 +59,13 @@ and replaced the `ServerSetup` nested switches with a layout table.
 (tests), and fixed the pre-existing protobuf duplicate descriptor crash in the test
 binary.
 
+**Post-12599a1 commits on `refactor_qwen3-6-27b`:**
+- `f9b65b7` — Upgraded CMake from C++17 to C++20; updated AGENTS.md
+- `4c07cdb` — Replaced stringstream/sprintf with `std::format` across the codebase
+- Two `wip` commits (`8653cc6`, `02c6c27) — Uncommitted work in progress
+
 The items below are what remains to reach the original exit criteria and to clean up
 follow-on work surfaced by the executed refactors.
-
----
 
 ## Priority Issues
 
@@ -192,11 +195,12 @@ buffer arithmetic.
 
 ## Code Quality Improvements
 
-### C1 — Modern C++ idioms across the board *(Partial — three sub-items remain)*
+### C1 — Modern C++ idioms across the board *(Partial — two sub-items remain, one unblocked)*
 
 **Status:** Partial. Phase 2 (3dca550) did the mechanical sweep: NULL→nullptr,
 `override` on concrete renderer virtuals, `#define`-constants → `inline constexpr`,
-range-for `const auto&` fixes. Three sub-items were skipped at the time:
+range-for `const auto&` fixes. Two post-12599a1 commits added: C++20 bump (`f9b65b7`)
+and std::format migration (`4c07cdb`). Two sub-items remain open:
 
 #### C1.a — `enum class` for `ScreenNumber` / `EdgeNumber` / `CornerNumber`
 
@@ -218,20 +222,18 @@ Convert `enum ScreenNumber/EdgeNumber/CornerNumber` in
 
 #### C1.b — `std::span<const Color>` in `IRenderer::setScreenData`
 
-**Status:** Skipped during Phase 2 and Phase 5c (S1).
-
-**Why skipped:** Project is C++17. `std::span` requires C++20.
+**Status:** **UNBLOCKED** — C++20 bump completed in commit `f9b65b7`. Was skipped during
+Phase 2 and Phase 5c (S1) because the project was C++17.
 
 **Task-specific info (from original plan):**
 Use `std::span<const Color>` in `IRenderer::setScreenData` instead of raw `Color *`.
 
-**To complete (after a C++20 bump):**
+**To complete (C++20 is now in place):**
 - `IRenderer::setScreenData(int, Color*)` → `setScreenData(int, std::span<const Color>)`.
 - Update every implementation (FPGA*, RGBMatrix, WebSocketSimulator) and every
   caller (`Server.cpp` `handleSetScreenFrame`).
-- The C++20 bump itself is a separate concern — toolchain audit needed (gcc 10+,
-  Xcode current, Boost ABI compatibility on RPi targets).
-
+- Toolchain is confirmed: C++20 is set in CMake, Xcode is current, and the codebase
+  already uses other C++20 features (e.g., `std::format` from `4c07cdb`).
 #### C1.c — `std::optional` for failable lookups
 
 **Status:** Skipped during Phase 2.
@@ -496,3 +498,7 @@ From the original plan, these criteria are not yet met:
   architecture diagram.
 
 **One unmet criterion remains:** S4 (single binary with runtime backend selection).
+
+**Next actionable item within this repo:** C1.b (`std::span` in `IRenderer::setScreenData`)
+is now unblocked by the C++20 bump. This is the only remaining deferred item that can be
+completed without external coordination.

@@ -1,6 +1,7 @@
 #ifndef MATRIXSERVER_SCREEN_H
 #define MATRIXSERVER_SCREEN_H
 
+#include <span>
 #include <vector>
 #include "Color.h"
 
@@ -36,7 +37,7 @@ class Screen {
 
     Color* getScreenDataRaw();
 
-    void setScreenData(Color* data);
+    void setScreenData(std::span<const Color> data);
 
     void setScreenData(std::vector<Color>&);
 

@@ -45,7 +45,7 @@ void RGBMatrixRenderer::init(std::vector<std::shared_ptr<Screen>> initScreens) {
     rgbFrameCanvas = rgbMatrix->SwapOnVSync(rgbFrameCanvas);
 }
 
-void RGBMatrixRenderer::setScreenData(int screenId, Color *screenData) {
+void RGBMatrixRenderer::setScreenData(int screenId, std::span<const Color> screenData) {
     if (screenId < screens.size()) {
         screens.at(screenId)->setScreenData(screenData);
     }
