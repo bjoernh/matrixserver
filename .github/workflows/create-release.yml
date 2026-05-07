@@ -61,8 +61,10 @@ jobs:
             WF_ID=$(gh api "repos/$REPO/actions/workflows" \
               --jq ".workflows[] | select(.name == \"$WF_NAME\") | .id")
 
-            RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=1" \
-              --jq '.workflow_runs[0]')
+            # Fetch runs for the commit SHA, but explicitly filter to match the exact TAG name
+            # This prevents matching old runs if multiple tags point to the same commit.
+            RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=100" \
+              --jq "[.workflow_runs[] | select(.head_branch == \"${{ env.TAG }}\")][0]")
 
             CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
             RUN_ID=$(echo "$RUN" | jq -r '.id')
@@ -102,8 +104,19 @@ jobs:
           TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           DEB_FILES=$(find debs/ -name "*.deb" | tr '\n' ' ')
+          
+          # Find the latest full release (ignoring pre-releases)
+          LATEST_RELEASE=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName 2>/dev/null || echo "")
+          
+          NOTES_FLAG=""
+          if [ -n "$LATEST_RELEASE" ]; then
+            NOTES_FLAG="--notes-start-tag $LATEST_RELEASE"
+          fi
+
           gh release create "$TAG" $DEB_FILES \
             --repo "${{ github.repository }}" \
             --prerelease \
             --generate-notes \
-            --title "Release $TAG"
+            $NOTES_FLAG \
+            --title "Release $TAG" || \
+          gh release upload "$TAG" $DEB_FILES --repo "${{ github.repository }}" --clobber

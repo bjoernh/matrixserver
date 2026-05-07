@@ -44,6 +44,12 @@ jobs:
           make testAll
           ./tests/testAll
 
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix_server_binary
+          path: build/server/matrix_server
+
   package-and-push:
     name: Package and Push to GHCR (AMD64)
     needs: build-and-test
@@ -59,19 +65,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            build-essential cmake git pkg-config \
-            libeigen3-dev libboost-all-dev libasound2-dev \
-            libprotobuf-dev protobuf-compiler libimlib2-dev
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix_server_binary
+          path: build/server
 
-      - name: Compile Project
-        run: |
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make -j$(nproc)
+      - name: Restore executable permission
+        run: chmod +x build/server/matrix_server
 
       - name: Create Debian Package Workspace
         run: |
