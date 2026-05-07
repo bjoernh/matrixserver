@@ -1,9 +1,9 @@
 #include <cmath>
 #include "Color.h"
 
-Color::Color() { Color(0); }
+Color::Color() : Color(0) {}
 
-Color::Color(uint8_t brightness) { Color(brightness, brightness, brightness); }
+Color::Color(uint8_t brightness) : Color(brightness, brightness, brightness) {}
 
 Color::Color(uint8_t red, uint8_t green, uint8_t blue) {
     r_ = red;

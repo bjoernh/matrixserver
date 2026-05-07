@@ -64,6 +64,10 @@ void FPGARendererFTDI::render() {
         BOOST_LOG_TRIVIAL(warning) << "[FPGARendererFTDI] render: could not acquire render mutex, skipping frame";
         return;
     }
+    if (screens.empty()) {
+        renderMutex.unlock();
+        return;
+    }
     //    auto usStart = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 
     const int screenWidth = screens[0]->getWidth();

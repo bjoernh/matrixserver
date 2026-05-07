@@ -22,7 +22,7 @@ foreach(BACKEND IN LISTS HARDWARE_BACKEND)
     endif()
 endforeach()
 
-set_target_properties(common PROPERTIES PUBLIC_HEADER "IRenderer.h;IBidirectionalRenderer.h")
+set_target_properties(renderer PROPERTIES PUBLIC_HEADER "IRenderer.h;IBidirectionalRenderer.h")
 
 install(TARGETS renderer
         EXPORT matrixapplication-targets

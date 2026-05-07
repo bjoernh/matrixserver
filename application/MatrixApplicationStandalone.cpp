@@ -135,7 +135,7 @@ void MatrixApplicationStandalone::renderLoop() {
             break;
         }
         for (auto screen : screens) {
-            renderer->setScreenData(screen->getScreenId(), screen->getScreenDataRaw());
+            renderer->setScreenData(screen->getScreenId(), std::span<const Color>(screen->getScreenDataRaw(), screen->getScreenDataSize()));
         }
         newFrame = false;
         renderSyncMutex.unlock();

@@ -19,6 +19,8 @@ class UniversalConnection {
     virtual bool isDead() = 0;
 
     virtual void setDead(bool sDead) = 0;
+
+    virtual ~UniversalConnection() = default;
 };
 
 #endif // MATRIXSERVER_UNIVERSALCONNECTION_H

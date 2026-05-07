@@ -4,7 +4,7 @@
 #include <matrixserver.pb.h>
 #include <SocketConnection.h>
 
-enum class AppState : unsigned int { running, paused, ended, killed, unkown };
+enum class AppState : unsigned int { running, paused, ended, killed, unknown };
 
 class App {
   public:

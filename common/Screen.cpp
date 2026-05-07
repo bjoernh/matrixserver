@@ -18,7 +18,10 @@ std::vector<Color> &Screen::getScreenData() { return screenData; }
 
 Color *Screen::getScreenDataRaw() { return screenData.data(); }
 
-void Screen::setScreenData(std::span<const Color> data) { screenData.assign(data.begin(), data.begin() + screenDataSize); }
+void Screen::setScreenData(std::span<const Color> data) {
+    const auto copyLen = std::min(static_cast<int>(data.size()), screenDataSize);
+    screenData.assign(data.begin(), data.begin() + copyLen);
+}
 
 void Screen::setScreenData(std::vector<Color> &newScreenData) { screenData = newScreenData; }
 
