@@ -24,7 +24,7 @@ setup" section at the bottom — copied unchanged from the original plan.
 | **S4** — Runtime renderer selection | ⏳ DEFERRED | — | Needs CI/Docker/Debian coordination |
 | **S7** — Connection abstraction | ⏳ PARTIAL | `7618c4e` | Buffers modernized; Unix socket audit open |
 | **C1.a** — enum class ScreenNumber | ⏳ DEFERRED | — | Needs example-apps PR |
-| **C1.b** — std::span in IRenderer | ⏳ UNBLOCKED | — | C++20 bump done (`f9b65b7`); ready to implement |
+| **C1.b** — std::span in IRenderer |  ✅ DONE | — | C++20 bump done (`f9b65b7`); ready to implement |
 | **C1.c** — std::optional lookups | ❌ SKIP | — | No clarity win; leave as-is |
 | **C1** — std::format | ✅ DONE | `4c07cdb` | Replaced stringstream/sprintf with std::format across codebase |
 | **C2** — Error handling policy | ✅ DONE | `f615ab6` | Logging already present in FPGA renderers |
@@ -34,14 +34,16 @@ setup" section at the bottom — copied unchanged from the original plan.
 | **N1** — RendererRegistry | ✅ DONE | `12599a1` | Extracted from Server |
 | **N3** — LC_RPATH fix | ⏳ OPEN | — | Lives in example-apps repo |
 | **C++20 bump** | ✅ DONE | `f9b65b7` | CMake upgraded from C++17 to C++20; AGENTS.md updated |
+| **NEW1** - Hardcoded IPs  | OPEN | - | Remove all hard coded 192.168.188.x ips from ExampleApplication or matrixserver |
 
 **Remaining items require external coordination (except C1.b, now unblocked):**
 - **S2 legacy mirror removal** — Needs example-apps PR (MatrixRain migration)
 - **S4 single binary** — Needs CI/Docker/Debian coordination
 - **C1.a enum class** — Needs example-apps PR
-- **C1.b std::span** — **NOW UNBLOCKED** (C++20 bump done in `f9b65b7`); can be implemented within this repo
 - **C4 config** — Needs protobuf schema changes
 - **N3 LC_RPATH** — Lives in example-apps repo
+
+
 
 ## Context
 
@@ -222,7 +224,7 @@ Convert `enum ScreenNumber/EdgeNumber/CornerNumber` in
 
 #### C1.b — `std::span<const Color>` in `IRenderer::setScreenData`
 
-**Status:** **UNBLOCKED** — C++20 bump completed in commit `f9b65b7`. Was skipped during
+**Status:** **✅ DONE ** — C++20 bump completed in commit `f9b65b7`. Was skipped during
 Phase 2 and Phase 5c (S1) because the project was C++17.
 
 **Task-specific info (from original plan):**
@@ -234,6 +236,8 @@ Use `std::span<const Color>` in `IRenderer::setScreenData` instead of raw `Color
   caller (`Server.cpp` `handleSetScreenFrame`).
 - Toolchain is confirmed: C++20 is set in CMake, Xcode is current, and the codebase
   already uses other C++20 features (e.g., `std::format` from `4c07cdb`).
+
+
 #### C1.c — `std::optional` for failable lookups
 
 **Status:** Skipped during Phase 2.

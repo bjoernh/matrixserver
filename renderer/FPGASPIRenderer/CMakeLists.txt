@@ -7,6 +7,7 @@ add_library(FPGASPIRenderer SHARED ${SOURCE_FILES})
 target_link_libraries(FPGASPIRenderer PRIVATE renderer)
 target_include_directories(FPGASPIRenderer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:include/matrixapplication>)
 
+target_compile_definitions(FPGASPIRenderer INTERFACE HAVE_FPGA_RPISPI)
 set_target_properties(FPGASPIRenderer PROPERTIES PUBLIC_HEADER "FPGARendererRPISPI.h")
 
 install(TARGETS FPGASPIRenderer

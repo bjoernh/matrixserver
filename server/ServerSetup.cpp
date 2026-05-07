@@ -193,9 +193,12 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
     std::string serverAddressOverride = "";
 
     try {
+        std::string backendIgnored;
         po::options_description desc("Allowed options");
         desc.add_options()("help", "produce help message")("config", po::value<std::string>(&configPath), "path to configuration file")(
-            "address", po::value<std::string>(&serverAddressOverride), "override server address");
+            "address", po::value<std::string>(&serverAddressOverride), "override server address")(
+            "backend", po::value<std::string>(&backendIgnored)->default_value("simulator"),
+            "renderer backend: simulator, fpga-ftdi, fpga-rpispi, rgb-matrix");
 
         po::positional_options_description p;
         p.add("config", 1);
@@ -222,11 +225,15 @@ void handleServerConfig(int argc, char **argv, matrixserver::ServerConfig &serve
                       << "  --config <path>         Path to configuration file. "
                          "Can also be passed as a positional argument.\n"
                       << "  --address <ip>          Override the server address "
-                         "specified in the config.\n\n"
+                         "specified in the config.\n"
+                      << "  --backend <backend>     Renderer backend to use. "
+                         "One of: simulator, fpga-ftdi, fpga-rpispi, rgb-matrix. "
+                         "(default: simulator)\n\n"
                       << "EXAMPLES:\n"
                       << "  " << executableName << " --config myConfig.json\n"
                       << "  " << executableName << " default_config.json\n"
-                      << "  " << executableName << " --address 192.168.1.100\n";
+                      << "  " << executableName << " --address 192.168.1.100\n"
+                      << "  " << executableName << " --backend=fpga-rpispi\n";
             exit(0);
         }
     } catch (std::exception &e) {

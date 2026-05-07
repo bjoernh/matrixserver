@@ -30,28 +30,22 @@ endif ()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# Hardware backend selection
-set(HARDWARE_BACKEND "" CACHE STRING "Hardware renderer backend: FPGA_FTDI, FPGA_RPISPI, or RGB_MATRIX")
+# Hardware backend selection (may be a semicolon-separated list)
+set(HARDWARE_BACKEND "" CACHE STRING "Hardware renderer backend(s): FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX (may be a semicolon-separated list)")
 set(VALID_BACKENDS "FPGA_FTDI" "FPGA_RPISPI" "RGB_MATRIX")
 
-if (HARDWARE_BACKEND AND NOT HARDWARE_BACKEND IN_LIST VALID_BACKENDS)
-  message(FATAL_ERROR "Invalid HARDWARE_BACKEND '${HARDWARE_BACKEND}'. "
-            "Must be one of: FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX")
-endif ()
+foreach(BACKEND IN LISTS HARDWARE_BACKEND)
+  if (NOT BACKEND IN_LIST VALID_BACKENDS)
+    message(FATAL_ERROR "Invalid HARDWARE_BACKEND entry '${BACKEND}'. "
+              "Must be one of: FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX")
+  endif ()
+endforeach()
 
 # Core libraries
 add_subdirectory(common)
 add_subdirectory(renderer)
 add_subdirectory(server)
 add_subdirectory(application)
-
-# Simulator target (always built)
-add_subdirectory(server_simulator)
-
-# Hardware target (only when a backend is selected)
-if (HARDWARE_BACKEND)
-  add_subdirectory(server_hardware)
-endif ()
 
 add_subdirectory(MainMenu)
 

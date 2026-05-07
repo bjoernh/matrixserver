@@ -1,4 +1,4 @@
-name: Build and Push RGB_MATRIX (ARM64)
+name: Build and Push Pi (ARM64)
 
 on:
   workflow_run:
@@ -8,11 +8,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-RGB_MATRIX
+  IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-pi
 
 jobs:
-  build-and-push-rgb-matrix:
-    name: Build DEB and Push to GHCR (ARM64)
+  build-and-push-pi:
+    name: Build Pi DEB and Push to GHCR (ARM64)
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request') }}
     runs-on: [self-hosted, linux, ARM64]
     permissions:
@@ -34,7 +34,12 @@ jobs:
             libboost-system-dev libboost-regex-dev libboost-chrono-dev \
             libboost-date-time-dev libboost-filesystem-dev libboost-atomic-dev \
             libboost-program-options-dev libasound2-dev libprotobuf-dev \
-            protobuf-compiler libimlib2-dev
+            protobuf-compiler libimlib2-dev libftdi1-dev
+
+      - name: Build and install wiringPi natively
+        run: |
+          git clone https://github.com/WiringPi/WiringPi.git
+          cd WiringPi && sudo ./build && cd .. && rm -rf WiringPi
 
       - name: Mock Raspberry Pi detection for CMake
         run: sudo mkdir -p /boot && sudo touch /boot/LICENCE.broadcom
@@ -42,10 +47,11 @@ jobs:
       - name: Clean pre-compiled submodules
         run: make -C renderer/RGBMatrixRenderer/rpi-rgb-led-matrix/lib clean || true
 
-      - name: Compile Project
+      - name: Compile Project (all hardware backends)
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DHARDWARE_BACKEND=RGB_MATRIX ..
+          cmake -DCMAKE_BUILD_TYPE=Release \
+            -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" ..
           make -j$(nproc)
 
       - name: Create Debian Package Workspace
@@ -58,33 +64,37 @@ jobs:
 
           # Copy Binaries
           cp build/MainMenu/MainMenu deb-workspace/usr/local/bin/
-          cp build/server_hardware/matrix_server deb-workspace/usr/local/bin/
+          cp build/server/matrix_server deb-workspace/usr/local/bin/
 
-          # Copy Shared Libraries
+          # Copy Shared Libraries (renderer .so for all enabled backends)
           find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/local/lib/ \;
+
+          # Copy WiringPi Dynamic Libraries
+          cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/local/lib/
+          cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/local/lib/
 
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control
-          Package: matrixserver-rgb-matrix
+          Package: matrixserver-pi
           Version: ${PROJECT_VERSION}
           Section: base
           Priority: optional
           Architecture: arm64
           Maintainer: Bjoern Hauffe<oss@64b.de>
-          Description: LEDCube matrixserver RGB Matrix binaries
-          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64
+          Description: LEDCube matrixserver for Raspberry Pi (all hardware backends; runtime --backend= selection)
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2
           EOF
 
       - name: Build Debian Package
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
-          dpkg-deb --build deb-workspace "matrixserver-rgb-matrix_${PROJECT_VERSION}_arm64.deb"
+          dpkg-deb --build deb-workspace "matrixserver-pi_${PROJECT_VERSION}_arm64.deb"
 
       - name: Upload Debian Package Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: matrixserver-rgb-matrix-arm64
-          path: matrixserver-rgb-matrix_*.deb
+          name: matrixserver-pi-arm64
+          path: matrixserver-pi_*.deb
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
