@@ -18,10 +18,14 @@ jobs:
   release:
     # On workflow_run: only proceed if the triggering workflow succeeded on a v* tag
     # On workflow_dispatch: always proceed (manual invocation implies intent)
+    # workflow_run.event == 'push' is safe because build-and-push-amd64 only triggers
+    # on push: tags: v* — never on branch pushes — so 'push' always means a tag.
+    # We avoid startsWith(head_branch, 'v') because GitHub Actions reports the
+    # branch name (e.g. 'master') instead of the tag name for tag-triggered workflows.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,8 +38,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
-          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
         run: |
+          # Resolve tag from SHA — head_branch is unreliable for tag-triggered workflows
+          HEAD_SHA=$(gh api "repos/$REPO/commits/$HEAD_SHA" --jq '.sha')
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG=$(gh api "repos/$REPO/git/refs/tags" \
+              --jq ".[] | select(.object.sha == \"$HEAD_SHA\") | .ref" \
+              | sed 's|refs/tags/||' | head -1)
+            if [ -z "$TAG" ]; then
+              echo "::error::No tag found for SHA $HEAD_SHA — aborting release"
+              exit 1
+            fi
+          fi
+          echo "Resolved: tag=$TAG  sha=$HEAD_SHA"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
           WORKFLOWS=(
             "Build and Push Simulator (AMD64)"
             "Build and Push Pi (ARM64)"
@@ -47,9 +67,7 @@ jobs:
             ["Build and Push Pi (ARM64)"]="matrixserver-pi-arm64"
           )
 
-          # Expand short SHA to full 40-char SHA (API requires full SHA)
-          HEAD_SHA=$(gh api "repos/$REPO/commits/$HEAD_SHA" --jq '.sha')
-          echo "Resolved HEAD_SHA: $HEAD_SHA"
+          HEAD_SHA="${{ steps.check.outputs.sha }}"
 
           ALL_SUCCESS=true
           RUN_ARTIFACT_PAIRS=()
@@ -61,7 +79,7 @@ jobs:
             # Fetch runs for the commit SHA, but explicitly filter to match the exact TAG name
             # This prevents matching old runs if multiple tags point to the same commit.
             RUN=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?head_sha=$HEAD_SHA&per_page=100" \
-              --jq "[.workflow_runs[] | select(.head_branch == \"${{ env.TAG }}\")][0]")
+              --jq "[.workflow_runs[] | select(.head_branch == \"${{ steps.check.outputs.tag }}\")][0]")
 
             CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
             RUN_ID=$(echo "$RUN" | jq -r '.id')
@@ -112,9 +130,9 @@ jobs:
         if: steps.check.outputs.all_success == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+          TAG: ${{ steps.check.outputs.tag }}
         run: |
-          DEB_FILES=$(find debs/ -name "*.deb" | tr '\n' ' ')
+          DEB_FILES=$(find . -maxdepth 1 -name "*.deb" | tr '\n' ' ')
           
           # Find the latest full release (ignoring pre-releases)
           LATEST_RELEASE=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName 2>/dev/null || echo "")

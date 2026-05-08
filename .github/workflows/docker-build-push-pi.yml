@@ -62,19 +62,22 @@ jobs:
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
           if [ -z "$PROJECT_VERSION" ]; then echo "Failed to extract version"; exit 1; fi
 
-          mkdir -p deb-workspace/usr/local/bin
-          mkdir -p deb-workspace/usr/local/lib
+          mkdir -p deb-workspace/usr/bin
+          mkdir -p deb-workspace/usr/lib
 
           # Copy Binaries
-          cp build/MainMenu/MainMenu deb-workspace/usr/local/bin/
-          cp build/server/matrix_server deb-workspace/usr/local/bin/
+          cp build/MainMenu/MainMenu deb-workspace/usr/bin/
+          cp build/server/matrix_server deb-workspace/usr/bin/
+
+          # Copy matrixapplication shared library
+          find build/application -name "libmatrixapplication.so*" -exec cp {} deb-workspace/usr/lib/ \;
 
           # Copy Shared Libraries (renderer .so for all enabled backends)
-          find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/local/lib/ \;
+          find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/lib/ \;
 
           # Copy WiringPi Dynamic Libraries
-          cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/local/lib/
-          cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/local/lib/
+          cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/lib/
+          cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/lib/
 
           mkdir -p deb-workspace/DEBIAN
           cat <<EOF > deb-workspace/DEBIAN/control
@@ -87,6 +90,12 @@ jobs:
           Description: LEDCube matrixserver for Raspberry Pi (all hardware backends; runtime --backend= selection)
           Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2
           EOF
+
+          cat <<'EOF' > deb-workspace/DEBIAN/postinst
+          #!/bin/sh
+          ldconfig
+          EOF
+          chmod 755 deb-workspace/DEBIAN/postinst
 
       - name: Build Debian Package
         run: |
