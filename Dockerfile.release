@@ -3,7 +3,7 @@ FROM ghcr.io/bjoernh/matrixserver-base:latest
 WORKDIR /app
 
 # Copy the pre-built server executable from the deb-workspace created by GitHub Actions
-COPY deb-workspace/usr/local/bin/matrix_server /usr/local/bin/matrix_server
+COPY deb-workspace/usr/bin/matrix_server /usr/bin/matrix_server
 
 # Default entrypoint (starts both Nginx and WebSocket servers)
 CMD ["/app/entrypoint.sh"]
