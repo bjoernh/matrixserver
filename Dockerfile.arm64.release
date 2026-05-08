@@ -3,15 +3,15 @@ FROM ghcr.io/bjoernh/matrixserver-base:latest
 WORKDIR /app
 
 # Copy the pre-built server executables from the deb-workspace created by GitHub Actions
-COPY deb-workspace/usr/local/bin/MainMenu /usr/local/bin/MainMenu
-COPY deb-workspace/usr/local/bin/matrix_server /usr/local/bin/matrix_server
+COPY deb-workspace/usr/bin/MainMenu /usr/bin/MainMenu
+COPY deb-workspace/usr/bin/matrix_server /usr/bin/matrix_server
 
 # Copy project shared libraries
-COPY deb-workspace/usr/local/lib/*.so /usr/local/lib/
+COPY deb-workspace/usr/lib/*.so /usr/lib/
 
 # Copy wiringPi dynamic libraries
-COPY deb-workspace/usr/local/lib/libwiringPi.so* /usr/local/lib/
-COPY deb-workspace/usr/local/lib/libwiringPiDev.so* /usr/local/lib/
+COPY deb-workspace/usr/lib/libwiringPi.so* /usr/lib/
+COPY deb-workspace/usr/lib/libwiringPiDev.so* /usr/lib/
 
 RUN ldconfig
 

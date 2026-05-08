@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the built server executable and required resources from the builder stage
-COPY --from=builder /app/build/server/matrix_server /usr/local/bin/matrix_server
+COPY --from=builder /app/build/server/matrix_server /usr/bin/matrix_server
 COPY --from=web-builder /app/dist /app/dist/CubeWebapp
 COPY entrypoint.sh /app/entrypoint.sh
 COPY nginx.conf /etc/nginx/sites-available/default
