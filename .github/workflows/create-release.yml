@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows:
       - "Build and Push Simulator (AMD64)"
-      - "Build and Push Simulator (ARM64)"
       - "Build and Push Pi (ARM64)"
     types: [completed]
   workflow_dispatch:
@@ -40,14 +39,12 @@ jobs:
         run: |
           WORKFLOWS=(
             "Build and Push Simulator (AMD64)"
-            "Build and Push Simulator (ARM64)"
             "Build and Push Pi (ARM64)"
           )
 
           # Map workflow name → artifact name
           declare -A WF_ARTIFACTS=(
             ["Build and Push Simulator (AMD64)"]="matrixserver-simulator"
-            ["Build and Push Simulator (ARM64)"]="matrixserver-simulator-arm64"
             ["Build and Push Pi (ARM64)"]="matrixserver-pi-arm64"
           )
 
@@ -99,6 +96,7 @@ jobs:
           find debs/ -name "*.deb" | sort
 
       - name: Upload to APT Repository
+        if: steps.check.outputs.all_success == 'true'
         uses: appleboy/scp-action@master
         with:
           host: ${{ vars.UPLOAD_HOST }}
