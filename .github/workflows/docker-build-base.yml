@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'Dockerfile.base'
+      - 'Dockerfile.builder'
       - 'CubeWebapp/**'
       - 'entrypoint.sh'
       - 'nginx.conf'
@@ -13,7 +14,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/matrixserver-base
+  BASE_IMAGE: ${{ github.repository_owner }}/matrixserver-base
+  BUILDER_IMAGE: ${{ github.repository_owner }}/matrixserver-builder
 
 jobs:
   build-and-push-base:
@@ -35,11 +37,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract Docker metadata
-        id: meta
+      - name: Extract Docker metadata (base)
+        id: meta-base
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long
+
+      - name: Extract Docker metadata (builder)
+        id: meta-builder
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BUILDER_IMAGE }}
           tags: |
             type=raw,value=latest
             type=sha,format=long
@@ -58,7 +69,19 @@ jobs:
           file: ./Dockerfile.base
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-base.outputs.tags }}
+          labels: ${{ steps.meta-base.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push builder image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.builder
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-builder.outputs.tags }}
+          labels: ${{ steps.meta-builder.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

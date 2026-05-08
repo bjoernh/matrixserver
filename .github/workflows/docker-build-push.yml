@@ -15,8 +15,14 @@ jobs:
   build-and-test:
     name: Build and Test (AMD64)
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/bjoernh/matrixserver-builder:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: read
+      packages: read
 
     steps:
       - name: Checkout repository
@@ -36,14 +42,6 @@ jobs:
             exit 1
           fi
           echo "Version match verified: $PROJECT_VERSION"
-
-      - name: Install Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            build-essential cmake git pkg-config \
-            libeigen3-dev libboost-all-dev libasound2-dev \
-            libprotobuf-dev protobuf-compiler libimlib2-dev
 
       - name: Compile Project
         run: |
