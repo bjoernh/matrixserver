@@ -36,6 +36,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           WORKFLOWS=(
             "Build and Push Simulator (AMD64)"
