@@ -49,9 +49,12 @@ jobs:
 
       - name: Compile Project (all hardware backends)
         run: |
-          mkdir build && cd build
+          rm -rf build && mkdir build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release \
-            -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" ..
+            -DENABLE_FPGA_FTDI=ON \
+            -DENABLE_FPGA_RPISPI=ON \
+            -DENABLE_RGB_MATRIX=ON \
+            ..
           make -j$(nproc)
 
       - name: Create Debian Package Workspace

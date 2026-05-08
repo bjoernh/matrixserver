@@ -30,16 +30,10 @@ endif ()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# Hardware backend selection (may be a semicolon-separated list)
-set(HARDWARE_BACKEND "" CACHE STRING "Hardware renderer backend(s): FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX (may be a semicolon-separated list)")
-set(VALID_BACKENDS "FPGA_FTDI" "FPGA_RPISPI" "RGB_MATRIX")
-
-foreach(BACKEND IN LISTS HARDWARE_BACKEND)
-  if (NOT BACKEND IN_LIST VALID_BACKENDS)
-    message(FATAL_ERROR "Invalid HARDWARE_BACKEND entry '${BACKEND}'. "
-              "Must be one of: FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX")
-  endif ()
-endforeach()
+# Hardware backend selection — one option flag per backend
+option(ENABLE_FPGA_FTDI   "Enable FPGA FTDI USB backend"         OFF)
+option(ENABLE_FPGA_RPISPI "Enable FPGA Raspberry Pi SPI backend" OFF)
+option(ENABLE_RGB_MATRIX  "Enable RGB matrix panel backend"      OFF)
 
 # Core libraries
 add_subdirectory(common)

@@ -3,7 +3,6 @@ name: Create Pre-Release
 on:
   workflow_run:
     workflows:
-      - "Build and Push Simulator (AMD64)"
       - "Build and Push Pi (ARM64)"
     types: [completed]
   workflow_dispatch:
@@ -94,6 +93,10 @@ jobs:
           done
           echo "Downloaded packages:"
           find debs/ -name "*.deb" | sort
+
+      - name: Stage .deb files for upload
+        if: steps.check.outputs.all_success == 'true'
+        run: mv debs/*.deb .
 
       - name: Upload to APT Repository
         if: steps.check.outputs.all_success == 'true'

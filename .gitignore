@@ -26,3 +26,4 @@ install/*
 reports/*
 output/*
 .idea/*
+.claude/scheduled_tasks.lock
