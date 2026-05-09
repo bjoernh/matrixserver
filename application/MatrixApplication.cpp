@@ -300,17 +300,18 @@ void MatrixApplication::start() {
     // constructors have already run and any params.register*() calls are done
     // before we send the schema to the server.
     registerAtServer();
-    runner_.start([this]() { return loop(); },
-                  [this]() {
-                      // Only push frames once the server has assigned us an appId.
-                      // Pre-running iterations would otherwise send setScreenFrame
-                      // with appId=0, which the server rejects with appKill,
-                      // tearing the app down before it ever displays anything.
-                      if (runner_.getState() == AppState::running) {
-                          renderToScreens();
-                      }
-                      checkConnection();
-                  });
+    // The render must happen inside the body callback (which the LoopRunner
+    // only invokes when state == running) and *before* the screen-access cv
+    // wait. Otherwise the very first iteration deadlocks: the runner waits
+    // for an ack of a frame that hasn't been sent yet. This also keeps frames
+    // from being emitted with appId=0 prior to registration completing —
+    // the server rejects those with appKill, which tore apps down on startup.
+    runner_.start([this]() {
+                      bool keepGoing = loop();
+                      renderToScreens();
+                      return keepGoing;
+                  },
+                  [this]() { checkConnection(); });
 }
 
 bool MatrixApplication::pause() {
