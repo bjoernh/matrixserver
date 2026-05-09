@@ -330,17 +330,23 @@ jobs:
       - name: List downloaded packages
         run: find debs -name "*.deb" | sort
 
-      - name: Upload to APT repository
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ vars.UPLOAD_HOST }}
-          port: 22322
-          username: ${{ vars.UPLOAD_USER }}
-          key: ${{ secrets.UPLOAD_SSH_KEY }}
-          source: "debs/*.deb"
-          target: "/docker/apt-repo/data/incoming/"
-          strip_components: 1
-          debug: true
+      - name: Upload to APT repository (sftp)
+        env:
+          UPLOAD_HOST: ${{ vars.UPLOAD_HOST }}
+          UPLOAD_USER: ${{ vars.UPLOAD_USER }}
+          UPLOAD_SSH_KEY: ${{ secrets.UPLOAD_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          umask 077
+          printf '%s\n' "$UPLOAD_SSH_KEY" > ~/.ssh/id_upload
+          ssh-keyscan -p 22322 -t ed25519,rsa "$UPLOAD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          sftp -P 22322 -i ~/.ssh/id_upload -o StrictHostKeyChecking=yes \
+               -b - "$UPLOAD_USER@$UPLOAD_HOST" <<EOF
+          cd /docker/apt-repo/data/incoming
+          $(for f in debs/*.deb; do echo "put $f"; done)
+          bye
+          EOF
 
       - name: Create GitHub pre-release
         env:
