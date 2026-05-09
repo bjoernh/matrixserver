@@ -25,11 +25,11 @@ mkdir -p build && cd build && cmake .. && make
 # Debug build
 mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
-# Compile in one or more hardware backends (HARDWARE_BACKEND is a list):
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" .. && make
+# Compile in one or more hardware backends (individual boolean options, each defaults OFF):
+mkdir -p build && cd build && cmake -DENABLE_FPGA_FTDI=ON .. && make
+mkdir -p build && cd build && cmake -DENABLE_FPGA_RPISPI=ON .. && make
+mkdir -p build && cd build && cmake -DENABLE_RGB_MATRIX=ON .. && make
+mkdir -p build && cd build && cmake -DENABLE_FPGA_FTDI=ON -DENABLE_FPGA_RPISPI=ON -DENABLE_RGB_MATRIX=ON .. && make
 
 # Rebuild after changes (from build/)
 make
@@ -48,27 +48,26 @@ make matrixapplication
 |--------|--------|-------------|
 | `matrix_server` | `server/matrix_server` | The only server executable. Always built. Backend is selected at runtime via `--backend=<name>`. The `simulator` backend is always available; hardware backends are present only if compiled in via `HARDWARE_BACKEND`. |
 
-### HARDWARE_BACKEND Values
+### Hardware Backend Options
 
-`HARDWARE_BACKEND` is a CMake list (semicolon-separated). Each entry must be
-one of the values below; multiple may be enabled simultaneously, in which case
-all of them are linked into the single `matrix_server` binary and selectable
-via `--backend=`. Each renderer's CMake target sets a corresponding
-`HAVE_FPGA_FTDI` / `HAVE_FPGA_RPISPI` / `HAVE_RGB_MATRIX` macro that
+Each hardware backend is individually enabled via a CMake boolean option (all default `OFF`).
+Multiple backends can be enabled simultaneously — all are linked into the single `matrix_server`
+binary and selectable via `--backend=` at runtime. Each renderer's CMake target propagates a
+corresponding `HAVE_FPGA_FTDI` / `HAVE_FPGA_RPISPI` / `HAVE_RGB_MATRIX` macro that
 `server/RendererFactory.cpp` uses to gate construction.
 
-| Value | CLI string | Renderer | Interface |
-|-------|------------|----------|-----------|
-| (none) | `simulator` | `WebSocketSimulatorRenderer` | Default; web-based simulator |
-| `FPGA_FTDI` | `fpga-ftdi` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
-| `FPGA_RPISPI` | `fpga-rpispi` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
-| `RGB_MATRIX` | `rgb-matrix` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
+| CMake Option | CLI string | Renderer | Interface |
+|--------------|------------|----------|-----------|
+| (none / all OFF) | `simulator` | `WebSocketSimulatorRenderer` | Default; web-based simulator |
+| `ENABLE_FPGA_FTDI=ON` | `fpga-ftdi` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
+| `ENABLE_FPGA_RPISPI=ON` | `fpga-rpispi` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
+| `ENABLE_RGB_MATRIX=ON` | `rgb-matrix` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
 
 ### Tests (Catch v1, single-header)
 
-**IMPORTANT:** The `tests/` subdirectory is NOT added in the root CMakeLists.txt. You must
-add `add_subdirectory(tests)` to the root `CMakeLists.txt` or build from the tests directory
-to compile tests.
+The `tests/` subdirectory is included unconditionally in the root `CMakeLists.txt`.
+However, the `testAll` target is excluded from the default build (`EXCLUDE_FROM_ALL`) and
+must be built explicitly.
 
 ```bash
 # Build and run all tests (from build/)
@@ -94,17 +93,30 @@ Test files use Catch v1 macros: `TEST_CASE`, `SECTION`, `REQUIRE` (fatal),
 ### Docker
 
 ```bash
-docker build -t matrixserver .                                                           # amd64 simulator
-docker build -f Dockerfile.arm64 -t matrixserver-pi .                                    # arm64 Pi (all hw backends; default ARG)
-docker build -f Dockerfile.arm64 --build-arg HARDWARE_BACKEND=FPGA_RPISPI -t mx-pi .     # arm64 Pi, single backend (override)
+docker build -t matrixserver .                    # amd64 simulator image (Dockerfile)
+docker build -f Dockerfile.arm64 -t matrixserver-pi .   # arm64 Pi image (all hw backends)
 ```
 
 ### CI
 
-- `.github/workflows/docker-build-push.yml` — simulator (AMD64) on tag push
-- `.github/workflows/docker-build-push-simulator-arm64.yml` — simulator (ARM64) on tag push
-- `.github/workflows/docker-build-push-pi.yml` — Pi (ARM64) with all three hardware backends compiled in (`HARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX"`) on tag push, producing `matrixserver-pi_*.deb`
-- `.github/workflows/create-release.yml` — gathers the three artifacts above into a GitHub release
+Two workflow files handle the full pipeline:
+
+- `.github/workflows/docker-build-base.yml` — builds and pushes the multi-arch
+  `matrixserver-base` and `matrixserver-builder` images to GHCR. Triggered on pushes to
+  `master` that touch `Dockerfile.base`, `Dockerfile.builder`, `CubeWebapp/`, `entrypoint.sh`,
+  or `nginx.conf`. Also manually dispatchable.
+
+- `.github/workflows/release.yml` — unified release pipeline, triggered on `v*` tag pushes,
+  PRs, and manual dispatch. Jobs:
+  - `build-amd64` — builds in the builder container, runs tests, creates
+    `matrixserver-simulator_*.deb`, uploads artifacts
+  - `push-amd64-image` — builds and pushes `matrixserver-simulator` Docker image (skipped on PRs)
+  - `build-arm64` — runs on a self-hosted ARM64 runner, builds with all three hardware backends
+    (`-DENABLE_FPGA_FTDI=ON -DENABLE_FPGA_RPISPI=ON -DENABLE_RGB_MATRIX=ON`), creates
+    `matrixserver-pi_*.deb` (skipped on PRs)
+  - `push-arm64-image` — builds and pushes `matrixserver-pi` Docker image (skipped on PRs)
+  - `release` — uploads `.deb` packages to the APT repo and creates a GitHub pre-release
+    with auto-generated notes (tags only)
 
 ## Code Style Guidelines
 

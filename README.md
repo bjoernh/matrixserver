@@ -1,5 +1,4 @@
-[![Build Matrixserver Simulator (AMD64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml)
-[![Build Matrixserver Pi (ARM64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-pi.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-pi.yml)
+[![Release](https://github.com/bjoernh/matrixserver/actions/workflows/release.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/release.yml)
 
 # LEDCube matrixserver
 
@@ -138,25 +137,24 @@ mkdir build && cd build && cmake .. && make
 ./server/matrix_server                       # equivalent to --backend=simulator
 ```
 
-To build with one or more hardware backends compiled in, pass
-`-DHARDWARE_BACKEND` as a semicolon-separated list of any of
-`FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`:
+To build with one or more hardware backends compiled in, pass individual
+`-DENABLE_*` flags (each defaults to `OFF`):
 
 ```bash
 # FPGA via FTDI USB (IceBreaker board)
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
+mkdir build && cd build && cmake -DENABLE_FPGA_FTDI=ON .. && make
 ./server/matrix_server --backend=fpga-ftdi
 
 # FPGA via Raspberry Pi SPI
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
+mkdir build && cd build && cmake -DENABLE_FPGA_RPISPI=ON .. && make
 ./server/matrix_server --backend=fpga-rpispi
 
 # RGB Matrix panels via Raspberry Pi GPIO
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
+mkdir build && cd build && cmake -DENABLE_RGB_MATRIX=ON .. && make
 ./server/matrix_server --backend=rgb-matrix
 
 # All hardware backends in a single binary (matches the matrixserver-pi deb)
-mkdir build && cd build && cmake -DHARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX" .. && make
+mkdir build && cd build && cmake -DENABLE_FPGA_FTDI=ON -DENABLE_FPGA_RPISPI=ON -DENABLE_RGB_MATRIX=ON .. && make
 ./server/matrix_server --backend=fpga-rpispi   # pick at runtime
 ```
 
