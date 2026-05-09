@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo && chmod +x /usr/local/bin/sudo && \
       git clone --depth 1 https://github.com/WiringPi/WiringPi.git /tmp/WiringPi && \
-      cd /tmp/WiringPi && ./build && cd / && rm -rf /tmp/WiringPi && ldconfig; \
+      cd /tmp/WiringPi && ./build && cd / && rm -rf /tmp/WiringPi && ldconfig && \
+      rm /usr/local/bin/sudo; \
     fi
