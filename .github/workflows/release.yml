@@ -13,6 +13,13 @@ env:
   PI_IMAGE: ${{ github.repository_owner }}/matrixserver-pi
   BUILDER_IMAGE: ghcr.io/bjoernh/matrixserver-builder:latest
 
+# GitHub Actions defaults to /bin/sh inside container: jobs, which silently
+# breaks bashisms like `[[ ]]` and `${var/-/\~}` (see the prerelease version
+# mangling in "Create Debian package workspace"). Force bash everywhere.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build-amd64:
     name: Build, test & package (AMD64)
