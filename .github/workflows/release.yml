@@ -340,6 +340,7 @@ jobs:
           source: "debs/*.deb"
           target: "/docker/apt-repo/data/incoming/"
           strip_components: 1
+          debug: true
 
       - name: Create GitHub pre-release
         env:
