@@ -302,7 +302,13 @@ void MatrixApplication::start() {
     registerAtServer();
     runner_.start([this]() { return loop(); },
                   [this]() {
-                      renderToScreens();
+                      // Only push frames once the server has assigned us an appId.
+                      // Pre-running iterations would otherwise send setScreenFrame
+                      // with appId=0, which the server rejects with appKill,
+                      // tearing the app down before it ever displays anything.
+                      if (runner_.getState() == AppState::running) {
+                          renderToScreens();
+                      }
                       checkConnection();
                   });
 }
