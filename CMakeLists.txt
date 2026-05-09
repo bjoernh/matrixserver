@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.07)
-project(matrixserver VERSION 0.4.10)
+project(matrixserver VERSION 0.5.0)
 
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
