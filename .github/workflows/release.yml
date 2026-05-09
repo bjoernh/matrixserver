@@ -1,0 +1,361 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  SIM_IMAGE: ${{ github.repository_owner }}/matrixserver-simulator
+  PI_IMAGE: ${{ github.repository_owner }}/matrixserver-pi
+  BUILDER_IMAGE: ghcr.io/bjoernh/matrixserver-builder:latest
+
+jobs:
+  build-amd64:
+    name: Build, test & package (AMD64)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/bjoernh/matrixserver-builder:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify tag matches CMake version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          TAG_BASE_VERSION=$(echo "$TAG_VERSION" | cut -d'-' -f1)
+          if [ "$PROJECT_VERSION" != "$TAG_BASE_VERSION" ]; then
+            echo "::error::CMake project version ($PROJECT_VERSION) does not match Git tag version ($TAG_BASE_VERSION)!"
+            exit 1
+          fi
+          echo "Version match verified: $PROJECT_VERSION"
+
+      - name: Ensure ccache present
+        run: command -v ccache >/dev/null || (apt-get update && apt-get install -y ccache)
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-amd64-${{ github.sha }}
+          restore-keys: |
+            ccache-amd64-
+
+      - name: Configure & build
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -- -j$(nproc)
+          ccache -s
+
+      - name: Run tests
+        run: |
+          cmake --build build --target testAll
+          ./build/tests/testAll
+
+      - name: Create Debian package workspace
+        run: |
+          PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
+          mkdir -p deb-workspace/usr/bin deb-workspace/usr/lib deb-workspace/DEBIAN
+          cp build/server/matrix_server deb-workspace/usr/bin/
+          find build/application -name "libmatrixapplication.so*" -exec cp {} deb-workspace/usr/lib/ \;
+
+          cat <<EOF > deb-workspace/DEBIAN/control
+          Package: matrixserver-simulator
+          Version: ${PROJECT_VERSION}
+          Section: base
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Bjoern Hauffe<oss@64b.de>
+          Description: LEDCube matrixserver & matrixapplication library (Simulator)
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64
+          EOF
+
+          cat <<'EOF' > deb-workspace/DEBIAN/postinst
+          #!/bin/sh
+          ldconfig
+          EOF
+          chmod 755 deb-workspace/DEBIAN/postinst
+
+          dpkg-deb --build deb-workspace "matrixserver-simulator_${PROJECT_VERSION}_amd64.deb"
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrixserver-simulator
+          path: matrixserver-simulator_*.deb
+
+      - name: Upload deb-workspace (for Docker image step)
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-workspace-amd64
+          path: deb-workspace
+          include-hidden-files: false
+          retention-days: 1
+
+  push-amd64-image:
+    name: Push simulator Docker image (AMD64)
+    needs: build-amd64
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download deb-workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-workspace-amd64
+          path: deb-workspace
+
+      - name: Restore executable permission
+        run: chmod +x deb-workspace/usr/bin/matrix_server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.SIM_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.release
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-arm64:
+    name: Build & package (ARM64)
+    needs: build-amd64
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted, linux, ARM64]
+    container:
+      image: ghcr.io/bjoernh/matrixserver-builder:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-arm64-${{ github.sha }}
+          restore-keys: |
+            ccache-arm64-
+
+      - name: Mock Raspberry Pi detection for CMake
+        run: mkdir -p /boot && touch /boot/LICENCE.broadcom
+
+      - name: Configure & build (all hardware backends)
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_FPGA_FTDI=ON \
+            -DENABLE_FPGA_RPISPI=ON \
+            -DENABLE_RGB_MATRIX=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -- -j$(nproc)
+          ccache -s
+
+      - name: Create Debian package workspace
+        run: |
+          PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
+          mkdir -p deb-workspace/usr/bin deb-workspace/usr/lib deb-workspace/DEBIAN
+
+          cp build/MainMenu/MainMenu deb-workspace/usr/bin/
+          cp build/server/matrix_server deb-workspace/usr/bin/
+          find build/application -name "libmatrixapplication.so*" -exec cp {} deb-workspace/usr/lib/ \;
+          find build/renderer -name '*.so' -exec cp {} deb-workspace/usr/lib/ \;
+          cp /usr/local/lib/libwiringPi.so* deb-workspace/usr/lib/
+          cp /usr/local/lib/libwiringPiDev.so* deb-workspace/usr/lib/
+
+          cat <<EOF > deb-workspace/DEBIAN/control
+          Package: matrixserver-pi
+          Version: ${PROJECT_VERSION}
+          Section: base
+          Priority: optional
+          Architecture: arm64
+          Maintainer: Bjoern Hauffe<oss@64b.de>
+          Description: LEDCube matrixserver for Raspberry Pi (all hardware backends; runtime --backend= selection)
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2
+          EOF
+
+          cat <<'EOF' > deb-workspace/DEBIAN/postinst
+          #!/bin/sh
+          ldconfig
+          EOF
+          chmod 755 deb-workspace/DEBIAN/postinst
+
+          dpkg-deb --build deb-workspace "matrixserver-pi_${PROJECT_VERSION}_arm64.deb"
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrixserver-pi-arm64
+          path: matrixserver-pi_*.deb
+
+      - name: Upload deb-workspace (for Docker image step)
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-workspace-arm64
+          path: deb-workspace
+          include-hidden-files: false
+          retention-days: 1
+
+  push-arm64-image:
+    name: Push Pi Docker image (ARM64)
+    needs: build-arm64
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted, linux, ARM64]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download deb-workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-workspace-arm64
+          path: deb-workspace
+
+      - name: Restore executable permissions
+        run: |
+          chmod +x deb-workspace/usr/bin/matrix_server
+          chmod +x deb-workspace/usr/bin/MainMenu
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PI_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.arm64.release
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: Create pre-release & upload to APT
+    needs: [build-amd64, build-arm64]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all .deb artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: debs
+          pattern: matrixserver-*
+          merge-multiple: true
+
+      - name: List downloaded packages
+        run: find debs -name "*.deb" | sort
+
+      - name: Upload to APT repository
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ vars.UPLOAD_HOST }}
+          username: ${{ vars.UPLOAD_USER }}
+          key: ${{ secrets.UPLOAD_SSH_KEY }}
+          source: "debs/*.deb"
+          target: "/docker/apt-repo/data/incoming/"
+          strip_components: 1
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          DEB_FILES=$(find debs -maxdepth 1 -name "*.deb" | tr '\n' ' ')
+
+          LATEST_RELEASE=$(gh release view --repo "${{ github.repository }}" \
+            --json tagName -q .tagName 2>/dev/null || echo "")
+
+          NOTES_FLAG=""
+          if [ -n "$LATEST_RELEASE" ]; then
+            NOTES_FLAG="--notes-start-tag $LATEST_RELEASE"
+          fi
+
+          gh release create "$TAG" $DEB_FILES \
+            --repo "${{ github.repository }}" \
+            --prerelease \
+            --generate-notes \
+            $NOTES_FLAG \
+            --title "Release $TAG" \
+          || gh release upload "$TAG" $DEB_FILES \
+              --repo "${{ github.repository }}" --clobber
