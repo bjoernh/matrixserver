@@ -72,13 +72,20 @@ jobs:
       - name: Create Debian package workspace
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_VERSION=${GITHUB_REF#refs/tags/v}
+            # Use ~ instead of - so prereleases sort before the final release in apt
+            PKG_VERSION=${TAG_VERSION/-/\~}
+          else
+            PKG_VERSION=$PROJECT_VERSION
+          fi
           mkdir -p deb-workspace/usr/bin deb-workspace/usr/lib deb-workspace/DEBIAN
           cp build/server/matrix_server deb-workspace/usr/bin/
           find build/application -name "libmatrixapplication.so*" -exec cp {} deb-workspace/usr/lib/ \;
 
           cat <<EOF > deb-workspace/DEBIAN/control
           Package: matrixserver-simulator
-          Version: ${PROJECT_VERSION}
+          Version: ${PKG_VERSION}
           Section: base
           Priority: optional
           Architecture: amd64
@@ -93,7 +100,7 @@ jobs:
           EOF
           chmod 755 deb-workspace/DEBIAN/postinst
 
-          dpkg-deb --build deb-workspace "matrixserver-simulator_${PROJECT_VERSION}_amd64.deb"
+          dpkg-deb --build deb-workspace "matrixserver-simulator_${PKG_VERSION}_amd64.deb"
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
@@ -210,6 +217,13 @@ jobs:
       - name: Create Debian package workspace
         run: |
           PROJECT_VERSION=$(grep -oP 'project\([^ ]+ VERSION \K[0-9.]+' CMakeLists.txt)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_VERSION=${GITHUB_REF#refs/tags/v}
+            # Use ~ instead of - so prereleases sort before the final release in apt
+            PKG_VERSION=${TAG_VERSION/-/\~}
+          else
+            PKG_VERSION=$PROJECT_VERSION
+          fi
           mkdir -p deb-workspace/usr/bin deb-workspace/usr/lib deb-workspace/DEBIAN
 
           cp build/MainMenu/MainMenu deb-workspace/usr/bin/
@@ -221,7 +235,7 @@ jobs:
 
           cat <<EOF > deb-workspace/DEBIAN/control
           Package: matrixserver-pi
-          Version: ${PROJECT_VERSION}
+          Version: ${PKG_VERSION}
           Section: base
           Priority: optional
           Architecture: arm64
@@ -236,7 +250,7 @@ jobs:
           EOF
           chmod 755 deb-workspace/DEBIAN/postinst
 
-          dpkg-deb --build deb-workspace "matrixserver-pi_${PROJECT_VERSION}_arm64.deb"
+          dpkg-deb --build deb-workspace "matrixserver-pi_${PKG_VERSION}_arm64.deb"
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
