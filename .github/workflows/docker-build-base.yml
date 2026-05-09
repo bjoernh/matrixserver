@@ -3,7 +3,7 @@ name: Build and Push Base Image (Multi-Arch)
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'Dockerfile.base'
       - 'Dockerfile.builder'
@@ -79,7 +79,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.builder
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta-builder.outputs.tags }}
           labels: ${{ steps.meta-builder.outputs.labels }}
