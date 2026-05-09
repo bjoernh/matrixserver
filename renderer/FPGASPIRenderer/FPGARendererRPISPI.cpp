@@ -32,8 +32,8 @@ unsigned char *spiWriteQueueBufferCurrentPos;
 
 unsigned char spiWriteQueueBackBuffer0[65535]; // 49346 needed
 unsigned char spiWriteQueueBackBuffer1[65535];
-struct spi_ioc_transfer transferBackBuffer0[255];
-struct spi_ioc_transfer transferBackBuffer1[255];
+struct spi_ioc_transfer transferBackBuffer0[512];
+struct spi_ioc_transfer transferBackBuffer1[512];
 int buffPos = 0;
 
 bool SpiWriteQueueInit(unsigned int count, unsigned int bufferSize) {
@@ -91,12 +91,10 @@ bool SpiWriteQueueAddCSTrigger() {
 }
 
 void SpiWriteQueueTrigger() {
-    std::thread([&]() {
-        int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
-        if (ret < 0) {
-            BOOST_LOG_TRIVIAL(error) << std::format("[SPI] ioctl write failed: {}", strerror(errno));
-        }
-    }).detach();
+    int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
+    if (ret < 0) {
+        BOOST_LOG_TRIVIAL(error) << std::format("[SPI] ioctl write failed: {}", strerror(errno));
+    }
 }
 
 int SpiWriteRead(unsigned char *data, unsigned int length) {
