@@ -1,5 +1,5 @@
-[![Build Matrixserver Simulator (AMD64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push.yml)
-[![Build Matrixserver RPi (ARM64)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/docker-build-push-rpi.yml)
+[![Release](https://github.com/bjoernh/matrixserver/actions/workflows/release.yml/badge.svg)](https://github.com/bjoernh/matrixserver/actions/workflows/release.yml)
+
 
 # LEDCube matrixserver
 

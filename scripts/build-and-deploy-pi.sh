@@ -113,15 +113,11 @@ log "Build complete"
 # ── Gather artifacts into a staging directory ─────────────────────────────
 STAGING_DIR="${REPO_ROOT}/build-pi/deploy-staging"
 rm -rf "$STAGING_DIR"
-mkdir -p "${STAGING_DIR}/usr/bin" "${STAGING_DIR}/usr/lib" "${STAGING_DIR}/lib/systemd/system" "${STAGING_DIR}/etc/default"
+mkdir -p "${STAGING_DIR}/usr/bin" "${STAGING_DIR}/usr/lib"
 
 # Binaries
 cp build-pi/${MATRIX_SERVER_FOLDER}/${MATRIX_SERVER_NAME} "${STAGING_DIR}/usr/bin/"
 cp build-pi/MainMenu/MainMenu "${STAGING_DIR}/usr/bin/"
-
-# Systemd service and default config
-cp "${REPO_ROOT}/scripts/matrix_server.service" "${STAGING_DIR}/lib/systemd/system/"
-cp "${REPO_ROOT}/scripts/matrix_server.default" "${STAGING_DIR}/etc/default/matrix_server"
 
 # Application shared libraries
 find build-pi/application -name "libmatrixapplication.so*" \
