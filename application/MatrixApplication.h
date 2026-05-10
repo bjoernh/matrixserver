@@ -89,6 +89,8 @@ private:
   matrixserver::ServerConfig serverConfig;
 
   std::mutex renderSyncMutex;
+  std::condition_variable renderSyncCv;
+  bool frameAcked = true;
 
 public:
   static float latestSimulatorImuX;

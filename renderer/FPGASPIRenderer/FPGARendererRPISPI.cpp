@@ -29,9 +29,10 @@ unsigned char *spiWriteQueueBufferCurrentPos;
 
 unsigned char spiWriteQueueBackBuffer0[65535];  //49346 needed
 unsigned char spiWriteQueueBackBuffer1[65535];
-struct spi_ioc_transfer transferBackBuffer0[255];
-struct spi_ioc_transfer transferBackBuffer1[255];
+struct spi_ioc_transfer transferBackBuffer0[1024];
+struct spi_ioc_transfer transferBackBuffer1[1024];
 int buffPos = 0;
+std::thread spiThread;
 
 bool SpiWriteQueueInit(unsigned int count, unsigned int bufferSize){
     if(buffPos++%2){
@@ -49,7 +50,8 @@ bool SpiWriteQueueInit(unsigned int count, unsigned int bufferSize){
     memset (spiIocTransfers, 0, sizeof(struct spi_ioc_transfer) * count);
     spiIocTransfersSize = count;
     spiIocTransfersPos = 0;
-};
+    return true;
+}
 
 bool SpiWriteQueueAdd(unsigned char * data, unsigned int length) {
     if(spiIocTransfersPos < spiIocTransfersSize){
@@ -89,12 +91,14 @@ bool SpiWriteQueueAddCSTrigger(){
 }
 
 void SpiWriteQueueTrigger(){
-    std::thread([&](){
-        int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(spiIocTransfersPos), spiIocTransfers);
+    struct spi_ioc_transfer* transfers = spiIocTransfers;
+    unsigned int count = spiIocTransfersPos;
+    spiThread = std::thread([transfers, count](){
+        int ret = ioctl(spiDevFilehandle, SPI_IOC_MESSAGE(count), transfers);
         if (ret < 0) {
             BOOST_LOG_TRIVIAL(error) << "[SPI] ioctl write failed: " << strerror(errno);
         }
-    }).detach();
+    });
 }
 
 int SpiWriteRead(unsigned char *data, unsigned int length) {
@@ -209,6 +213,9 @@ void FPGARendererRPISPI::setScreenData(int screenId, Color *screenData) {
 
 void FPGARendererRPISPI::render() {
 
+    if (spiThread.joinable()) {
+        spiThread.join();
+    }
 
     /* Doing VSync */
     do {

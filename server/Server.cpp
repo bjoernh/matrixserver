@@ -20,7 +20,7 @@
 static std::string defaultAppPath([]() -> std::string {
   const char *envVal = std::getenv("MATRIXSERVER_DEFAULT_APP");
   std::string cmd = envVal ? std::string(envVal)
-                           : std::string("/usr/local/bin/MainMenu");
+                           : std::string("/usr/bin/MainMenu");
   // Trim to first token in case the env var still contains shell arguments
   auto pos = cmd.find_first_of(" \t");
   return (pos != std::string::npos) ? cmd.substr(0, pos) : cmd;
@@ -277,24 +277,37 @@ bool Server::tick() {
   {
     std::lock_guard<std::mutex> lock(appsMutex);
     if (apps.size() == 0 && !defaultAppStarted) {
-      BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << defaultAppPath;
-      pid_t pid = fork();
-      if (pid == 0) {
-        // Child: redirect stdout/stderr to /dev/null and exec the app
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-          dup2(devnull, STDOUT_FILENO);
-          dup2(devnull, STDERR_FILENO);
-          close(devnull);
+      // Check if the previous default app is still alive
+      bool app_still_alive = false;
+      if (defaultAppPid_ > 0) {
+        if (kill(defaultAppPid_, 0) == 0) {
+          app_still_alive = true;
+        } else {
+          waitpid(defaultAppPid_, nullptr, WNOHANG);
+          defaultAppPid_ = -1;
         }
-        setsid(); // detach from server's process group
-        execl(defaultAppPath.c_str(), defaultAppPath.c_str(), nullptr);
-        _exit(1); // execl failed
-      } else if (pid > 0) {
-        defaultAppPid_ = pid;
-        BOOST_LOG_TRIVIAL(debug) << "[Server] Default app PID: " << pid;
-      } else {
-        BOOST_LOG_TRIVIAL(warning) << "[Server] fork() failed for default app";
+      }
+
+      if (!app_still_alive) {
+        BOOST_LOG_TRIVIAL(info) << "[Server] Starting default app: " << defaultAppPath;
+        pid_t pid = fork();
+        if (pid == 0) {
+          // Child: redirect stdout/stderr to /dev/null and exec the app
+          int devnull = open("/dev/null", O_WRONLY);
+          if (devnull >= 0) {
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+          }
+          setsid(); // detach from server's process group
+          execl(defaultAppPath.c_str(), defaultAppPath.c_str(), nullptr);
+          _exit(1); // execl failed
+        } else if (pid > 0) {
+          defaultAppPid_ = pid;
+          BOOST_LOG_TRIVIAL(debug) << "[Server] Default app PID: " << pid;
+        } else {
+          BOOST_LOG_TRIVIAL(warning) << "[Server] fork() failed for default app";
+        }
       }
       defaultAppStarted = true;
     }

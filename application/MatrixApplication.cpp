@@ -130,7 +130,11 @@ void MatrixApplication::internalLoop() {
     try {
       auto startTime = micros();
       if (appState == AppState::running) {
-        renderSyncMutex.lock();
+        {
+          std::unique_lock<std::mutex> lock(renderSyncMutex);
+          renderSyncCv.wait(lock, [this]{ return frameAcked; });
+          frameAcked = false;
+        }
         running = loop();
         renderToScreens();
       }
@@ -234,9 +238,13 @@ void MatrixApplication::handleRequest(
     stop();
   } break;
   case matrixserver::requestScreenAccess:
-  case matrixserver::setScreenFrame:
-    renderSyncMutex.unlock();
-    break;
+  case matrixserver::setScreenFrame: {
+    {
+      std::lock_guard<std::mutex> lock(renderSyncMutex);
+      frameAcked = true;
+    }
+    renderSyncCv.notify_one();
+  } break;
   case matrixserver::joystickData: {
     for (int i = 0; i < message->joystickdata_size(); ++i) {
       const auto& joystickData = message->joystickdata(i);

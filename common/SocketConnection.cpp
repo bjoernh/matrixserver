@@ -61,7 +61,7 @@ void SocketConnection::sendMessage(std::shared_ptr<matrixserver::MatrixServerMes
     auto sendBuffer = Cobs::encode(message->SerializeAsString());
 
     boost::asio::post(io, [this, self=shared_from_this(), sendBuffer=std::move(sendBuffer)]() mutable {
-        if (write_queue.size() > 5) {
+        if (write_queue.size() > 100) {
             BOOST_LOG_TRIVIAL(warning) << "[SOCK CON] Write queue full, dropping message";
             return;
         }

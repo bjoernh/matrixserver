@@ -23,7 +23,13 @@ enum MenuState {
 
 MenuState menuState = applist;
 
-MainMenu::MainMenu() : CubeApplication(40), joystickmngr(8) {
+MainMenu::MainMenu() : CubeApplication(40, 
+#ifdef BUILD_RASPBERRYPI
+    "ipc://matrixserver",
+#else
+    DEFAULTSERVERURI,
+#endif
+    "MainMenu"), joystickmngr(8) {
     const char *appPath = std::getenv("CUBE_APP_PATH");
     if (appPath) {
         searchDirectory = std::string(appPath);
