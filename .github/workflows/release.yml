@@ -95,6 +95,8 @@ jobs:
           # Add systemd service and default config
           cp scripts/matrix_server.service deb-workspace/lib/systemd/system/
           cp scripts/matrix_server.default deb-workspace/etc/default/matrix_server
+          cp scripts/cube-update.sh deb-workspace/usr/bin/cube-update
+          chmod 755 deb-workspace/usr/bin/cube-update
 
           cat <<EOF > deb-workspace/DEBIAN/control
           Package: matrixserver-simulator
@@ -266,6 +268,8 @@ jobs:
           # Add systemd service and default config
           cp scripts/matrix_server.service deb-workspace/lib/systemd/system/
           cp scripts/matrix_server.default deb-workspace/etc/default/matrix_server
+          cp scripts/cube-update.sh deb-workspace/usr/bin/cube-update
+          chmod 755 deb-workspace/usr/bin/cube-update
 
           cat <<EOF > deb-workspace/DEBIAN/control
           Package: matrixserver-pi

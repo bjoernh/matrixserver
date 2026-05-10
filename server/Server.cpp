@@ -37,6 +37,17 @@ App *Server::getAppByID(int searchID) {
   return nullptr;
 }
 
+void Server::resumeTopApp() {
+  if (!apps.empty()) {
+    BOOST_LOG_TRIVIAL(debug)
+        << "[Server] Resuming top app " << apps.back().getAppId();
+    auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
+    msg->set_messagetype(matrixserver::appResume);
+    msg->set_appid(apps.back().getAppId());
+    apps.back().sendMsg(msg);
+  }
+}
+
 Server::Server(std::shared_ptr<IRenderer> setRenderer,
                matrixserver::ServerConfig &setServerConfig)
     : ioContext(),
@@ -150,6 +161,15 @@ void Server::handleRequest(
       int newAppId;
       {
         std::lock_guard<std::mutex> lock(appsMutex);
+        if (!apps.empty()) {
+          BOOST_LOG_TRIVIAL(debug)
+              << "[Server] Pausing current top app " << apps.back().getAppId()
+              << " to make room for new app";
+          auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
+          msg->set_messagetype(matrixserver::appPause);
+          msg->set_appid(apps.back().getAppId());
+          apps.back().sendMsg(msg);
+        }
         apps.push_back(App(connection));
         newAppId = apps.back().getAppId();
       }
@@ -218,18 +238,45 @@ void Server::handleRequest(
       BOOST_LOG_TRIVIAL(debug)
           << "[Server] send app " << message->appid() << " to pause";
       auto msg = std::make_shared<matrixserver::MatrixServerMessage>();
-      msg->set_messagetype(matrixserver::appKill);
+      msg->set_messagetype(matrixserver::appPause);
+      msg->set_appid(message->appid());
       connection->sendMessage(msg);
     }
     break;
   }
-  case matrixserver::appAlive:
-  case matrixserver::appPause:
-  case matrixserver::appResume:
+  case matrixserver::appAlive: {
+    // BOOST_LOG_TRIVIAL(trace) << "[Server] appAlive " << message->appid();
+    break;
+  }
+  case matrixserver::appPause: {
+    BOOST_LOG_TRIVIAL(debug)
+        << "[Server] appPause " << message->appid() << " successful";
+    std::lock_guard<std::mutex> lock(appsMutex);
+    for (auto &app : apps) {
+      if (app.getAppId() == message->appid()) {
+        app.setAppState(AppState::paused);
+        break;
+      }
+    }
+    break;
+  }
+  case matrixserver::appResume: {
+    BOOST_LOG_TRIVIAL(debug)
+        << "[Server] appResume " << message->appid() << " successful";
+    std::lock_guard<std::mutex> lock(appsMutex);
+    for (auto &app : apps) {
+      if (app.getAppId() == message->appid()) {
+        app.setAppState(AppState::running);
+        break;
+      }
+    }
+    break;
+  }
   case matrixserver::appKill: {
     BOOST_LOG_TRIVIAL(debug)
-        << "[Server] appkill " << message->appid() << " successfull";
+        << "[Server] appKill " << message->appid() << " successful";
     std::lock_guard<std::mutex> lock(appsMutex);
+    bool wasTopApp = (!apps.empty() && apps.back().getAppId() == message->appid());
     apps.erase(std::remove_if(apps.begin(), apps.end(),
                               [message](App a) {
                                 if (a.getAppId() == message->appid()) {
@@ -242,6 +289,9 @@ void Server::handleRequest(
                                 }
                               }),
                apps.end());
+    if (wasTopApp) {
+      resumeTopApp();
+    }
     break;
   }
   case matrixserver::appParamSchema: {
@@ -329,6 +379,7 @@ bool Server::tick() {
         defaultAppPid_ = -1;
     }
 
+    int topAppIdBefore = apps.empty() ? -1 : apps.back().getAppId();
     apps.erase(std::remove_if(apps.begin(), apps.end(),
                               [](App a) {
                                 bool returnVal = a.getConnection()->isDead();
@@ -339,6 +390,10 @@ bool Server::tick() {
                                 return returnVal;
                               }),
                apps.end());
+    int topAppIdAfter = apps.empty() ? -1 : apps.back().getAppId();
+    if (topAppIdBefore != topAppIdAfter && topAppIdAfter != -1) {
+      resumeTopApp();
+    }
   }
 
   connections.erase(

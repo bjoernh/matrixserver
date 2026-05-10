@@ -36,6 +36,7 @@ public:
     void stopDefaultApp();
 
 private:
+    void resumeTopApp();
     std::mutex appsMutex;
     std::vector<App> apps;
     std::vector<std::shared_ptr<IRenderer>> renderers;

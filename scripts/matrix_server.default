@@ -4,4 +4,4 @@
 # For Raspberry Pi hardware, choose one of the fpga_* or rgb_matrix backends.
 # MATRIX_SERVER_OPTS="--backend=rgb_matrix"
 
-MATRIX_SERVER_OPTS="--backend=simulator"
+MATRIX_SERVER_OPTS="--backend=fpga_rpispi"
