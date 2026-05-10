@@ -4,7 +4,7 @@ FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-ARG HARDWARE_BACKEND=FPGA_RPISPI
+ARG HARDWARE_BACKEND="FPGA_FTDI;FPGA_RPISPI;RGB_MATRIX"
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -49,7 +49,7 @@ RUN make -C renderer/RGBMatrixRenderer/rpi-rgb-led-matrix/lib clean || true
 # Build the project
 RUN mkdir -p build && cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release \
-    -DHARDWARE_BACKEND=${HARDWARE_BACKEND} \
+    -DHARDWARE_BACKEND="${HARDWARE_BACKEND}" \
     .. && \
     make -j$(nproc)
 
@@ -79,16 +79,16 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy the built server executables from the builder stage
-COPY --from=builder /app/build/MainMenu/MainMenu /usr/local/bin/MainMenu
-COPY --from=builder /app/build/server_hardware/matrix_server /usr/local/bin/matrix_server
+COPY --from=builder /app/build/MainMenu/MainMenu /usr/bin/MainMenu
+COPY --from=builder /app/build/server/matrix_server /usr/bin/matrix_server
 
 # Copy project shared libraries (renderer .so for the selected backend)
 COPY --from=builder /app/build/renderer/ /tmp/renderer-build/
-RUN find /tmp/renderer-build -name '*.so' -exec cp {} /usr/local/lib/ \; && rm -rf /tmp/renderer-build
+RUN find /tmp/renderer-build -name '*.so' -exec cp {} /usr/lib/ \; && rm -rf /tmp/renderer-build
 
-# Copy wiringPi dynamic libraries (usually installed to /usr/local/lib)
-COPY --from=builder /usr/local/lib/libwiringPi.so* /usr/local/lib/
-COPY --from=builder /usr/local/lib/libwiringPiDev.so* /usr/local/lib/
+# Copy wiringPi dynamic libraries (usually installed to /usr/lib)
+COPY --from=builder /usr/loca/lib/libwiringPi.so* /usr/lib/
+COPY --from=builder /usr/local/lib/libwiringPiDev.so* /usr/lib/
 RUN ldconfig
 
 # Default entrypoint

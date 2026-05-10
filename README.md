@@ -11,7 +11,7 @@ planar screen orientations, as well as other complex screen orientations.
 
 The easiest way to get started is using the **self-contained simulator Docker image**, which bundles:
 
-- The `matrix_server_simulator` binary
+- The `matrix_server` binary (configured for `simulator` backend)
 - The **CubeWebapp** web frontend (built into the image)
 - An **Nginx HTTPS reverse proxy** that serves the webapp UI and proxies the WebSocket connection
 
@@ -91,7 +91,7 @@ Browser (https://localhost:5173)
   Static UI    ws://localhost:1337
                       │
                       ▼
-          matrix_server_simulator
+               matrix_server
                       │
                       ▼  (port 2017, TCP)
               Matrix Applications
@@ -134,23 +134,19 @@ To build the project for a standard development environment (simulator only):
 mkdir build && cd build && cmake .. && make
 ```
 
-To build for a specific hardware backend, set `-DHARDWARE_BACKEND`:
+To build for a specific hardware backend, use the `ENABLE_*` flags (multiple can be enabled):
 ```bash
 # FPGA via FTDI USB (IceBreaker board)
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
+mkdir build && cd build && cmake -DENABLE_FPGA_FTDI=ON .. && make
 
 # FPGA via Raspberry Pi SPI
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
+mkdir build && cd build && cmake -DENABLE_FPGA_RPISPI=ON .. && make
 
 # RGB Matrix panels via Raspberry Pi GPIO
-mkdir build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
+mkdir build && cd build && cmake -DENABLE_RGB_MATRIX=ON .. && make
 ```
 
-Valid values for `HARDWARE_BACKEND`: `FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`
-
-When `HARDWARE_BACKEND` is set, two targets are built:
-- `matrix_server_simulator` — always built for development/testing
-- `matrix_server` — hardware server with the selected renderer
+When enabled, a single `matrix_server` binary is produced that supports the selected backends via the `--backend` command line argument.
 
 To build and install the project to a local directory (e.g., `./install`):
 ```bash

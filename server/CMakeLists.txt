@@ -9,8 +9,25 @@ set(SOURCE_FILES
         App.cpp)
 
 add_library(server STATIC ${SOURCE_FILES})
-target_link_libraries(server common renderer)
+target_link_libraries(server common renderer wsSimulatorRenderer)
 target_link_libraries(server ${Boost_LIBRARIES})
 target_include_directories(server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_definitions(server PUBLIC BOOST_LOG_DYN_LINK)
+
+# Unified server executable
+add_executable(matrix_server main.cpp RendererFactory.cpp)
+target_link_libraries(matrix_server server wsSimulatorRenderer)
+target_compile_definitions(matrix_server PUBLIC BOOST_LOG_DYN_LINK)
+
+if (ENABLE_FPGA_FTDI)
+  target_link_libraries(matrix_server FPGAFTDIRenderer)
+endif()
+if (ENABLE_FPGA_RPISPI)
+  target_link_libraries(matrix_server FPGASPIRenderer)
+endif()
+if (ENABLE_RGB_MATRIX)
+  target_link_libraries(matrix_server RGBMatrixRenderer)
+endif()
+
+install(TARGETS matrix_server DESTINATION bin)

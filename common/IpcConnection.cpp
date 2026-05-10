@@ -8,9 +8,12 @@ IpcConnection::IpcConnection(){
     dead = false;
 }
 
-IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver){
+IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender,
+                              std::shared_ptr<boost::interprocess::message_queue> receiver,
+                              std::string name) {
     sendMQ = sender;
     receiveMQ = receiver;
+    mqName = name;
     receiveCallback = NULL;
     receiveThread = nullptr;
     dead = false;
@@ -36,6 +39,7 @@ void IpcConnection::readLoop() {
     BOOST_LOG_TRIVIAL(trace) << "[IpcConnection] start read loop";
     while(!dead){
         try {
+            boost::this_thread::interruption_point();
             boost::posix_time::ptime timeout = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::milliseconds(100);
             if (this->receiveMQ->timed_receive(&receiveData, MAXIPCMESSAGESIZE, recvd_size, priority, timeout)) {
                 auto receiveMessage = std::make_shared<matrixserver::MatrixServerMessage>();
@@ -97,11 +101,16 @@ bool IpcConnection::isDead() {
 IpcConnection::~IpcConnection() {
     setDead(true);
     if (receiveThread) {
+        receiveThread->interrupt();
         if (receiveThread->joinable()) {
             receiveThread->join();
         }
         delete receiveThread;
         receiveThread = nullptr;
+    }
+    if (!mqName.empty()) {
+        BOOST_LOG_TRIVIAL(debug) << "[IpcConnection] Removing message queue: " << mqName;
+        boost::interprocess::message_queue::remove(mqName.c_str());
     }
 }
 
@@ -111,13 +120,17 @@ void IpcConnection::setDead(bool sDead) {
 
 bool IpcConnection::connectToServer(std::string serverAddress) {
     try {
+        if (!mqName.empty()) {
+            boost::interprocess::message_queue::remove(mqName.c_str());
+        }
         std::stringstream receiveMQname;
         for(int i = 0; i < 20; i++)
             receiveMQname << (char)(rand()%26+'a'); // add random character [a...z]
+        mqName = receiveMQname.str();
 
         auto tempServer = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_only, serverAddress.data());
-        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, receiveMQname.str().data(), 10, MAXIPCMESSAGESIZE, boost::interprocess::permissions(0666));
-        tempServer->send(receiveMQname.str().data(), receiveMQname.str().size(), 0);
+        this->receiveMQ = std::make_shared<boost::interprocess::message_queue>(boost::interprocess::open_or_create, mqName.data(), 10, MAXIPCMESSAGESIZE, boost::interprocess::permissions(0666));
+        tempServer->send(mqName.data(), mqName.size(), 0);
         std::vector<char> tempData(MAXIPCMESSAGESIZE);
         boost::interprocess::message_queue::size_type recvd_size;
         unsigned int priority;

@@ -11,12 +11,17 @@ target_include_directories(renderer PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOU
 
 add_subdirectory(WebSocketSimulatorRenderer)
 
-if (HARDWARE_BACKEND STREQUAL "FPGA_FTDI")
+if (ENABLE_FPGA_FTDI)
     add_subdirectory(FPGAFTDIRenderer)
-elseif (HARDWARE_BACKEND STREQUAL "FPGA_RPISPI")
+    target_compile_definitions(renderer PUBLIC HAVE_FPGA_FTDI)
+endif()
+if (ENABLE_FPGA_RPISPI)
     add_subdirectory(FPGASPIRenderer)
-elseif (HARDWARE_BACKEND STREQUAL "RGB_MATRIX")
+    target_compile_definitions(renderer PUBLIC HAVE_FPGA_RPISPI)
+endif()
+if (ENABLE_RGB_MATRIX)
     add_subdirectory(RGBMatrixRenderer)
+    target_compile_definitions(renderer PUBLIC HAVE_RGB_MATRIX)
 endif()
 
 set_target_properties(common PROPERTIES PUBLIC_HEADER "IRenderer.h")

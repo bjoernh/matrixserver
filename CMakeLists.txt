@@ -30,28 +30,16 @@ endif ()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# Hardware backend selection
-set(HARDWARE_BACKEND "" CACHE STRING "Hardware renderer backend: FPGA_FTDI, FPGA_RPISPI, or RGB_MATRIX")
-set(VALID_BACKENDS "FPGA_FTDI" "FPGA_RPISPI" "RGB_MATRIX")
-
-if (HARDWARE_BACKEND AND NOT HARDWARE_BACKEND IN_LIST VALID_BACKENDS)
-  message(FATAL_ERROR "Invalid HARDWARE_BACKEND '${HARDWARE_BACKEND}'. "
-            "Must be one of: FPGA_FTDI, FPGA_RPISPI, RGB_MATRIX")
-endif ()
+# Hardware backend selection — one option flag per backend
+option(ENABLE_FPGA_FTDI   "Enable FPGA FTDI USB backend"         OFF)
+option(ENABLE_FPGA_RPISPI "Enable FPGA Raspberry Pi SPI backend" OFF)
+option(ENABLE_RGB_MATRIX  "Enable RGB matrix panel backend"      OFF)
 
 # Core libraries
 add_subdirectory(common)
 add_subdirectory(renderer)
 add_subdirectory(server)
 add_subdirectory(application)
-
-# Simulator target (always built)
-add_subdirectory(server_simulator)
-
-# Hardware target (only when a backend is selected)
-if (HARDWARE_BACKEND)
-  add_subdirectory(server_hardware)
-endif ()
 
 add_subdirectory(MainMenu)
 

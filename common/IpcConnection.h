@@ -16,7 +16,9 @@ class IpcConnection :  public std::enable_shared_from_this<IpcConnection>, publi
 public:
     IpcConnection();
 
-    IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender, std::shared_ptr<boost::interprocess::message_queue> receiver);
+    IpcConnection(std::shared_ptr<boost::interprocess::message_queue> sender,
+                  std::shared_ptr<boost::interprocess::message_queue> receiver,
+                  std::string name = "");
 
     ~IpcConnection();
 
@@ -40,6 +42,7 @@ private:
 
     std::shared_ptr<boost::interprocess::message_queue> sendMQ;
     std::shared_ptr<boost::interprocess::message_queue> receiveMQ;
+    std::string mqName;
 
     boost::thread * receiveThread;
 

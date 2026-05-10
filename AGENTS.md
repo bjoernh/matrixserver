@@ -25,17 +25,14 @@ mkdir -p build && cd build && cmake .. && make
 # Debug build
 mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
 
-# Hardware build — select one backend:
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_FTDI .. && make
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=FPGA_RPISPI .. && make
-mkdir -p build && cd build && cmake -DHARDWARE_BACKEND=RGB_MATRIX .. && make
+# Hardware build — enable desired backends (multiple possible):
+mkdir -p build && cd build && cmake -DENABLE_FPGA_FTDI=ON -DENABLE_FPGA_RPISPI=ON .. && make
 
 # Rebuild after changes (from build/)
 make
 
 # Build specific targets
-make matrix_server_simulator
-make matrix_server          # requires HARDWARE_BACKEND to be set
+make matrix_server
 make testAll
 make common
 make server
@@ -46,16 +43,15 @@ make matrixapplication
 
 | Target | Binary | Description |
 |--------|--------|-------------|
-| `matrix_server_simulator` | `server_simulator/matrix_server_simulator` | Always built; uses WebSocketSimulatorRenderer |
-| `matrix_server` | `server_hardware/matrix_server` | Built when `HARDWARE_BACKEND` is set |
+| `matrix_server` | `server/matrix_server` | Unified server; use `--backend` to select renderer |
 
-### HARDWARE_BACKEND Values
+### ENABLE_* Flags (Backend selection)
 
-| Value | Renderer | Interface |
+| Flag | Renderer | Interface |
 |-------|----------|-----------|
-| `FPGA_FTDI` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
-| `FPGA_RPISPI` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
-| `RGB_MATRIX` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
+| `ENABLE_FPGA_FTDI` | `FPGARendererFTDI` | FTDI USB to IceBreaker FPGA |
+| `ENABLE_FPGA_RPISPI` | `FPGARendererRPISPI` | Raspberry Pi SPI to FPGA |
+| `ENABLE_RGB_MATRIX` | `RGBMatrixRenderer` | Raspberry Pi GPIO to HUB75 panels |
 
 ### Tests (Catch v1, single-header)
 
@@ -107,8 +103,7 @@ C++17.
 
 - One class per file pair: `ClassName.h` + `ClassName.cpp` (PascalCase filenames)
 - Directories are modules, each with its own `CMakeLists.txt`
-- Module structure: `common/` (shared), `server/`, `application/`, `renderer/`,
-  `server_simulator/`, `server_hardware/` (executables), `tests/`
+- Module structure: `common/` (shared), `server/` (unified binary), `application/`, `renderer/`, `tests/`
 
 ### Header Guards
 
@@ -251,5 +246,5 @@ TEST_CASE("descriptive name", "[module-tag]") {
 - Do NOT use `NULL` (use `nullptr`)
 - Do NOT add `using namespace std;` in headers
 - Do NOT use raw `new` without wrapping in a smart pointer
-- Do NOT add new server_* executable directories — use `server_simulator/` or `server_hardware/`
+- Do NOT add new server_* executable directories — use `server/` and add logic to `RendererFactory`
 - Do NOT hard-code screen orientations/offsets in main.cpp — put them in `createDefaultCubeConfig()`

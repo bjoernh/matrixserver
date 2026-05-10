@@ -6,6 +6,7 @@
 class IpcServer {
 public:
     IpcServer(std::string serverAddress);
+    ~IpcServer();
 
     void startAccepting();
 
@@ -13,6 +14,7 @@ public:
 
 private:
     void acceptLoop();
+    std::string serverName;
     std::shared_ptr<boost::interprocess::message_queue> serverMQ;
     std::function<void(std::shared_ptr<UniversalConnection>)> acceptCallback;
     boost::thread *acceptThread;
