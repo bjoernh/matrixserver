@@ -1,0 +1,104 @@
+name: Build & Test (Master)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BUILDER_IMAGE: ghcr.io/bjoernh/matrixserver-builder:latest
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-amd64:
+    name: Build & Test (AMD64)
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/bjoernh/matrixserver-builder:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure ccache present
+        run: command -v ccache >/dev/null || (apt-get update && apt-get install -y ccache)
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-amd64-${{ github.sha }}
+          restore-keys: |
+            ccache-amd64-
+
+      - name: Configure & build
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -- -j$(nproc)
+          ccache -s
+
+      - name: Run tests
+        run: |
+          cmake --build build --target testAll
+          ./build/tests/testAll
+
+  build-arm64:
+    name: Build & Test (ARM64)
+    runs-on: [self-hosted, linux, ARM64]
+    container:
+      image: ghcr.io/bjoernh/matrixserver-builder:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-arm64-${{ github.sha }}
+          restore-keys: |
+            ccache-arm64-
+
+      - name: Mock Raspberry Pi detection for CMake
+        run: mkdir -p /boot && touch /boot/LICENCE.broadcom
+
+      - name: Configure & build
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_FPGA_FTDI=ON \
+            -DENABLE_FPGA_RPISPI=ON \
+            -DENABLE_RGB_MATRIX=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -- -j$(nproc)
+          ccache -s
+
+      - name: Hand workspace back to self-hosted runner user
+        if: always()
+        run: chown -R 1000:1000 "$GITHUB_WORKSPACE"
