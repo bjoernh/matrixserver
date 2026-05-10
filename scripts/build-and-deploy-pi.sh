@@ -18,10 +18,37 @@ require_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "'$1' not found in PATH"
 }
 
+# ── Arguments ──────────────────────────────────────────────────────────────
+CLEANUP_ONLY=false
+if [[ "${1:-}" == "--cleanup" ]]; then
+    CLEANUP_ONLY=true
+fi
+
 # ── Prerequisites ──────────────────────────────────────────────────────────
-require_cmd docker
 require_cmd scp
 require_cmd ssh
+
+if [ "$CLEANUP_ONLY" = true ]; then
+    log "Removing deployed artifacts from ${CUBE_USER}@${CUBE_HOST} …"
+    ssh -i ~/.ssh/private "${CUBE_USER}@${CUBE_HOST}" bash -s << 'REMOTE_SCRIPT'
+set -x
+sudo rm -f /usr/bin/matrix_server /usr/bin/MainMenu
+sudo rm -f /usr/lib/libmatrixapplication.so*
+sudo rm -f /usr/lib/libFPGAFTDIRenderer.so*
+sudo rm -f /usr/lib/libFPGASPIRenderer.so*
+sudo rm -f /usr/lib/libRGBMatrixRenderer.so*
+sudo rm -f /usr/lib/libImu.so*
+sudo rm -f /usr/lib/libwiringPi.so*
+sudo rm -f /usr/lib/libwiringPiDev.so*
+sudo rm -rf /tmp/matrixserver-deploy
+sudo ldconfig
+echo "Cleanup complete"
+REMOTE_SCRIPT
+    log "Cleanup successful"
+    exit 0
+fi
+
+require_cmd docker
 
 # ── Repo root ──────────────────────────────────────────────────────────────
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
