@@ -1,0 +1,14 @@
+[Unit]
+Description=LEDCube Matrix Server
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/matrix_server
+ExecStart=/usr/bin/matrix_server $MATRIX_SERVER_OPTS
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

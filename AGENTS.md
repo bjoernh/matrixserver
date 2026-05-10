@@ -208,7 +208,12 @@ try {
 
 `server/ServerSetup.h` provides the `ServerSetup` namespace with:
 - `HardwareType` enum: `Simulator`, `FPGA_FTDI`, `FPGA_RPISPI`, `RGB_MATRIX`
-- `handleServerConfig(argc, argv, serverConfig)` — parses CLI args, loads/generates JSON config
+- `handleServerConfig(argc, argv, serverConfig)` — parses CLI args, loads/generates JSON config.
+  - **Config Search Order:** 
+    1. Path provided via `--config` CLI argument.
+    2. `/etc/matrixServerConfig.json` (Primary default).
+    3. `matrixServerConfig.json` in the current working directory (Fallback).
+  - If no config is found, it prompts to create a default one at `/etc/matrixServerConfig.json`.
 - `createDefaultCubeConfig(serverConfig, hwType)` — generates hardware-specific defaults including screen orientations and sets `pixelStreamingEnabled` (`true` for `Simulator`, `false` for all hardware types)
 - `createScreensFromConfig(serverConfig)` — creates `Screen` objects from config (reads offsetX/Y/rotation from JSON)
 

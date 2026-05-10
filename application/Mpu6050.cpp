@@ -90,7 +90,13 @@ Eigen::Vector3f Mpu6050::applyOrientation(float x, float y, float z) const {
 
 void Mpu6050::init() {
   // Load IMU orientation from server config file
-  std::ifstream f("matrixServerConfig.json");
+  std::string configPath = "/etc/matrixServerConfig.json";
+  std::ifstream f(configPath);
+  if (!f.good()) {
+    configPath = "matrixServerConfig.json";
+    f.open(configPath);
+  }
+
   if (f.good()) {
     std::string json((std::istreambuf_iterator<char>(f)),
                       std::istreambuf_iterator<char>());

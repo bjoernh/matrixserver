@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# This script is for a development with rpi related hardware backends.
+# Rapberry Pi 3A+ is not as fast as a modern ARM64 Laptop and has
+# rpi in the Cube has limited RAM (512MB)
+
 set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────────────
@@ -32,6 +36,8 @@ if [ "$CLEANUP_ONLY" = true ]; then
     log "Removing deployed artifacts from ${CUBE_USER}@${CUBE_HOST} …"
     ssh -i ~/.ssh/private "${CUBE_USER}@${CUBE_HOST}" bash -s << 'REMOTE_SCRIPT'
 set -x
+sudo systemctl stop matrix_server.service || true
+sudo systemctl disable matrix_server.service || true
 sudo rm -f /usr/bin/matrix_server /usr/bin/MainMenu
 sudo rm -f /usr/lib/libmatrixapplication.so*
 sudo rm -f /usr/lib/libFPGAFTDIRenderer.so*
@@ -40,7 +46,10 @@ sudo rm -f /usr/lib/libRGBMatrixRenderer.so*
 sudo rm -f /usr/lib/libImu.so*
 sudo rm -f /usr/lib/libwiringPi.so*
 sudo rm -f /usr/lib/libwiringPiDev.so*
+sudo rm -f /lib/systemd/system/matrix_server.service
+sudo rm -f /etc/default/matrix_server
 sudo rm -rf /tmp/matrixserver-deploy
+sudo systemctl daemon-reload
 sudo ldconfig
 echo "Cleanup complete"
 REMOTE_SCRIPT
@@ -104,11 +113,15 @@ log "Build complete"
 # ── Gather artifacts into a staging directory ─────────────────────────────
 STAGING_DIR="${REPO_ROOT}/build-pi/deploy-staging"
 rm -rf "$STAGING_DIR"
-mkdir -p "${STAGING_DIR}/usr/bin" "${STAGING_DIR}/usr/lib"
+mkdir -p "${STAGING_DIR}/usr/bin" "${STAGING_DIR}/usr/lib" "${STAGING_DIR}/lib/systemd/system" "${STAGING_DIR}/etc/default"
 
 # Binaries
 cp build-pi/${MATRIX_SERVER_FOLDER}/${MATRIX_SERVER_NAME} "${STAGING_DIR}/usr/bin/"
 cp build-pi/MainMenu/MainMenu "${STAGING_DIR}/usr/bin/"
+
+# Systemd service and default config
+cp "${REPO_ROOT}/scripts/matrix_server.service" "${STAGING_DIR}/lib/systemd/system/"
+cp "${REPO_ROOT}/scripts/matrix_server.default" "${STAGING_DIR}/etc/default/matrix_server"
 
 # Application shared libraries
 find build-pi/application -name "libmatrixapplication.so*" \
@@ -159,8 +172,8 @@ scp -i ~/.ssh/private -r "${STAGING_DIR}/usr" "${CUBE_USER}@${CUBE_HOST}:${REMOT
 # Install remotely with sudo
 ssh -i ~/.ssh/private "${CUBE_USER}@${CUBE_HOST}" bash -s << REMOTE_SCRIPT
 set -euo pipefail
-sudo cp -f /tmp/matrixserver-deploy/usr/bin/* /usr/bin/
-sudo cp -f /tmp/matrixserver-deploy/usr/lib/* /usr/lib/
+sudo cp -f ${REMOTE_DEPLOY_DIR}/usr/bin/* /usr/bin/
+sudo cp -f ${REMOTE_DEPLOY_DIR}/usr/lib/* /usr/lib/
 sudo ldconfig
 sudo chmod +x /usr/bin/${MATRIX_SERVER_NAME} /usr/bin/MainMenu
 echo "Remote installation complete"

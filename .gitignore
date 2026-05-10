@@ -5,6 +5,7 @@ cmake-build-release/*
 !cmake-build-release/.keep
 build/*
 build2/*
+build-pi/
 .cache
 bin/*
 

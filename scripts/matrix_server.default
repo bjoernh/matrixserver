@@ -1,0 +1,7 @@
+# Configuration for matrix_server systemd service
+
+# Backend selection: simulator, fpga_ftdi, fpga_rpispi, rgb_matrix
+# For Raspberry Pi hardware, choose one of the fpga_* or rgb_matrix backends.
+# MATRIX_SERVER_OPTS="--backend=rgb_matrix"
+
+MATRIX_SERVER_OPTS="--backend=simulator"

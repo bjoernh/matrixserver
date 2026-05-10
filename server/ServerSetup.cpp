@@ -233,9 +233,14 @@ void handleServerConfig(int argc, char **argv,
   }
 
   if (configPath.empty()) {
-    std::ifstream defaultFile("matrixServerConfig.json");
-    if (defaultFile.good()) {
-      configPath = "matrixServerConfig.json";
+    std::ifstream etcFile("/etc/matrixServerConfig.json");
+    if (etcFile.good()) {
+      configPath = "/etc/matrixServerConfig.json";
+    } else {
+      std::ifstream defaultFile("matrixServerConfig.json");
+      if (defaultFile.good()) {
+        configPath = "matrixServerConfig.json";
+      }
     }
   }
 
@@ -261,12 +266,8 @@ void handleServerConfig(int argc, char **argv,
           << "[ServerSetup] ServerConfig read failed from: " << fullPath;
     }
   } else {
-    std::string configFileName = "matrixServerConfig.json";
+    std::string configFileName = "/etc/matrixServerConfig.json";
     std::string fullPath = configFileName;
-    char resolved_path[PATH_MAX];
-    if (realpath(".", resolved_path) != NULL) {
-      fullPath = std::string(resolved_path) + "/" + configFileName;
-    }
 
     std::cout << "\nNo configuration file specified or found.\n"
               << "Would you like to create a default configuration file at "

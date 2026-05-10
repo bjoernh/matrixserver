@@ -195,17 +195,33 @@ docker run -it --rm --privileged -v /dev:/dev ghcr.io/bjoernh/matrixserver-rpi:l
 Both server targets share a unified command-line interface:
 
 *   **`-h, --help`**: Display available command-line options.
-*   **`--config <path>`**: Path to the `matrixServerConfig.json` configuration file. If not provided, the server checks the current directory or prompts you to generate a default one.
+*   **`--config <path>`**: Path to the `matrixServerConfig.json` configuration file. If not provided, the server checks `/etc/matrixServerConfig.json`, then the current directory, or prompts you to generate a default one at `/etc/matrixServerConfig.json`.
 *   **`--address <ip>`**: Override the server address specified in the configuration file.
 
-When starting a server without an existing configuration file, it will explicitly prompt you `[y/N]` before creating a default `matrixServerConfig.json` in the current directory. If you decline, it runs with a default in-memory configuration.
+When starting a server without an existing configuration file, it will explicitly prompt you `[y/N]` before creating a default `/etc/matrixServerConfig.json`. If you decline, it runs with a default in-memory configuration.
+
+## Systemd Service (Raspberry Pi & Linux)
+The matrix server can be managed as a systemd service. This is automatically set up when installing the `.deb` package or using the deployment script.
+
+*   **Status**: `systemctl status matrix_server.service`
+*   **Start/Stop**: `sudo systemctl start|stop matrix_server.service`
+*   **Logs**: `journalctl -u matrix_server.service -f`
+
+### Configuration
+You can configure the backend and other options by editing `/etc/default/matrix_server`:
+
+```bash
+# Example: Use the RGB Matrix backend
+MATRIX_SERVER_OPTS="--backend=rgb_matrix"
+```
+After changing the configuration, restart the service: `sudo systemctl restart matrix_server.service`.
 
 The generated config includes per-screen `screenRotation`, `offsetX`, `offsetY` fields that specify how each cube face maps to physical display positions. These defaults are set correctly for the selected hardware backend and can be adjusted in the JSON file.
 
 ## IMU Orientation Configuration
 To align a mounted orientation of the IMU sensor with the software, rotation to the gravity vector can be applied.
 
-Applications using the MPU6050 IMU sensor (Raspberry Pi only) read orientation corrections from `matrixServerConfig.json`:
+Applications using the MPU6050 IMU sensor (Raspberry Pi only) read orientation corrections from the server configuration file:
 
 ```json
 {
