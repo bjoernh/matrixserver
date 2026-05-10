@@ -23,7 +23,7 @@ enum MenuState {
 
 MenuState menuState = applist;
 
-MainMenu::MainMenu() : CubeApplication(40, 
+MainMenu::MainMenu() : CubeApplication(40,
 #ifdef BUILD_RASPBERRYPI
     "ipc://matrixserver",
 #else
@@ -34,14 +34,11 @@ MainMenu::MainMenu() : CubeApplication(40,
     if (appPath) {
         searchDirectory = std::string(appPath);
     } else {
-        const char *homeDir = std::getenv("HOME");
-        searchDirectory = std::string(homeDir ? homeDir : "/home/pi") + "/APPS";
+        searchDirectory = std::string("/opt/cube/bin");
     }
     if (std::filesystem::is_directory(searchDirectory)) {
         for (const auto &p : std::filesystem::directory_iterator(searchDirectory)) {
-            //if(p.path().extension() == "cube"){
             appList.push_back(AppListItem(std::string(p.path().filename()), std::string(p.path())));
-            //}
         }
     } else {
         BOOST_LOG_TRIVIAL(warning) << "[MainMenu] Apps directory not found: " << searchDirectory;
