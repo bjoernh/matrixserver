@@ -21,6 +21,7 @@ IpcConnection::IpcConnection(std::shared_ptr<boost::interprocess::message_queue>
 
 
 void IpcConnection::startReceiving() {
+    if (receiveThread != nullptr) return;
     receiveThread = new boost::thread(&IpcConnection::readLoop, this);
 }
 
@@ -52,8 +53,18 @@ void IpcConnection::readLoop() {
                     }
                 }
             }
+        } catch (const boost::thread_interrupted &) {
+            break;
         } catch (const boost::interprocess::interprocess_exception &e) {
             BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Receive error: " << e.what();
+            setDead(true);
+            break;
+        } catch (const std::exception &e) {
+            BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Unexpected error in readLoop: " << e.what();
+            setDead(true);
+            break;
+        } catch (...) {
+            BOOST_LOG_TRIVIAL(error) << "[IpcConnection] Unknown error in readLoop";
             setDead(true);
             break;
         }

@@ -133,6 +133,8 @@ class JoystickManager {
 public:
     JoystickManager(unsigned int maxNum = 8);
 
+    ~JoystickManager();
+
     std::vector<Joystick *> &getJoysticks();
 
     bool getButtonPress(unsigned int num);

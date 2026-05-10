@@ -31,7 +31,16 @@ WebSocketSimulatorRenderer::WebSocketSimulatorRenderer(
   // Start async accept
   do_accept();
   // Accept loop runs in a dedicated thread
-  ioThread = boost::thread([this] { this->ioContext.run(); });
+  ioThread = boost::thread([this] {
+    try {
+      this->ioContext.run();
+    } catch (const std::exception &e) {
+      BOOST_LOG_TRIVIAL(fatal)
+          << "[WebSocketRenderer] io_context exception: " << e.what();
+    } catch (...) {
+      BOOST_LOG_TRIVIAL(fatal) << "[WebSocketRenderer] Unknown exception in io_context";
+    }
+  });
 }
 
 WebSocketSimulatorRenderer::~WebSocketSimulatorRenderer() {

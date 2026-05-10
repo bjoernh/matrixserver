@@ -332,6 +332,13 @@ JoystickManager::JoystickManager(unsigned int maxNum) {
         joysticks.push_back(new Joystick(i));
 }
 
+JoystickManager::~JoystickManager() {
+    for (auto joystick : joysticks) {
+        delete joystick;
+    }
+    joysticks.clear();
+}
+
 std::vector<Joystick *> &JoystickManager::getJoysticks() {
     return joysticks;
 }

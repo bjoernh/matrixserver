@@ -19,7 +19,7 @@
 class Server {
 public:
 
-    ~Server() = default;
+    ~Server();
 
     Server(std::shared_ptr<IRenderer>, matrixserver::ServerConfig &);
 
@@ -45,7 +45,7 @@ private:
     TcpServer tcpServer;
 //    UnixSocketServer unixServer;
     IpcServer ipcServer;
-    boost::thread *ioThread;
+    boost::thread ioThread;
     std::vector<std::shared_ptr<UniversalConnection>> connections;
     JoystickManager joystickmngr;
     pid_t defaultAppPid_ = -1;

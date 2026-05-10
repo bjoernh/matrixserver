@@ -2,11 +2,13 @@
 
 #include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
+#include <cstdio>
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <string>
+#include <unistd.h>
 
 #include <google/protobuf/util/json_util.h>
 
@@ -269,11 +271,15 @@ void handleServerConfig(int argc, char **argv,
     std::string configFileName = "/etc/matrixServerConfig.json";
     std::string fullPath = configFileName;
 
-    std::cout << "\nNo configuration file specified or found.\n"
-              << "Would you like to create a default configuration file at "
-              << fullPath << "? [y/N]: ";
-    std::string response;
-    std::getline(std::cin, response);
+    bool is_interactive = isatty(fileno(stdin));
+    std::string response = "n";
+
+    if (is_interactive) {
+        std::cout << "\nNo configuration file specified or found.\n"
+                  << "Would you like to create a default configuration file at "
+                  << fullPath << "? [y/N]: ";
+        std::getline(std::cin, response);
+    }
 
     if (response == "y" || response == "Y") {
       BOOST_LOG_TRIVIAL(info) << "[ServerSetup] Creating default config...";

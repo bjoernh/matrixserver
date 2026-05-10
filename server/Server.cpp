@@ -55,15 +55,18 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
   boost::log::core::get()->set_filter(boost::log::trivial::severity >=
                                       boost::log::trivial::debug);
 
+  std::weak_ptr<IRenderer> weakRenderer = setRenderer;
   setRenderer->setClientMessageCallback(
-      [this, setRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+      [this, weakRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        auto renderer = weakRenderer.lock();
+        if (!renderer) return;
         if (msg->messagetype() == matrixserver::getServerInfo) {
           auto response = std::make_shared<matrixserver::MatrixServerMessage>();
           response->set_messagetype(matrixserver::getServerInfo);
           auto *tempConfig = new matrixserver::ServerConfig();
           tempConfig->CopyFrom(serverConfig);
           response->set_allocated_serverconfig(tempConfig);
-          setRenderer->sendMessage(response);
+          renderer->sendMessage(response);
 
           std::lock_guard<std::mutex> lock(appsMutex);
           if (!apps.empty()) {
@@ -72,7 +75,7 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
             schemaMsg->set_messagetype(matrixserver::appParamSchema);
             auto schema = apps.back().getParamSchema();
             schemaMsg->mutable_appparamschema()->CopyFrom(schema);
-            setRenderer->sendMessage(schemaMsg);
+            renderer->sendMessage(schemaMsg);
           }
         } else if (msg->messagetype() == matrixserver::imuData ||
             msg->messagetype() == matrixserver::audioDataMessage ||
@@ -108,7 +111,7 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
   //    this, std::placeholders::_1));
   ipcServer.setAcceptCallback(
       std::bind(&Server::newConnectionCallback, this, std::placeholders::_1));
-  ioThread = new boost::thread([this]() {
+  ioThread = boost::thread([this]() {
     try {
       this->ioContext.run();
     } catch (const std::exception &e) {
@@ -117,6 +120,14 @@ Server::Server(std::shared_ptr<IRenderer> setRenderer,
   });
   std::random_device rd;
   srand(rd());
+}
+
+Server::~Server() {
+  ioWork.reset();
+  ioContext.stop();
+  if (ioThread.joinable()) {
+    ioThread.join();
+  }
 }
 
 void Server::newConnectionCallback(
@@ -364,15 +375,18 @@ void Server::stopDefaultApp() {
 }
 
 void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
+  std::weak_ptr<IRenderer> weakRenderer = newRenderer;
   newRenderer->setClientMessageCallback(
-      [this, newRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+      [this, weakRenderer](std::shared_ptr<matrixserver::MatrixServerMessage> msg) {
+        auto renderer = weakRenderer.lock();
+        if (!renderer) return;
         if (msg->messagetype() == matrixserver::getServerInfo) {
           auto response = std::make_shared<matrixserver::MatrixServerMessage>();
           response->set_messagetype(matrixserver::getServerInfo);
           auto *cfg = new matrixserver::ServerConfig();
           cfg->CopyFrom(serverConfig);
           response->set_allocated_serverconfig(cfg);
-          newRenderer->sendMessage(response);
+          renderer->sendMessage(response);
 
           std::lock_guard<std::mutex> lock(appsMutex);
           if (!apps.empty()) {
@@ -380,7 +394,7 @@ void Server::addRenderer(std::shared_ptr<IRenderer> newRenderer) {
             schemaMsg->set_appid(apps.back().getAppId());
             schemaMsg->set_messagetype(matrixserver::appParamSchema);
             schemaMsg->mutable_appparamschema()->CopyFrom(apps.back().getParamSchema());
-            newRenderer->sendMessage(schemaMsg);
+            renderer->sendMessage(schemaMsg);
           }
         } else if (msg->messagetype() == matrixserver::imuData ||
             msg->messagetype() == matrixserver::audioDataMessage ||
