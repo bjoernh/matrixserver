@@ -1,6 +1,8 @@
 #ifndef MATRIXSERVER_ANIMATIONPARAMS_H
 #define MATRIXSERVER_ANIMATIONPARAMS_H
 
+#include <atomic>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <map>
@@ -32,6 +34,11 @@ public:
 
     // Mass Update
     void applyUpdate(const matrixserver::AppParamUpdate& update);
+
+    // Monotonic counter — bumped on every applyUpdate() call, regardless of
+    // whether the value actually changed. Apps can poll this to detect when
+    // a webapp "Apply" event arrived even if the value sent was identical.
+    std::uint64_t getUpdateCounter() const { return updateCounter_.load(); }
     
     // Serialization
     matrixserver::AppParamSchema toSchema(const std::string& appName) const;
@@ -54,6 +61,7 @@ private:
 
     mutable std::mutex mutex_;
     std::map<std::string, ParamRecord> params_;
+    std::atomic<std::uint64_t> updateCounter_{0};
 };
 
 } // namespace matrixserver

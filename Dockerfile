@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     libprotobuf-dev \
     protobuf-compiler \
     libimlib2-dev \
+    libsdl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy source code
@@ -53,6 +54,7 @@ RUN apt-get update && apt-get install -y \
     libasound2t64 \
     libprotobuf32t64 \
     libimlib2t64 \
+    libsdl2-2.0-0 \
     nginx \
     openssl \
     && rm -rf /var/lib/apt/lists/*

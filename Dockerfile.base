@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     libprotobuf32t64 \
     libimlib2t64 \
     libftdi1-2 \
+    libsdl2-2.0-0 \
     nginx \
     openssl \
     && rm -rf /var/lib/apt/lists/*

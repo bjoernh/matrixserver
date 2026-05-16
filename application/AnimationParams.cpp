@@ -90,20 +90,23 @@ std::string AnimationParams::getString(const std::string& key) const {
 }
 
 void AnimationParams::applyUpdate(const matrixserver::AppParamUpdate& update) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = params_.find(update.key());
-    if (it != params_.end()) {
-        const std::string& type = it->second.def.type();
-        if (type == "float") {
-            it->second.floatVal = update.floatval();
-        } else if (type == "int") {
-            it->second.intVal = update.intval();
-        } else if (type == "bool") {
-            it->second.boolVal = update.boolval();
-        } else if (type == "enum") {
-            it->second.stringVal = update.stringval();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = params_.find(update.key());
+        if (it != params_.end()) {
+            const std::string& type = it->second.def.type();
+            if (type == "float") {
+                it->second.floatVal = update.floatval();
+            } else if (type == "int") {
+                it->second.intVal = update.intval();
+            } else if (type == "bool") {
+                it->second.boolVal = update.boolval();
+            } else if (type == "enum") {
+                it->second.stringVal = update.stringval();
+            }
         }
     }
+    updateCounter_.fetch_add(1, std::memory_order_relaxed);
 }
 
 matrixserver::AppParamSchema AnimationParams::toSchema(const std::string& appName) const {

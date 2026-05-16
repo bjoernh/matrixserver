@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     libimlib2-dev \
     libftdi1-dev \
+    libsdl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Build and install wiringPi natively
@@ -74,6 +75,7 @@ RUN apt-get update && apt-get install -y \
     libprotobuf32t64 \
     libimlib2t64 \
     libftdi1-2 \
+    libsdl2-2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

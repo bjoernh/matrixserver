@@ -106,7 +106,7 @@ jobs:
           Architecture: amd64
           Maintainer: Bjoern Hauffe<oss@64b.de>
           Description: LEDCube matrixserver & matrixapplication library (Simulator)
-          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libsdl2-2.0-0
           EOF
 
           cat <<'EOF' > deb-workspace/DEBIAN/postinst
@@ -279,7 +279,7 @@ jobs:
           Architecture: arm64
           Maintainer: Bjoern Hauffe<oss@64b.de>
           Description: LEDCube matrixserver for Raspberry Pi (all hardware backends; runtime --backend= selection)
-          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2
+          Depends: libboost-thread1.83.0, libboost-log1.83.0, libboost-system1.83.0, libboost-regex1.83.0, libboost-chrono1.83.0, libboost-date-time1.83.0, libboost-filesystem1.83.0, libboost-atomic1.83.0, libboost-program-options1.83.0, libasound2t64, libprotobuf32t64, libimlib2t64, libftdi1-2, libsdl2-2.0-0
           EOF
 
           cat <<'EOF' > deb-workspace/DEBIAN/postinst
